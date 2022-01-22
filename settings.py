@@ -2,22 +2,22 @@
 #statistics
 statisticsInfoArray = ["r", "score"]
 
-statisticsDirec = "statistics\\"
+statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
-statisticsFilePath = "statistics\\"
+statisticsFilePath = "statistics"
 statisticsFileName = "statistics_summary.txt"
 
 ####################################
 #入力がファイルのパス
-inputFilePath = "in\\"
+inputFilePath = "in"
 
 ####################################
 #結果のパス
-resultFilePath = "result\\"
+resultFilePath = "result"
 
 ####################################
 #log
-logFilePath = "log\\"
+logFilePath = "log"
 
 ####################################
 #生成するScore情報を書き込むファイルのパス

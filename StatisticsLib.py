@@ -5,20 +5,14 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import DebugLib as dl
-import settings as stg
-
-####################################
-# settings
-
-#入力が書いてある場所
-statisticsDirec = stg.statisticsDirec
-csvFileName = stg.csvFileName
+from settings import *
+import os
 
 ####################################
 
 def InitCSV(ar):
     global statisticsDirec, csvFileName
-    path = statisticsDirec + csvFileName
+    path = os.path.join(statisticsDirec, csvFileName)
     ar = list(map(str, ar))
     with open(path, 'w', newline="") as f:
         writer = csv.writer(f)
@@ -26,7 +20,7 @@ def InitCSV(ar):
 
 def AddCSVFileSub(ar):
     global statisticsDirec, csvFileName
-    path = statisticsDirec + csvFileName
+    path = os.path.join(statisticsDirec, csvFileName)
     ar = list(map(str, ar))
     with open(path, 'a', newline="") as f:
         writer = csv.writer(f)
@@ -35,7 +29,7 @@ def AddCSVFileSub(ar):
 
 def statisticsMain():
     global statisticsDirec, csvFileName
-    path = statisticsDirec + csvFileName
+    path = os.path.join(statisticsDirec, csvFileName)
     df = pd.read_csv(path)
 
     statisticsInfo = dl.statisticsInfoArray
@@ -44,7 +38,7 @@ def statisticsMain():
         ax_x = x
         ax_y = statisticsInfo[-1]
         df.plot.scatter(x = ax_x, y = ax_y, alpha = 0.5)
-        outPath = statisticsDirec + ax_x + "-" + ax_y + ".png"
+        outPath = os.path.join(statisticsDirec, ax_x, "-", ax_y, ".png")
         plt.savefig(outPath)
         plt.close('all')
 
