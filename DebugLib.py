@@ -16,6 +16,9 @@ def ExacProg():
     errMessage = "NaN"
     try:
         import main
+        main.print = DebugPrint
+        main.input = DebugInput
+        main.main()
     except Exception as e:
         name = fl.GetFileName().split("\\")[-1]
         print("error in ", name)
