@@ -3,29 +3,11 @@ import glob
 import FileLib as fl
 import pandas as pd
 import StatisticsLib as sl
-import settings as stg
+from settings import *
 import time
 import os
 import datetime
 import shutil
-
-####################################
-# settings
-
-#入力が書いてある場所 
-inputFilePath = stg.inputFilePath
-
-#生成するlogファイルのパス
-resultFilePath = stg.resultFilePath
-
-#生成するScore情報を書き込むファイルのパス
-scoreFilePath = stg.scoreFilePath
-scoreFileName = stg.scoreFileName
-
-#生成する統計用の情報の設定
-statisticsFilePath = stg.statisticsFilePath
-statisticsFileName = stg.statisticsFileName
-statisticsInfoArray = stg.statisticsInfoArray
 
 ####################################
 def ExacProg():
@@ -57,8 +39,7 @@ def ExacProg():
     AddCSVFile(csvArr)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
-    if 'main' in sys.modules:
-        del sys.modules["main"]
+    if 'main' in sys.modules: del sys.modules["main"]
 
 ####################################
 #statisticsの管理
@@ -70,7 +51,7 @@ def AddCSVFile(ar):
 def SaveFile():
     dt = datetime.datetime.now()
     d = dt.strftime('%Y%m%d%H%M%S')
-    path = stg.logFilePath + str(d)
+    path =  os.path.join(logFilePath, str(d))
     os.mkdir(path)
 
     # mainファイルコピー
@@ -78,18 +59,18 @@ def SaveFile():
     shutil.copy(filePath, path)
 
     # summaryファイルコピー
-    filePath = stg.scoreFilePath + stg.scoreFileName
+    filePath = os.path.join(scoreFilePath, scoreFileName)
     shutil.copy(filePath, path)
 
     # csvファイルコピー
-    filePath = stg.statisticsDirec + stg.csvFileName
+    filePath = os.path.join(statisticsDirec, csvFileName)
     shutil.copy(filePath, path)
 
 ####################################
 #Debug用の入出力
 
 def DebugPrint(*arg, **keys):
-    f = open(resultFilePath + GetLogFileName(), 'a')
+    f = open(os.path.join(resultFilePath, GetLogFileName()), 'a')
     print(*arg, **keys, file=f)
     f.close()
 
@@ -100,12 +81,12 @@ def DebugInput():
 #logファイルの管理
 
 def InitLogFile():
-    f = open(resultFilePath + GetLogFileName(), 'w')
+    f = open(os.path.join(resultFilePath, GetLogFileName()), 'w')
     f.close()
 
 def GetAllFileName():
     global inputFilePath
-    return glob.glob(inputFilePath + "*")
+    return glob.glob(os.path.join(inputFilePath, "*"))
 
 def GetLogFileName():
     fileName =  fl.GetFileName().split("\\")[-1]
@@ -143,7 +124,7 @@ def WriteScore():
             scoreMaxFileName = fileName
         scoreSum += score
 
-    f = open(scoreFilePath + scoreFileName, 'w')
+    f = open(os.path.join(scoreFilePath, scoreFileName), 'w')
     f.write(str(length) + " files inputs" + "\n")
     f.write("score average is " + str(scoreSum/length) + "\n")
     f.write("max score is " + str(scoreMax) + ", filename is " + scoreMaxFileName + "\n")
