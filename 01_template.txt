@@ -1,18 +1,5 @@
-#main.pyの中に冒頭に以下のコードを書くこと
-#またmain.pyの中ではinput()の代わりにMyInput(), print()の代わりにMyPrint()を使うこと
+def main():
+    # Solve a problem
 
-DEBUG = 0
-if __name__ != "__main__":
-    DEBUG = 1
-    import DebugLib as dl
-
-def MyInput():
-    global DEBUG
-    if DEBUG: return dl.DebugInput()
-    else: return input()
-
-
-def MyPrint(*arg, **keys):
-    global DEBUG
-    if DEBUG: return dl.DebugPrint(*arg, **keys)
-    else: return print(*arg, **keys)
+if __name__ == '__name__':
+    main()
