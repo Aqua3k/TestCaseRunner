@@ -8,10 +8,11 @@ import time
 import os
 import datetime
 import shutil
+from typing import Any
 
 ####################################
-def ExacProg():
-    #プログラムの実行(名前が変わったなら変える)
+def ExacProg() -> None:
+    """プログラムの実行"""
     t_start = time.time()
     errMessage = "NaN"
     name = os.path.basename(fl.GetFileName())
@@ -30,7 +31,7 @@ def ExacProg():
         try:    cont = getattr(main, name)
         except: cont = errMessage
         if i == len(statisticsInfoArray) - 1:
-            fl.SetScoreSub(cont)
+            fl.SetScore(cont)
             print(cont)
         csvArr.append(cont)
     
@@ -40,8 +41,8 @@ def ExacProg():
     if 'main' in sys.modules: del sys.modules["main"]
 
 ####################################
-#summaryファイル, csv, mainファイルをコピーして保存する
-def SaveFile():
+def SaveFile() -> None:
+    """summaryファイル, csv, mainファイルをコピーしてlog以下に保存する"""
     dt = datetime.datetime.now()
     d = dt.strftime('%Y%m%d%H%M%S')
     path =  os.path.join(logFilePath, str(d))
@@ -60,34 +61,37 @@ def SaveFile():
     shutil.copy(filePath, path)
 
 ####################################
-#Debug用の入出力
-
-def DebugPrint(*arg, **keys):
+def DebugPrint(*arg: Any, **keys: Any) -> None:
+    """Debug用の出力"""
     f = open(os.path.join(resultFilePath, GetLogFileName()), 'a')
     print(*arg, **keys, file=f)
     f.close()
 
-def DebugInput():
+def DebugInput() -> str:
+    """Debug用の入力"""
     return str(fl.fileContents.pop())
 
 ####################################
-#logファイルの管理
 
-def InitLogFile():
+def InitLogFile() -> None:
+    """Logファイルの初期化"""
     f = open(os.path.join(resultFilePath, GetLogFileName()), 'w')
     f.close()
 
-def GetAllFileName():
+def GetAllFileName() -> list[str]:
+    """Logファイルの初期化"""
     return glob.glob(os.path.join(inputFilePath, "*"))
 
-def GetLogFileName():
+def GetLogFileName() -> str:
+    """Logファイルの名前を返す"""
     return "log_" + os.path.basename(fl.GetFileName())
 
 ####################################
 #scoreの管理
-def WriteScore():
+def MakeSummaryFile() -> None:
+    """サマリファイルを作る"""
     global scoreFilePath, scoreFileName
-    scores = fl.GetScore()
+    scores = fl.GetAllScore()
     fileNameList, scoresList = [], []
     for i, [filePath, scoreStr] in enumerate(scores):
         fileName = os.path.basename(filePath)
@@ -109,7 +113,7 @@ def WriteScore():
 ####################################
 #main
 
-def main():
+def main() -> None:
     ar = ["FileName", "Time"] + statisticsInfoArray
     sl.InitCSV(ar)
     for filename in GetAllFileName():
@@ -118,7 +122,7 @@ def main():
         
         InitLogFile()
         ExacProg()
-    WriteScore()
+    MakeSummaryFile()
     sl.statisticsMain()
     SaveFile()
 

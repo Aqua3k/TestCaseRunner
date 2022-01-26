@@ -10,24 +10,27 @@ import os
 
 ####################################
 
-def InitCSV(ar):
+def InitCSV(array: list[str]) -> None:
+    """CSVファイルを作成しarrayを書き込む"""
     global statisticsDirec, csvFileName
     path = os.path.join(statisticsDirec, csvFileName)
-    ar = list(map(str, ar))
+    array = list(map(str, array))
     with open(path, 'w', newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(ar)
+        writer.writerow(array)
 
-def AddCSVFileSub(ar):
+def AddCSVFileSub(array: list[str]) -> None:
+    """CSVファイルにarrayを追加する"""
     global statisticsDirec, csvFileName
     path = os.path.join(statisticsDirec, csvFileName)
-    ar = list(map(str, ar))
+    array = list(map(str, array))
     with open(path, 'a', newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(ar)
+        writer.writerow(array)
 
 
-def statisticsMain():
+def statisticsMain() -> None:
+    """統計処理のmain処理"""
     global statisticsDirec, csvFileName
     path = os.path.join(statisticsDirec, csvFileName)
     df = pd.read_csv(path)
