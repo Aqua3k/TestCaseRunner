@@ -17,12 +17,3 @@ def SetFileContents() -> None:
     path = GetFileName()
     with open(path) as f:
         fileContents = [s.strip() for s in f.readlines()][::-1]
-
-scores = []
-def SetScore(score: int) -> None:
-    """スコアをセット"""
-    scores.append([GetFileName(), score])
-def GetAllScore() -> list[str]:
-    """全部のスコアをゲット"""
-    return scores
-

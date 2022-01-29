@@ -22,15 +22,17 @@ HTMLText = '''
 '''
 
 import copy
+from typing import Any
 class ResultInfo:
-    def __init__(self, name, score, time, errFlg, errMsg, otherList):
+    """実行結果の情報管理用のクラス"""
+    def __init__(self, name: str, score: str, time: float, errFlg: bool, errMsg: str, otherList: list[Any]):
         self.name      = name
         self.score     = score
         self.time      = time
         self.errFlg    = errFlg
         self.errMsg    = errMsg
         self.otherList = copy.deepcopy(otherList)
-    def GetMember(self):
+    def GetMember(self) -> list[str]:
         """結果を配列にする"""
         ret = [self.name, self.score, self.time] + copy.deepcopy(self.otherList)
         return ret

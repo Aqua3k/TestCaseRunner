@@ -9,10 +9,8 @@ import os
 import datetime
 import shutil
 import traceback
-import copy
 from typing import Any
-
-from template import ResultInfo
+from template import *
 
 ####################################
 def ExacProg() -> ResultInfo:
@@ -34,18 +32,17 @@ def ExacProg() -> ResultInfo:
 
     try:    score = str(getattr(main, scoreStr))
     except: score = "None"
-    fl.SetScore(score)
 
     lis = []
-    for name in statisticsInfoArray:
-        try:    cont = str(getattr(main, name))
+    for val in statisticsInfoArray:
+        try:    cont = str(getattr(main, val))
         except: cont = "None"
         lis.append(cont)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
 
-    return ResultInfo(name, score, str(t_end - t_start), errFlg, errMessage, lis)
+    return ResultInfo(name, score, t_end-t_start, errFlg, errMessage, lis)
 
 ####################################
 def MakeLog() -> None:
@@ -94,25 +91,21 @@ def MakeCSVFile(resultAll):
         sl.AddCSVFile(result.GetMember())
 
 ####################################
-def MakeSummaryFile() -> None:
+def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
     """サマリファイルを作る"""
-    scores = fl.GetAllScore()
     fileNameList, scoresList = [], []
-    for filePath, scoreStr in scores:
-        fileName = os.path.basename(filePath)
-        try:    score = int(scoreStr)
-        except: score = 0
-        fileNameList.append(fileName)
-        scoresList.append(score)
-    
+    for result in resultAll:
+        fileNameList.append(os.path.basename(result.name))
+        scoresList.append(0 if result.score == "None" else int(result.score))
+
     f = open(os.path.join(scoreFilePath, scoreFileName), 'w')
-    f.write(str(len(scores)) + " files inputs" + "\n")
-    f.write("score average is " + str(sum(scoresList)/len(scores)) + "\n")
+    f.write(str(len(resultAll)) + " files inputs" + "\n")
+    f.write("score average is " + str(sum(scoresList)/len(resultAll)) + "\n")
     f.write("max score is " + str(max(scoresList)) + ", filename is " + fileNameList[scoresList.index(max(scoresList))] + "\n")
     f.write("min score is " + str(min(scoresList)) + ", filename is " + fileNameList[scoresList.index(min(scoresList))] + "\n")
     f.write("\n")
-    for fileName, score in scores:
-        f.write(os.path.basename(fileName) + " " + str(score) + "\n")
+    for result in resultAll:
+        f.write(os.path.basename(result.name) + " " + str(result.score) + "\n")
     f.close()
 
 ####################################
@@ -126,7 +119,7 @@ def main() -> None:
         fl.SetFileContents()
         result = ExacProg()
         resultAll.append(result)
-    MakeSummaryFile()
+    MakeSummaryFile(resultAll)
     MakeCSVFile(resultAll)
     sl.statisticsMain()
     MakeLog()
