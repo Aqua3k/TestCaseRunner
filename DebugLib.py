@@ -55,7 +55,7 @@ def MakeLog() -> None:
     # mainファイルコピー
     shutil.copy("main.py", path)
     # summaryファイルコピー
-    shutil.copy(os.path.join(scoreFilePath, scoreFileName), path)
+    shutil.copy(scoreFileName, path)
     # csvファイルコピー
     shutil.copy(os.path.join(statisticsDirec, csvFileName), path)
 
@@ -82,7 +82,7 @@ def GetAllFileName() -> list[str]:
 
 def GetLogFileName() -> str:
     """現在のLogファイルの名前を返す"""
-    return "log_" + os.path.basename(fl.GetFileName())
+    return os.path.basename(fl.GetFileName())
 
 ####################################
 def MakeCSVFile(resultAll: list[ResultInfo]) -> None:
@@ -100,7 +100,7 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
         fileNameList.append(os.path.basename(result.name))
         scoresList.append(0 if result.score == "None" else int(result.score))
 
-    f = open(os.path.join(scoreFilePath, scoreFileName), 'w')
+    f = open(scoreFileName, 'w')
     f.write(str(len(resultAll)) + " files inputs" + "\n")
     f.write("score average is " + str(sum(scoresList)/len(resultAll)) + "\n")
     f.write("max score is " + str(max(scoresList)) + ", filename is " + fileNameList[scoresList.index(max(scoresList))] + "\n")
