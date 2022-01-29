@@ -49,6 +49,7 @@ def ExacProg() -> ResultInfo:
 def MakeLog() -> None:
     """summary, csv, mainファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    if logFilePath not in glob.glob("*"): os.mkdir(logFilePath)
     path =  os.path.join(logFilePath, str(timeInfo))
     os.mkdir(path)
 
@@ -129,11 +130,11 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         table += TableCell.format(text=link)
         if not result.errFlg:
             text = str(result.score)
-            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, "log_" + result.name), string=text)
+            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
             table += TableCell.format(text=link)
         else:
             text = "RE"
-            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, "log_" + result.name), string=text)
+            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
             table += TableColoredCell.format(color="gold", text=link)
         table += TableCell.format(text=str(round(result.time, 3)))
         for x in result.otherList: table += TableCell.format(text=str(x))
