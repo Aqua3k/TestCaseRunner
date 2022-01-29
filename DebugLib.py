@@ -1,7 +1,6 @@
 import sys
 import glob
 import FileLib as fl
-import pandas as pd
 import StatisticsLib as sl
 from settings import *
 import time
@@ -46,7 +45,7 @@ def ExacProg() -> ResultInfo:
 
 ####################################
 def MakeLog() -> None:
-    """summaryファイル, csv, mainファイルをコピーしてlog以下に保存する"""
+    """summary, csv, mainファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     path =  os.path.join(logFilePath, str(timeInfo))
     os.mkdir(path)
@@ -84,7 +83,8 @@ def GetLogFileName() -> str:
     return "log_" + os.path.basename(fl.GetFileName())
 
 ####################################
-def MakeCSVFile(resultAll):
+def MakeCSVFile(resultAll: list[ResultInfo]) -> None:
+    """CSVファイルを作成"""
     sl.InitCSV()
     sl.AddCSVFile(sl.CSVHeader)
     for result in resultAll:
@@ -109,6 +109,10 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
     f.close()
 
 ####################################
+def MakeHTML(resultAll: list[ResultInfo]) -> None:
+    pass
+
+####################################
 #main
 
 def main() -> None:
@@ -121,6 +125,7 @@ def main() -> None:
         resultAll.append(result)
     MakeSummaryFile(resultAll)
     MakeCSVFile(resultAll)
+    MakeHTML(resultAll)
     sl.statisticsMain()
     MakeLog()
 

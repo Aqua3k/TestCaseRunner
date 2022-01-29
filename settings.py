@@ -15,7 +15,7 @@ inputFilePath = "in"
 
 ####################################
 #結果のパス
-resultFilePath = "result"
+resultFilePath = "out"
 
 ####################################
 #log

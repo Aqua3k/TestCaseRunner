@@ -1,5 +1,3 @@
-import DebugLib as dl
-
 fileName = ""
 def SetFileName(name: str) -> None:
     """現在の実行中の入力ファイルの名前をセット"""
