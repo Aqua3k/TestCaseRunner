@@ -21,18 +21,18 @@ HTMLText = '''
 </html>
 '''
 
-
+import copy
 class ResultInfo:
-    def __init__(self):
-        self.name = None
-        self.score = None
-        self.time = None
-        self.otherList  = []
-        self.errFlg = None
-        self.errMsg = None
+    def __init__(self, name, score, time, errFlg, errMsg, otherList):
+        self.name      = name
+        self.score     = score
+        self.time      = time
+        self.errFlg    = errFlg
+        self.errMsg    = errMsg
+        self.otherList = copy.deepcopy(otherList)
     def GetMember(self):
         """結果を配列にする"""
-        ret = [self.name, self.score, self.time] + self.otherList
+        ret = [self.name, self.score, self.time] + copy.deepcopy(self.otherList)
         return ret
     def __lt__(self, other) -> bool:
         """__lt__を定義しておくとクラスのままソートが可能になる"""

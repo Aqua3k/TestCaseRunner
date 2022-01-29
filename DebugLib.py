@@ -32,46 +32,34 @@ def ExacProg() -> ResultInfo:
         errMessage = traceback.format_exc()
     t_end = time.time()
 
-    result = ResultInfo()
-    result.name = name
-    result.errFlg = errFlg
-    result.errMsg = errMessage
-    result.time = str(t_end - t_start)
     try:    score = str(getattr(main, scoreStr))
     except: score = "None"
     fl.SetScore(score)
-    result.score = score
 
     lis = []
     for name in statisticsInfoArray:
         try:    cont = str(getattr(main, name))
         except: cont = "None"
         lis.append(cont)
-    result.otherList = copy.deepcopy(lis)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
-    return result
+
+    return ResultInfo(name, score, str(t_end - t_start), errFlg, errMessage, lis)
 
 ####################################
 def MakeLog() -> None:
     """summaryファイル, csv, mainファイルをコピーしてlog以下に保存する"""
-    dt = datetime.datetime.now()
-    d = dt.strftime('%Y%m%d%H%M%S')
-    path =  os.path.join(logFilePath, str(d))
+    timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    path =  os.path.join(logFilePath, str(timeInfo))
     os.mkdir(path)
 
     # mainファイルコピー
-    filePath = "main.py"
-    shutil.copy(filePath, path)
-
+    shutil.copy("main.py", path)
     # summaryファイルコピー
-    filePath = os.path.join(scoreFilePath, scoreFileName)
-    shutil.copy(filePath, path)
-
+    shutil.copy(os.path.join(scoreFilePath, scoreFileName), path)
     # csvファイルコピー
-    filePath = os.path.join(statisticsDirec, csvFileName)
-    shutil.copy(filePath, path)
+    shutil.copy(os.path.join(statisticsDirec, csvFileName), path)
 
 ####################################
 def DebugPrint(*arg: Any, **keys: Any) -> None:
@@ -108,10 +96,9 @@ def MakeCSVFile(resultAll):
 ####################################
 def MakeSummaryFile() -> None:
     """サマリファイルを作る"""
-    global scoreFilePath, scoreFileName
     scores = fl.GetAllScore()
     fileNameList, scoresList = [], []
-    for i, [filePath, scoreStr] in enumerate(scores):
+    for filePath, scoreStr in scores:
         fileName = os.path.basename(filePath)
         try:    score = int(scoreStr)
         except: score = 0
