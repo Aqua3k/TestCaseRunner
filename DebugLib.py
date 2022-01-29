@@ -8,40 +8,53 @@ import time
 import os
 import datetime
 import shutil
+import traceback
+import copy
 from typing import Any
 
+from template import ResultInfo
+
 ####################################
-def ExacProg() -> None:
-    """プログラムの実行"""
+def ExacProg() -> ResultInfo:
+    """プログラムを実行して結果を返す"""
     t_start = time.time()
-    errMessage = "NaN"
+    errMessage = ""
     name = os.path.basename(fl.GetFileName())
+    errFlg = False
     try:
         import main
         main.print = DebugPrint
         main.input = DebugInput
         main.main()
-    except Exception as e:        
+    except:
+        errFlg = True
         print("error in ", name)
-        errMessage = str(e)
+        errMessage = traceback.format_exc()
     t_end = time.time()
 
-    csvArr = [name, str(t_end - t_start)]
-    for i, name in enumerate(statisticsInfoArray):
-        try:    cont = getattr(main, name)
-        except: cont = errMessage
-        if i == len(statisticsInfoArray) - 1:
-            fl.SetScore(cont)
-            print(cont)
-        csvArr.append(cont)
-    
-    sl.AddCSVFileSub(csvArr)
+    result = ResultInfo()
+    result.name = name
+    result.errFlg = errFlg
+    result.errMsg = errMessage
+    result.time = str(t_end - t_start)
+    try:    score = str(getattr(main, scoreStr))
+    except: score = "None"
+    fl.SetScore(score)
+    result.score = score
+
+    lis = []
+    for name in statisticsInfoArray:
+        try:    cont = str(getattr(main, name))
+        except: cont = "None"
+        lis.append(cont)
+    result.otherList = copy.deepcopy(lis)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
+    return result
 
 ####################################
-def SaveFile() -> None:
+def MakeLog() -> None:
     """summaryファイル, csv, mainファイルをコピーしてlog以下に保存する"""
     dt = datetime.datetime.now()
     d = dt.strftime('%Y%m%d%H%M%S')
@@ -72,22 +85,27 @@ def DebugInput() -> str:
     return str(fl.fileContents.pop())
 
 ####################################
-
 def InitLogFile() -> None:
-    """Logファイルの初期化"""
-    f = open(os.path.join(resultFilePath, GetLogFileName()), 'w')
-    f.close()
+    """Logフォルダの初期化"""
+    shutil.rmtree(resultFilePath, ignore_errors=True)
+    os.mkdir(resultFilePath)
 
 def GetAllFileName() -> list[str]:
-    """Logファイルの初期化"""
+    """inputするファイルすべての名前を取得"""
     return glob.glob(os.path.join(inputFilePath, "*"))
 
 def GetLogFileName() -> str:
-    """Logファイルの名前を返す"""
+    """現在のLogファイルの名前を返す"""
     return "log_" + os.path.basename(fl.GetFileName())
 
 ####################################
-#scoreの管理
+def MakeCSVFile(resultAll):
+    sl.InitCSV()
+    sl.AddCSVFile(sl.CSVHeader)
+    for result in resultAll:
+        sl.AddCSVFile(result.GetMember())
+
+####################################
 def MakeSummaryFile() -> None:
     """サマリファイルを作る"""
     global scoreFilePath, scoreFileName
@@ -114,17 +132,17 @@ def MakeSummaryFile() -> None:
 #main
 
 def main() -> None:
-    ar = ["FileName", "Time"] + statisticsInfoArray
-    sl.InitCSV(ar)
+    resultAll = []
+    InitLogFile()
     for filename in GetAllFileName():
         fl.SetFileName(filename)
         fl.SetFileContents()
-        
-        InitLogFile()
-        ExacProg()
+        result = ExacProg()
+        resultAll.append(result)
     MakeSummaryFile()
+    MakeCSVFile(resultAll)
     sl.statisticsMain()
-    SaveFile()
+    MakeLog()
 
 if __name__ == "__main__":
     main()

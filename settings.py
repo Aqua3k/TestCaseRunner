@@ -1,6 +1,8 @@
 ####################################
 #statistics
-statisticsInfoArray = ["r", "score"]
+scoreStr = "score"
+
+statisticsInfoArray = ["k", "r"]
 
 statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
