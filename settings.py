@@ -2,7 +2,7 @@
 #statistics
 scoreStr = "score"
 
-statisticsInfoArray = ["k", "r"]
+statisticsInfoArray = []
 
 statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
@@ -25,3 +25,7 @@ logFilePath = "log"
 #生成するScore情報を書き込むファイルのパス
 scoreFilePath = ""
 scoreFileName = "summary.txt"
+
+####################################
+#エラーメッセージ
+messagePath = "message"

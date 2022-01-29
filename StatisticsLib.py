@@ -6,7 +6,7 @@ import shutil
 from settings import *
 import os
 
-CSVHeader = ["FileName", "score", "Time"] + statisticsInfoArray
+CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
 
 ####################################
 
