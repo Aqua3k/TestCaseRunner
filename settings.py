@@ -1,13 +1,10 @@
 ####################################
 #statistics
 scoreStr = "score"
-
 statisticsInfoArray = []
 
 statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
-statisticsFilePath = "statistics"
-statisticsFileName = "statistics_summary.txt"
 
 ####################################
 #入力がファイルのパス
@@ -23,7 +20,6 @@ logFilePath = "log"
 
 ####################################
 #生成するScore情報を書き込むファイルのパス
-scoreFilePath = ""
 scoreFileName = "summary.txt"
 
 ####################################
