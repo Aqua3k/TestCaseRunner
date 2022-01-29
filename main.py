@@ -5,8 +5,9 @@ def Input():
     return n,m,k,r,d,uv
 
 score = 0
+k,r = 0,0
 def main():
-    global score
+    global score,k,r
     n,m,k,r,d,uv = Input()
 
     score = n+m+k+r
