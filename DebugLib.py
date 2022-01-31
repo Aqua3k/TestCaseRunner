@@ -18,11 +18,14 @@ def ExacProg() -> ResultInfo:
     errMessage = ""
     name = os.path.basename(fl.GetFileName())
     errFlg = False
+    score = "None"
     try:
         import main
         main.print = DebugPrint
         main.input = DebugInput
-        main.main()
+        _score = main.main()
+        if type(_score) is int or type(_score) is float:
+            score = _score
     except:
         errFlg = True
         print("error in ", name)
@@ -30,9 +33,6 @@ def ExacProg() -> ResultInfo:
         DebugPrint("------------------------------")
         DebugPrint(errMessage)
     t_end = time.time()
-
-    try:    score = str(getattr(main, scoreStr))
-    except: score = "None"
 
     lis = []
     for val in statisticsInfoArray:
