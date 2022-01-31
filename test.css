@@ -1,0 +1,50 @@
+<style type="text/css">
+/* === ソートボタンを表示するエリア ============== */
+.tsImgArea{
+  line-height: 1;
+}
+/* === ソートボタン ============================== */
+.tsImg{
+  display    : inline-block;
+  width      : 8px;
+  height     : 6px;
+  background : #eee;
+  border     : 1px solid #777;
+  margin     : 1px 3px;
+  padding    : 3px;
+  cursor     : pointer;
+}
+/* === ソートボタン（カーソルオーバー時）========= */
+.tsImg:hover{
+  background : #FFD700;
+}
+/* === ソートボタン内の三角の色（SVG）============ */
+.tsImg path{
+  fill       : #777;
+}
+ 
+ 
+ /* --- （参考）テーブル全体のスタイル指定 ------- */
+#sortTable {
+  width          : 100%;
+  border-collapse: collapse;         /* 境界線結合 */
+  border-spacing : 0;                /* 罫線間余白 */
+  font-size      : 9pt;              /* 文字サイズ */
+}
+ /* --- ヘッダーのスタイル指定 ------------------- */
+#sortTable th {
+  text-align    : center;            /* 文字位置   */
+  font-weight   : bold;              /* 太文字     */
+  padding       : 6px 5px;          /* 余白       */
+  border        : 1px #666666 solid; /* 罫線       */
+  background    : #99ccff;           /* 背景色     */
+  white-space   : nowrap;
+}
+ /* --- 明細のスタイル指定 ----------------------- */
+#sortTable td {
+  text-align    : center;            /* 文字位置   */
+  padding       : 6px 5px;           /* 余白       */
+  border        : 1px #666666 solid; /* 罫線       */
+  white-space   : nowrap;
+}
+</style>

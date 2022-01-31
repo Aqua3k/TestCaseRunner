@@ -1,10 +1,13 @@
 HTMLLinkStr = '<a href="{path}">{string}</a><br>'
 
 cssLink = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css">'
+cssLink2 = '<link rel="stylesheet" href="test.css">'
+scriptLink = '<script type="text/javascript" src="test.js"></script>'
 
-Table = '<table border="{border}">{body}</table>'
+Table = '<table id="sortTable">{body}</table>'
 TableLine = '<tr>{text}</tr>'
-TableCell = '<th>{text}</th>'
+TableCell1 = '<th cmanSortBtn>{text}</th>'
+TableCell2 = '<td>{text}</td>'
 TableColoredCell = '<th bgcolor={color}>{text}</th>'
 
 HTMLText = '''

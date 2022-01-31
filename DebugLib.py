@@ -112,39 +112,41 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
     f.close()
 
 ####################################
-def InsertTextIntoHTMLHead(HTMLStr: str, text: str) -> str:
+def InsertTextIntoHTMLHead(tag: str, HTMLStr: str, text: str) -> str:
     """HTMLの文字列のHeadの中に別の文字列を挿入する"""
     HTMLStrList = HTMLStr.split("\n")
-    HTMLStrList.insert(HTMLStrList.index("<head>") + 1, text)
+    HTMLStrList.insert(HTMLStrList.index(tag) + 1, text)
     return "\n".join(HTMLStrList)
 
 def MakeHTML(resultAll: list[ResultInfo]) -> None:
     """結果のHTMLファイルを作成する"""
     tableBody = []
     table = ""
-    for s in sl.CSVHeader: table += TableCell.format(text=s)
+    for s in sl.CSVHeader: table += TableCell1.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
         table = ""
         link = HTMLLinkStr.format(path=os.path.join(inputFilePath, result.name), string=result.name)
-        table += TableCell.format(text=link)
+        table += TableCell2.format(text=link)
         if not result.errFlg:
             text = str(result.score)
             link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
-            table += TableCell.format(text=link)
+            table += TableCell2.format(text=link)
         else:
             text = "RE"
             link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
             table += TableColoredCell.format(color="gold", text=link)
-        table += TableCell.format(text=str(round(result.time, 3)))
-        for x in result.otherList: table += TableCell.format(text=str(x))
+        table += TableCell2.format(text=str(round(result.time, 3)))
+        for x in result.otherList: table += TableCell2.format(text=str(x))
         tableBody.append(TableLine.format(text=table))
-    tableAll = Table.format(border=len(sl.CSVHeader), body="\n".join(tableBody))
+    tableAll = Table.format(body="\n".join(tableBody))
 
     resultFileName = "result.html"
     with open(resultFileName ,'w', encoding='utf-8', newline='\n') as html:
         text = HTMLText.format(body=tableAll, title="Result")
-        html.writelines(InsertTextIntoHTMLHead(text, cssLink))
+        text = InsertTextIntoHTMLHead("<body>", text, cssLink2)
+        text = InsertTextIntoHTMLHead("<body>", text, scriptLink)
+        html.writelines(text)
 
 ####################################
 #main
