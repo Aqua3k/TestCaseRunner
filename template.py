@@ -1,10 +1,14 @@
 HTMLLinkStr = '<a href="{path}">{string}</a><br>'
 
-cssLink = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css">'
+#後でcssの体裁整えるときのため削除じゃなくてコメントアウト
+#cssLink   = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css">'
+cssLink    = '<link rel="stylesheet" href="SortTable.css">'
+scriptLink = '<script type="text/javascript" src="Table.js"></script>'
 
-Table = '<table border="{border}">{body}</table>'
-TableLine = '<tr>{text}</tr>'
-TableCell = '<th>{text}</th>'
+TableHeading     = '<table id="sortTable">{body}</table>'
+TableLine        = '<tr>{text}</tr>'
+TableCellHeading = '<th cmanSortBtn>{text}</th>'
+TableCell        = '<td>{text}</td>'
 TableColoredCell = '<th bgcolor={color}>{text}</th>'
 
 HTMLText = '''

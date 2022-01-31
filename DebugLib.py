@@ -112,17 +112,17 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
     f.close()
 
 ####################################
-def InsertTextIntoHTMLHead(HTMLStr: str, text: str) -> str:
-    """HTMLの文字列のHeadの中に別の文字列を挿入する"""
+def InsertTextIntoHTMLHead(tag: str, HTMLStr: str, text: str) -> str:
+    """HTMLの文字列のtagの中に別の文字列を挿入する"""
     HTMLStrList = HTMLStr.split("\n")
-    HTMLStrList.insert(HTMLStrList.index("<head>") + 1, text)
+    HTMLStrList.insert(HTMLStrList.index(tag) + 1, text)
     return "\n".join(HTMLStrList)
 
 def MakeHTML(resultAll: list[ResultInfo]) -> None:
     """結果のHTMLファイルを作成する"""
     tableBody = []
     table = ""
-    for s in sl.CSVHeader: table += TableCell.format(text=s)
+    for s in sl.CSVHeader: table += TableCellHeading.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
         table = ""
@@ -139,12 +139,14 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         table += TableCell.format(text=str(round(result.time, 3)))
         for x in result.otherList: table += TableCell.format(text=str(x))
         tableBody.append(TableLine.format(text=table))
-    tableAll = Table.format(border=len(sl.CSVHeader), body="\n".join(tableBody))
+    tableAll = TableHeading.format(body="\n".join(tableBody))
 
     resultFileName = "result.html"
     with open(resultFileName ,'w', encoding='utf-8', newline='\n') as html:
         text = HTMLText.format(body=tableAll, title="Result")
-        html.writelines(InsertTextIntoHTMLHead(text, cssLink))
+        text = InsertTextIntoHTMLHead("<body>", text, cssLink)
+        text = InsertTextIntoHTMLHead("<body>", text, scriptLink)
+        html.writelines(text)
 
 ####################################
 #main
