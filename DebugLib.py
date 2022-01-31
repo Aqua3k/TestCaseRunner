@@ -113,7 +113,7 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
 
 ####################################
 def InsertTextIntoHTMLHead(tag: str, HTMLStr: str, text: str) -> str:
-    """HTMLの文字列のHeadの中に別の文字列を挿入する"""
+    """HTMLの文字列のtagの中に別の文字列を挿入する"""
     HTMLStrList = HTMLStr.split("\n")
     HTMLStrList.insert(HTMLStrList.index(tag) + 1, text)
     return "\n".join(HTMLStrList)
@@ -122,29 +122,29 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
     """結果のHTMLファイルを作成する"""
     tableBody = []
     table = ""
-    for s in sl.CSVHeader: table += TableCell1.format(text=s)
+    for s in sl.CSVHeader: table += TableCellHeading.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
         table = ""
         link = HTMLLinkStr.format(path=os.path.join(inputFilePath, result.name), string=result.name)
-        table += TableCell2.format(text=link)
+        table += TableCell.format(text=link)
         if not result.errFlg:
             text = str(result.score)
             link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
-            table += TableCell2.format(text=link)
+            table += TableCell.format(text=link)
         else:
             text = "RE"
             link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
             table += TableColoredCell.format(color="gold", text=link)
-        table += TableCell2.format(text=str(round(result.time, 3)))
-        for x in result.otherList: table += TableCell2.format(text=str(x))
+        table += TableCell.format(text=str(round(result.time, 3)))
+        for x in result.otherList: table += TableCell.format(text=str(x))
         tableBody.append(TableLine.format(text=table))
-    tableAll = Table.format(body="\n".join(tableBody))
+    tableAll = TableHeading.format(body="\n".join(tableBody))
 
     resultFileName = "result.html"
     with open(resultFileName ,'w', encoding='utf-8', newline='\n') as html:
         text = HTMLText.format(body=tableAll, title="Result")
-        text = InsertTextIntoHTMLHead("<body>", text, cssLink2)
+        text = InsertTextIntoHTMLHead("<body>", text, cssLink)
         text = InsertTextIntoHTMLHead("<body>", text, scriptLink)
         html.writelines(text)
 
