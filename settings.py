@@ -1,17 +1,9 @@
 ####################################
-#statistics
-scoreStr = "score"
-statisticsInfoArray = []
-
-statisticsDirec = "statistics"
-csvFileName     = "Statistics.csv"
-
-####################################
-#入力がファイルのパス
+#入力ファイルの場所
 inputFilePath = "in"
 
 ####################################
-#結果のパス
+#ファイル出力する場所
 resultFilePath = "out"
 
 ####################################
@@ -23,5 +15,10 @@ logFilePath = "log"
 scoreFileName = "summary.txt"
 
 ####################################
-#エラーメッセージ
-messagePath = "message"
+#statistics
+makeFigure = True
+scoreStr   = "score"
+statisticsInfoArray = []
+
+statisticsDirec = "statistics"
+csvFileName     = "Statistics.csv"
