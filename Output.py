@@ -2,23 +2,26 @@ import shutil
 import glob
 import datetime
 import os
+import csv
 
 from MyLib import ResultInfo
 from HTMLtemplate import *
 from settings import *
-import StatisticsLib as sl
 
 CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
 
 ####################################
-def InitAll():
+def InitAll() -> None:
+    """初期化処理のまとめ"""
     InitLogFile()
 
-def MakeAllResult(resultAll):
+def MakeAllResult(resultAll: list[ResultInfo]) -> None:
+    """ファイルに出力処理のまとめ"""
     MakeSummaryFile(resultAll)
     MakeHTML(resultAll)
-    if makeCSV:
-        MakeCSVFile(resultAll)
+    MakeCSVFile(resultAll)
+    if makeFigure:
+        import StatisticsLib as sl #外部モジュールのimportが必要なのでここに
         sl.statisticsMain()
     MakeLog()
 
@@ -31,10 +34,23 @@ def InitLogFile() -> None:
 ####################################
 def MakeCSVFile(resultAll: list[ResultInfo]) -> None:
     """CSVファイルを作成"""
-    sl.InitCSV()
-    sl.AddCSVFile(CSVHeader)
+    InitCSV()
+    AddCSVFile(CSVHeader)
     for result in resultAll:
-        sl.AddCSVFile(result.GetMember())
+        AddCSVFile(result.GetMember())
+
+def InitCSV() -> None:
+    """CSVフォルダを初期化する"""
+    shutil.rmtree(statisticsDirec, ignore_errors=True)
+    os.mkdir(statisticsDirec)
+
+def AddCSVFile(array: list[str]) -> None:
+    """CSVファイルにarrayを追加する"""
+    path = os.path.join(statisticsDirec, csvFileName)
+    array = list(map(str, array))
+    with open(path, 'a', newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(array)
 
 ####################################
 def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
@@ -47,8 +63,10 @@ def MakeSummaryFile(resultAll: list[ResultInfo]) -> None:
     f = open(scoreFileName, 'w')
     f.write(str(len(resultAll)) + " files inputs" + "\n")
     f.write("score average is " + str(sum(scoresList)/len(resultAll)) + "\n")
-    f.write("max score is " + str(max(scoresList)) + ", filename is " + fileNameList[scoresList.index(max(scoresList))] + "\n")
-    f.write("min score is " + str(min(scoresList)) + ", filename is " + fileNameList[scoresList.index(min(scoresList))] + "\n")
+    f.write("max score is " + str(max(scoresList)) + ", filename is " +\
+         fileNameList[scoresList.index(max(scoresList))] + "\n")
+    f.write("min score is " + str(min(scoresList)) + ", filename is " +\
+         fileNameList[scoresList.index(min(scoresList))] + "\n")
     f.write("\n")
     for result in resultAll:
         f.write(os.path.basename(result.name) + " " + str(result.score) + "\n")
