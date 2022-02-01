@@ -2,10 +2,9 @@ import csv
 import pandas as pd
 import matplotlib.pyplot as plt
 import shutil
-from settings import *
 import os
 
-CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
+from settings import *
 
 ####################################
 

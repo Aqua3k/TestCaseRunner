@@ -1,30 +1,25 @@
-HTMLLinkStr = '<a href="{path}">{string}</a><br>'
-
-#後でcssの体裁整えるときのため削除じゃなくてコメントアウト
-#cssLink   = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css">'
-cssLink    = '<link rel="stylesheet" href="SortTable.css">'
-scriptLink = '<script type="text/javascript" src="Table.js"></script>'
-
-TableHeading     = '<table id="sortTable">{body}</table>'
-TableLine        = '<tr>{text}</tr>'
-TableCellHeading = '<th cmanSortBtn>{text}</th>'
-TableCell        = '<td>{text}</td>'
-TableColoredCell = '<th bgcolor={color}>{text}</th>'
-
-HTMLText = '''
-<html>
-<head>
-<meta charset="utf-8">
-<title>{title}</title>
-</head>
-<body>
-{body}
-</body>
-</html>
-'''
-
 import copy
 from typing import Any
+
+class FileControl:
+    """入力させるファイルの情報管理"""
+    def __init__(self):
+        self.fileName = ""
+        self.fileContents = ""
+    def SetFileName(self, name: str) -> str:
+        """ファイルの名前をSet"""
+        self.fileName = name
+    def GetFileName(self) -> str:
+        """現在Setしてあるファイルの名前を取得"""
+        return self.fileName
+    def SetFileContents(self: str) -> None:
+        """ファイルの中身をSetする"""
+        with open(self.fileName) as f:
+            self.fileContents = [s.strip() for s in f.readlines()][::-1]
+    def GetFileContentsLine(self) -> str:
+        """ファイルの中身を1行分Get(inputと同等の動作)"""
+        return self.fileContents.pop()
+
 class ResultInfo:
     """実行結果の情報管理用のクラス"""
     def __init__(self, name: str, score: str, time: float, errFlg: bool, errMsg: str, otherList: list[Any]):
@@ -41,3 +36,4 @@ class ResultInfo:
     def __lt__(self, other) -> bool:
         """__lt__を定義しておくとクラスのままソートが可能になる"""
         return self.name < other.name
+

@@ -1,5 +1,6 @@
 ####################################
 #statistics
+makeCSV  = True
 scoreStr = "score"
 statisticsInfoArray = []
 
