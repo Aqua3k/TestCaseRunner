@@ -1,6 +1,6 @@
 import sys
 import glob
-import FileLib as fl
+from FileLib import *
 import StatisticsLib as sl
 from settings import *
 import time
@@ -16,7 +16,7 @@ def ExacProg() -> ResultInfo:
     """プログラムを実行して結果を返す"""
     t_start = time.time()
     errMessage = ""
-    name = os.path.basename(fl.GetFileName())
+    name = os.path.basename(File.GetFileName())
     errFlg = False
     score = "None"
     try:
@@ -69,7 +69,7 @@ def DebugPrint(*arg: Any, **keys: Any) -> None:
 
 def DebugInput() -> str:
     """Debug用の入力"""
-    return str(fl.fileContents.pop())
+    return str(File.GetFileContentsLine())
 
 ####################################
 def InitLogFile() -> None:
@@ -83,7 +83,7 @@ def GetAllFileName() -> list[str]:
 
 def GetLogFileName() -> str:
     """現在のLogファイルの名前を返す"""
-    return os.path.basename(fl.GetFileName())
+    return os.path.basename(File.GetFileName())
 
 ####################################
 def MakeCSVFile(resultAll: list[ResultInfo]) -> None:
@@ -151,12 +151,15 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
 ####################################
 #main
 
+File = None
 def main() -> None:
+    global File
+    File = FileControl()
     resultAll = []
     InitLogFile()
     for filename in GetAllFileName():
-        fl.SetFileName(filename)
-        fl.SetFileContents()
+        File.SetFileName(filename)
+        File.SetFileContents()
         result = ExacProg()
         resultAll.append(result)
     MakeSummaryFile(resultAll)

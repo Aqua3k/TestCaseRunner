@@ -1,17 +1,14 @@
-fileName = ""
-def SetFileName(name: str) -> None:
-    """現在の実行中の入力ファイルの名前をセット"""
-    global fileName
-    fileName = name
-def GetFileName() -> str:
-    """現在の実行中の入力ファイルの名前をゲット"""
-    global fileName
-    return fileName
-
-fileContents = ""
-def SetFileContents() -> None:
-    """ファイルの中身をセットする"""
-    global fileContents
-    path = GetFileName()
-    with open(path) as f:
-        fileContents = [s.strip() for s in f.readlines()][::-1]
+class FileControl:
+    def __init__(self):
+        self.fileName = ""
+        self.fileContents = ""
+    def SetFileName(self, name: str) -> str:
+        self.fileName = name
+    def GetFileName(self) -> str:
+        return self.fileName
+    def SetFileContents(self: str) -> None:
+        with open(self.fileName) as f:
+            self.fileContents = [s.strip() for s in f.readlines()][::-1]
+    def GetFileContentsLine(self) -> str:
+        """ファイルの中身を1行分Get(inputと同等の動作)"""
+        return self.fileContents.pop()
