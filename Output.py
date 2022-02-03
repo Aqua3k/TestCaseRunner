@@ -106,7 +106,8 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
     resultFileName = "result.html"
     with open(resultFileName ,'w', encoding='utf-8', newline='\n') as html:
         text = HTMLText.format(body=tableAll, title="Result")
-        text = InsertTextIntoHTMLHead("<body>", text, cssLink)
+        text = InsertTextIntoHTMLHead("<body>", text, cssLink1)
+        text = InsertTextIntoHTMLHead("<body>", text, cssLink2)
         text = InsertTextIntoHTMLHead("<body>", text, scriptLink)
         html.writelines(text)
 

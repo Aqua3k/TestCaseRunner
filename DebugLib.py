@@ -28,7 +28,7 @@ def ExacProg() -> ResultInfo:
     errMessage = ""
     name = os.path.basename(File.GetFileName())
     errFlg = False
-    score = "None"
+    score = ""
     try:
         import main
         main.print = DebugPrint
@@ -36,12 +36,15 @@ def ExacProg() -> ResultInfo:
         _score = main.main()
         if type(_score) is int or type(_score) is float:
             score = _score
+        else:
+            score = "None"
     except:
         errFlg = True
         print("error in ", name)
         errMessage = traceback.format_exc()
         DebugPrint("------------------------------")
         DebugPrint(errMessage)
+        score = "RE"
     t_end = time.time()
 
     lis = []

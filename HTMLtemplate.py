@@ -1,8 +1,7 @@
-HTMLLinkStr = '<a href="{path}">{string}</a><br>'
+HTMLLinkStr = '<a href="{path}" target="_blank" rel="noopener noreferrer">{string}</a><br>'
 
-#後でcssの体裁整えるときのため削除じゃなくてコメントアウト
-#cssLink   = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/kognise/water.css@latest/dist/light.min.css">'
-cssLink    = '<link rel="stylesheet" href="SortTable.css">'
+cssLink1   = '<link rel="stylesheet" href="https://newcss.net/new.min.css">'
+cssLink2   = '<link rel="stylesheet" href="SortTable.css">'
 scriptLink = '<script type="text/javascript" src="Table.js"></script>'
 
 TableHeading     = '<table id="sortTable">{body}</table>'
