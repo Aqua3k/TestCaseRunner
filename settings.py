@@ -22,3 +22,7 @@ statisticsInfoArray = []
 
 statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
+
+####################################
+#visualizer
+useVisualizer = True
