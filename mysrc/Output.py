@@ -57,7 +57,7 @@ def MakeSummaryInfo(resultAll: list[ResultInfo]) -> str:
     fileNameList, scoresList = [], []
     for result in resultAll:
         fileNameList.append(os.path.basename(result.name))
-        scoresList.append(0 if result.score == "None" else int(result.score))
+        scoresList.append(0 if result.score == "None" or result.errFlg else int(result.score))
 
     string = []
     string.append(str(len(resultAll)) + " files inputs")
@@ -81,20 +81,24 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
     """結果のHTMLファイルを作成する"""
     tableBody = []
     table = ""
+    table += '<th>in</th>'
+    table += '<th>out</th>'
     for s in CSVHeader: table += TableCellHeading.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
         table = ""
-        link = HTMLLinkStr.format(path=os.path.join(inputFilePath, result.name), string=result.name)
-        table += TableCell.format(text=link)
+        link1 = HTMLLinkStr.format(path=os.path.join(inputFilePath, result.name), string="+")
+        table += TableCell.format(text=link1)
+        link2 = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string="+")
+        table += TableCell.format(text=link2)
+
+        table += TableCell.format(text=result.name)
         if not result.errFlg:
             text = str(result.score)
-            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
-            table += TableCell.format(text=link)
+            table += TableCell.format(text=text)
         else:
             text = "RE"
-            link = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string=text)
-            table += TableColoredCell.format(color="gold", text=link)
+            table += TableColoredCell.format(color="gold", text=text)
         table += TableCell.format(text=str(round(result.time, 3)))
         for x in result.otherList: table += TableCell.format(text=str(x))
         tableBody.append(TableLine.format(text=table))

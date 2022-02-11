@@ -8,7 +8,7 @@ TableHeading     = '<table id="sortTable">{body}</table>'
 TableLine        = '<tr>{text}</tr>'
 TableCellHeading = '<th cmanSortBtn>{text}</th>'
 TableCell        = '<td>{text}</td>'
-TableColoredCell = '<th bgcolor={color}>{text}</th>'
+TableColoredCell = '<td bgcolor={color}>{text}</td>'
 
 HTMLText = '''
 <html>
