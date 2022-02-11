@@ -25,4 +25,4 @@ csvFileName     = "Statistics.csv"
 
 ####################################
 #visualizer
-useVisualizer = True
+useVisualizer = False
