@@ -5,3 +5,7 @@ log/
 statistics/
 *.html
 summary.txt
+target/
+*.lock
+*.toml
+src/
