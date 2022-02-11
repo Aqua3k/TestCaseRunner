@@ -3,7 +3,7 @@ import sys
 import shutil
 import os
 
-from settings import *
+from mysrc.settings import *
 
 inFileName  = "in.txt"
 outFileName = "out.txt"

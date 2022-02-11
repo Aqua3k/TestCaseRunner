@@ -4,9 +4,9 @@ import datetime
 import os
 import csv
 
-from MyLib import ResultInfo
-from HTMLtemplate import *
-from settings import *
+from mysrc.MyLib import ResultInfo
+from mysrc.HTMLtemplate import *
+from mysrc.settings import *
 
 CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
 
@@ -20,7 +20,7 @@ def MakeAllResult(resultAll: list[ResultInfo]) -> None:
     MakeHTML(resultAll)
     MakeCSVFile(resultAll)
     if makeFigure:
-        import StatisticsLib as sl #外部モジュールのimportが必要なのでここに
+        import mysrc.StatisticsLib as sl #外部モジュールのimportが必要なのでここに
         sl.statisticsMain()
     MakeLog()
 

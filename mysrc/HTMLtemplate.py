@@ -1,8 +1,8 @@
 HTMLLinkStr = '<a href="{path}" target="_blank" rel="noopener noreferrer">{string}</a><br>'
 
 cssLink1   = '<link rel="stylesheet" href="https://newcss.net/new.min.css">'
-cssLink2   = '<link rel="stylesheet" href="SortTable.css">'
-scriptLink = '<script type="text/javascript" src="Table.js"></script>'
+cssLink2   = '<link rel="stylesheet" href="mysrc/SortTable.css">'
+scriptLink = '<script type="text/javascript" src="mysrc/Table.js"></script>'
 
 TableHeading     = '<table id="sortTable">{body}</table>'
 TableLine        = '<tr>{text}</tr>'

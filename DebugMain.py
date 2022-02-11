@@ -5,11 +5,11 @@ import os
 import traceback
 from typing import Any
 
-from settings import *
-from MyLib import *
-from HTMLtemplate import *
-from Output import InitAll, MakeAllResult
-from VisualizerLib import GetScoreFromVisualizer
+from mysrc.settings import *
+from mysrc.MyLib import *
+from mysrc.HTMLtemplate import *
+from mysrc.Output import InitAll, MakeAllResult
+from mysrc.VisualizerLib import GetScoreFromVisualizer
 
 ####################################
 def DebugPrint(*arg: Any, **keys: Any) -> None:
