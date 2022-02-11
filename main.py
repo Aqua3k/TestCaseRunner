@@ -1,5 +1,4 @@
-import random
 def main():
-    return random.randint(0,10000)
+    return 0
 if __name__ == '__main__':
     main()

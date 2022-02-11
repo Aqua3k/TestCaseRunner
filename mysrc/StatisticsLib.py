@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-from settings import *
+from mysrc.settings import *
 
 ####################################
 def statisticsMain() -> None:
