@@ -3,6 +3,7 @@ import glob
 import datetime
 import os
 import csv
+import datetime
 
 from mysrc.MyLib import ResultInfo
 from mysrc.HTMLtemplate import *
@@ -60,12 +61,14 @@ def MakeSummaryInfo(resultAll: list[ResultInfo]) -> str:
         scoresList.append(0 if result.score == "None" or result.errFlg else int(result.score))
 
     string = []
-    string.append(str(len(resultAll)) + " files inputs")
-    string.append("score average is " + str(sum(scoresList)/len(resultAll)))
-    string.append("max score is " + str(max(scoresList)) + ", filename is " +\
-         fileNameList[scoresList.index(max(scoresList))])
-    string.append("min score is " + str(min(scoresList)) + ", filename is " +\
-         fileNameList[scoresList.index(min(scoresList))])
+    string.append("Input file number: " + str(len(resultAll)))
+    string.append("Average Score: " + str(sum(scoresList)/len(resultAll)))
+    string.append("")
+    string.append("Max Score: " + str(max(scoresList)))
+    string.append("FileName: " + fileNameList[scoresList.index(max(scoresList))])
+    string.append("")
+    string.append("Minimum Score: " + str(min(scoresList)))
+    string.append("FileName: " + fileNameList[scoresList.index(min(scoresList))])
     string.append("")
     return "<br>\n".join(string)
 
@@ -104,8 +107,12 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         tableBody.append(TableLine.format(text=table))
     tableAll = "<h2>Table</h2>"
     tableAll += TableHeading.format(body="\n".join(tableBody))
-
-    body = "<h2>Summary</h2>"
+    
+    now = datetime.datetime.now()
+    nowStr = now.strftime('%Y/%m/%d %H:%M:%S')
+    body = '<h6>Creation date and time: {text}</h6>'.format(text=nowStr)
+    
+    body += "<h2>Summary</h2>"
     body += MakeSummaryInfo(resultAll)
     body += tableAll
 
