@@ -22,11 +22,14 @@ class FileControl:
 
 class ResultInfo:
     """実行結果の情報管理用のクラス"""
-    def __init__(self, name: str, score: str, time: float, errFlg: bool, errMsg: str, otherList: list[Any]):
+    AC = 0
+    RE = 1
+    TLE = 2
+    def __init__(self, name: str, score: str, time: float, errStatus: int, errMsg: str, otherList: list[Any]):
         self.name      = name
         self.score     = score
         self.time      = time
-        self.errFlg    = errFlg
+        self.errStatus    = errStatus
         self.errMsg    = errMsg
         self.otherList = copy.deepcopy(otherList)
     def GetMember(self) -> list[str]:
