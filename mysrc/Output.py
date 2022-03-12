@@ -86,6 +86,7 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
     table = ""
     table += '<th>in</th>'
     table += '<th>out</th>'
+    table += '<th>stdout</th>'
     for s in CSVHeader: table += TableCellHeading.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
@@ -94,6 +95,8 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         table += TableCell.format(text=link1)
         link2 = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string="+")
         table += TableCell.format(text=link2)
+        link3 = HTMLLinkStr.format(path=os.path.join(resultFilePath, "stdout" + result.name), string="+")
+        table += TableCell.format(text=link3)
 
         table += TableCell.format(text=result.name)
         if result.errStatus == ResultInfo.AC:

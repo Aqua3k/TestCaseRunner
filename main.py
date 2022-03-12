@@ -1,3 +1,5 @@
+# write your code here.
+
 TURN_MAX = 300
 
 def main():
@@ -15,6 +17,8 @@ def main():
     for turn in range(TURN_MAX):
         print("."*m, flush=True)
         _ = input()
+    import random
+    return random.randint(0, 100)
     
 if __name__ == '__main__':
     main()

@@ -25,5 +25,5 @@ csvFileName     = "Statistics.csv"
 
 ####################################
 #tester commands
-myCmd = "python main.py"
-command = "cargo run --release --bin tester {myCmd} < {inFile} > {outFile}"
+useTester = True
+command = "cargo run --release --bin tester python main.py < {inFile} > {outFile}"

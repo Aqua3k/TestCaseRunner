@@ -56,13 +56,33 @@ def EndProcess():
 def ExacProg() -> ResultInfo:
     """プログラムを実行して結果を返す"""
     t_start = time.time()
-    timeLimit = 2
-    errMessage = ""
     name = os.path.basename(File.GetFileName())
+    
+    score, errStatus, stdOut = ExacCommand(name)
+
+    t_end = time.time()
+
+    lis = []
+    # TODO: デバッグ用の情報を取得する
+
+    # 標準出力をファイル出力
+    outFileName = "stdout" + name
+    path = os.path.join(resultFilePath, outFileName)
+    with open(path, mode='w') as f:
+        f.write(stdOut)
+
+    #Pythonは自動でimportガードがついてるので一度モジュールを削除する
+    if 'main' in sys.modules: del sys.modules["main"]
+
+    return ResultInfo(name, score, t_end-t_start, errStatus, stdOut, lis)
+
+def ExacCommand(name: str):
+    timeLimit = 2
     errStatus = ResultInfo.AC
     score = ""
+    stdOut = ""
 
-    cmd = command.format(myCmd=myCmd, inFile=inFile, outFile=outFile)
+    cmd = command.format(inFile=inFile, outFile=outFile)
 
     #inファイルコピー
     path = os.path.join(inputFilePath, name)
@@ -74,6 +94,7 @@ def ExacProg() -> ResultInfo:
              shell=True, text=True, timeout=timeLimit)
 
         if r.returncode != 0: errStatus = ResultInfo.RE
+        stdOut = r.stdout
         score = GetScoreFromStandardOutput(r.stdout)
 
         #outをコピー
@@ -96,15 +117,7 @@ def ExacProg() -> ResultInfo:
         DebugPrint("------------------------------")
         DebugPrint(errMsg)
     
-    t_end = time.time()
-
-    lis = []
-    # TODO: デバッグ用の情報を取得する
-
-    #Pythonは自動でimportガードがついてるので一度モジュールを削除する
-    if 'main' in sys.modules: del sys.modules["main"]
-
-    return ResultInfo(name, score, t_end-t_start, errStatus, errMessage, lis)
+    return score, errStatus, stdOut
 
 ####################################
 #main

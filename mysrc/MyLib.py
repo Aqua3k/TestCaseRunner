@@ -25,13 +25,13 @@ class ResultInfo:
     AC = 0
     RE = 1
     TLE = 2
-    def __init__(self, name: str, score: str, time: float, errStatus: int, errMsg: str, otherList: list[Any]):
+    def __init__(self, name: str, score: str, time: float, errStatus: int, stdOut: str, otherList: list[Any]):
         self.name      = name
         self.score     = score
         self.time      = time
-        self.errStatus    = errStatus
-        self.errMsg    = errMsg
+        self.errStatus = errStatus
         self.otherList = copy.deepcopy(otherList)
+        self.stdOut    = stdOut
     def GetMember(self) -> list[str]:
         """結果を配列にする"""
         ret = [self.name, self.score, self.time] + copy.deepcopy(self.otherList)
