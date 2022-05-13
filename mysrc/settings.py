@@ -1,29 +1,17 @@
-####################################
-#入力ファイルの場所
-inputFilePath = "in"
+#ファイル関係
+inputFilePath = "in"        #入力ファイルの場所
+resultFilePath = "out"      #ファイル出力する場所
 
-####################################
-#ファイル出力する場所
-resultFilePath = "out"
-
-####################################
 #log
-logFilePath = "log"
+logFilePath = "log"         #Logファイルを出力するパス
 
-####################################
-#生成するScore情報を書き込むファイルのパス
-scoreFileName = "summary.txt"
-
-####################################
-#statistics
+#statistics関係
 makeFigure = True
 scoreStr   = "score"
 statisticsInfoArray = []
-
 statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
 
-####################################
-#tester commands
-useTester = True
+#コマンド関係
+#実行コマンド ただし、inFileに入力ファイルパス、outFileに出力ファイルパスが入る
 command = "cargo run --release --bin tester python main.py < {inFile} > {outFile}"

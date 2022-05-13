@@ -11,7 +11,6 @@ from mysrc.settings import *
 
 CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
 
-####################################
 def InitAll() -> None:
     """初期化処理のまとめ"""
     InitLogFile()
@@ -25,13 +24,11 @@ def MakeAllResult(resultAll: list[ResultInfo]) -> None:
         sl.statisticsMain()
     MakeLog()
 
-####################################
 def InitLogFile() -> None:
     """Logフォルダの初期化"""
     shutil.rmtree(resultFilePath, ignore_errors=True)
     os.mkdir(resultFilePath)
 
-####################################
 def MakeCSVFile(resultAll: list[ResultInfo]) -> None:
     """CSVファイルを作成"""
     InitCSV()
@@ -52,7 +49,6 @@ def AddCSVFile(array: list[str]) -> None:
         writer = csv.writer(f)
         writer.writerow(array)
 
-####################################
 def MakeSummaryInfo(resultAll: list[ResultInfo]) -> str:
     """サマリ情報を作る"""
     fileNameList, scoresList = [], []
@@ -71,8 +67,6 @@ def MakeSummaryInfo(resultAll: list[ResultInfo]) -> str:
     string.append("FileName: " + fileNameList[scoresList.index(min(scoresList))])
     string.append("")
     return "<br>\n".join(string)
-
-####################################
 
 def InsertTextIntoHTMLHead(tag: str, HTMLStr: str, text: str) -> str:
     """HTMLの文字列のtagの中に別の文字列を挿入する"""
@@ -131,7 +125,6 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         text = InsertTextIntoHTMLHead("<body>", text, scriptLink)
         html.writelines(text)
 
-####################################
 def MakeLog() -> None:
     """html, csv, mainファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
