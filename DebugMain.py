@@ -5,6 +5,8 @@ import os
 import shutil
 import subprocess
 
+import psutil
+
 from mysrc.settings import *
 from mysrc.MyLib import *
 from mysrc.HTMLtemplate import *
@@ -54,7 +56,7 @@ def ExacProg() -> ResultInfo:
     t_start = time.time()
     name = os.path.basename(nextInputFileName)
     
-    score, errStatus, stdOut = ExacCommand(name)
+    score, errStatus, stdout = ExacCommand(name)
 
     t_end = time.time()
 
@@ -65,12 +67,20 @@ def ExacProg() -> ResultInfo:
     outFileName = "stdout" + name
     path = os.path.join(resultFilePath, outFileName)
     with open(path, mode='w') as f:
-        f.write(stdOut)
+        f.write(stdout)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
 
-    return ResultInfo(name, score, t_end-t_start, errStatus, stdOut, lis)
+    return ResultInfo(name, score, t_end-t_start, errStatus, stdout, lis)
+
+
+def kill(proc_pid):
+    """プロセルをkillする"""
+    process = psutil.Process(proc_pid)
+    for proc in process.children(recursive=True):
+        proc.kill()
+    process.kill()
 
 def ExacCommand(name: str):
     """プログラムを実行する
@@ -81,10 +91,9 @@ def ExacCommand(name: str):
     Returns:
         int, int, str: 得点, 結果のステータス, 標準出力
     """
-    timeLimit = 2
     errStatus = ResultInfo.AC
     score = ""
-    stdOut = ""
+    stdout = ""
 
     cmd = command.format(inFile=inFile, outFile=outFile)
 
@@ -94,19 +103,20 @@ def ExacCommand(name: str):
     
     try:
         #実行
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,\
-             shell=True, text=True, timeout=timeLimit)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = proc.communicate(timeout=timeLimit)
 
-        if r.returncode != 0: errStatus = ResultInfo.RE
-        stdOut = r.stdout
-        score = GetScoreFromStandardOutput(r.stdout)
+        if proc.returncode != 0: errStatus = ResultInfo.RE
+        stdout = result[1]
+        score = GetScoreFromStandardOutput(stdout)
 
         #outをコピー
         path = os.path.join(resultFilePath, name)
         shutil.copy(outFile, path)
 
-    except: #ここに入るのはTLEしたときだけのはず
+    except: #ここに入るのはTLEしたときだけ
         errStatus = ResultInfo.TLE
+        kill(proc.pid) #proc.kill()ではうまくいかなかったので
     
     if errStatus == ResultInfo.RE or errStatus == ResultInfo.TLE:
         if errStatus == ResultInfo.RE:
@@ -117,7 +127,7 @@ def ExacCommand(name: str):
             msg = "TLE"
         print(msg + " in ", name)
     
-    return score, errStatus, stdOut
+    return score, errStatus, stdout
 
 def main() -> None:
     """main処理"""

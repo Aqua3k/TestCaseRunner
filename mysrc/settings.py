@@ -1,3 +1,5 @@
+timeLimit = 2 #実行を打ち切る時間
+
 #ファイル関係
 inputFilePath = "in"        #入力ファイルの場所
 resultFilePath = "out"      #ファイル出力する場所
