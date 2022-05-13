@@ -1,5 +1,0 @@
-def main():
-    # Solve a problem
-
-if __name__ == '__name__':
-    main()

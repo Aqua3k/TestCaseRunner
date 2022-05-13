@@ -58,7 +58,7 @@ def MakeSummaryInfo(resultAll: list[ResultInfo]) -> str:
     fileNameList, scoresList = [], []
     for result in resultAll:
         fileNameList.append(os.path.basename(result.name))
-        scoresList.append(0 if result.score == "None" or result.errFlg else int(result.score))
+        scoresList.append(0 if result.score == "None" or result.errStatus != ResultInfo.AC else int(result.score))
 
     string = []
     string.append("Input file number: " + str(len(resultAll)))
@@ -86,6 +86,7 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
     table = ""
     table += '<th>in</th>'
     table += '<th>out</th>'
+    table += '<th>stdout</th>'
     for s in CSVHeader: table += TableCellHeading.format(text=s)
     tableBody.append(TableLine.format(text=table))
     for result in resultAll:
@@ -94,14 +95,20 @@ def MakeHTML(resultAll: list[ResultInfo]) -> None:
         table += TableCell.format(text=link1)
         link2 = HTMLLinkStr.format(path=os.path.join(resultFilePath, result.name), string="+")
         table += TableCell.format(text=link2)
+        link3 = HTMLLinkStr.format(path=os.path.join(resultFilePath, "stdout" + result.name), string="+")
+        table += TableCell.format(text=link3)
 
         table += TableCell.format(text=result.name)
-        if not result.errFlg:
+        if result.errStatus == ResultInfo.AC:
             text = str(result.score)
             table += TableCell.format(text=text)
-        else:
+        elif result.errStatus == ResultInfo.RE:
             text = "RE"
             table += TableColoredCell.format(color="gold", text=text)
+        elif result.errStatus == ResultInfo.TLE:
+            text = "TLE"
+            table += TableColoredCell.format(color="gold", text=text)
+        else: assert 0, "error in MakeHTML function."
         table += TableCell.format(text=str(round(result.time, 3)))
         for x in result.otherList: table += TableCell.format(text=str(x))
         tableBody.append(TableLine.format(text=table))

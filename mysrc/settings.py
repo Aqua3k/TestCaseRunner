@@ -24,5 +24,6 @@ statisticsDirec = "statistics"
 csvFileName     = "Statistics.csv"
 
 ####################################
-#visualizer
-useVisualizer = False
+#tester commands
+useTester = True
+command = "cargo run --release --bin tester python main.py < {inFile} > {outFile}"

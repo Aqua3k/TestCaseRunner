@@ -2,16 +2,20 @@ import sys
 import glob
 import time
 import os
-import traceback
+import shutil
+import subprocess
 from typing import Any
 
 from mysrc.settings import *
 from mysrc.MyLib import *
 from mysrc.HTMLtemplate import *
 from mysrc.Output import InitAll, MakeAllResult
-from mysrc.VisualizerLib import GetScoreFromVisualizer
 
 ####################################
+
+inFile = "in.txt"
+outFile = "out.txt"
+
 def DebugPrint(*arg: Any, **keys: Any) -> None:
     """Debug用の出力"""
     f = open(os.path.join(resultFilePath, os.path.basename(File.GetFileName())), 'a')
@@ -23,44 +27,97 @@ def DebugInput() -> str:
     return str(File.GetFileContentsLine())
 
 ####################################
+
+def GetScoreFromStandardOutput(string: str) -> int:
+    """標準出力から得点を取り出す"""
+    u = string.lower()
+    if "score" in u:
+        idx = u.index("score")
+    else:
+        idx = 0
+    s = ""
+    flg = False
+    for t in u[idx:]:
+        if "0" <= t <= "9":
+            s += t
+            flg = True
+        else:
+            if flg: break
+    try   : ret = int(s)
+    except: ret = 0
+    return ret
+
+def EndProcess():
+    time.sleep(3) # コマンド実行の関係で少し待機させる
+    if os.path.isfile(inFile): os.remove(inFile)
+    if os.path.isfile(outFile): os.remove(outFile)
+
+####################################
 def ExacProg() -> ResultInfo:
     """プログラムを実行して結果を返す"""
     t_start = time.time()
-    errMessage = ""
     name = os.path.basename(File.GetFileName())
-    errFlg = False
-    score = ""
-    try:
-        import main
-        main.print = DebugPrint
-        main.input = DebugInput
-        _score = main.main()
-        if type(_score) is int or type(_score) is float:
-            score = _score
-        else:
-            score = "None"
-    except:
-        errFlg = True
-        print("error in ", name)
-        errMessage = traceback.format_exc()
-        DebugPrint("------------------------------")
-        DebugPrint(errMessage)
-        score = "RE"
+    
+    score, errStatus, stdOut = ExacCommand(name)
+
     t_end = time.time()
 
-    if useVisualizer and not errFlg:
-        score = GetScoreFromVisualizer(name)
-
     lis = []
-    for val in statisticsInfoArray:
-        try:    cont = str(getattr(main, val))
-        except: cont = "None"
-        lis.append(cont)
+    # TODO: デバッグ用の情報を取得する
+
+    # 標準出力をファイル出力
+    outFileName = "stdout" + name
+    path = os.path.join(resultFilePath, outFileName)
+    with open(path, mode='w') as f:
+        f.write(stdOut)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
 
-    return ResultInfo(name, score, t_end-t_start, errFlg, errMessage, lis)
+    return ResultInfo(name, score, t_end-t_start, errStatus, stdOut, lis)
+
+def ExacCommand(name: str):
+    timeLimit = 2
+    errStatus = ResultInfo.AC
+    score = ""
+    stdOut = ""
+
+    cmd = command.format(inFile=inFile, outFile=outFile)
+
+    #inファイルコピー
+    path = os.path.join(inputFilePath, name)
+    shutil.copy(path, inFile)
+    
+    try:
+        #実行
+        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,\
+             shell=True, text=True, timeout=timeLimit)
+
+        if r.returncode != 0: errStatus = ResultInfo.RE
+        stdOut = r.stdout
+        score = GetScoreFromStandardOutput(r.stdout)
+
+        #outをコピー
+        path = os.path.join(resultFilePath, name)
+        shutil.copy(outFile, path)
+
+    except: #ここに入るのはTLEしたときだけのはず
+        errStatus = ResultInfo.TLE
+    
+    if errStatus == ResultInfo.RE or errStatus == ResultInfo.TLE:
+        if errStatus == ResultInfo.RE:
+            score = "RE"
+            msg = "RE "
+            errMsg = r.stdout
+        else:
+            score = "TLE"
+            msg = "TLE"
+            errMsg = "Time Limit Exceeded."
+        print(msg + " in ", name)
+        DebugPrint("------------------------------")
+        DebugPrint(errMsg)
+    
+    return score, errStatus, stdOut
 
 ####################################
 #main
@@ -77,6 +134,7 @@ def main() -> None:
         result = ExacProg()
         resultAll.append(result)
     MakeAllResult(resultAll)
+    EndProcess()
 
 if __name__ == "__main__":
     main()
