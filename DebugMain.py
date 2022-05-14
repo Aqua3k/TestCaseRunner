@@ -132,12 +132,12 @@ def ExacCommand(name: str):
 def main() -> None:
     """main処理"""
     global nextInputFileName
-    resultAll = []
+    resultAll = ResultInfoAll()
     InitAll()
     for filename in glob.glob(os.path.join(inputFilePath, "*")):
         nextInputFileName = filename
         result = ExacProg()
-        resultAll.append(result)
+        resultAll.add_result(result)
     MakeAllResult(resultAll)
     EndProcess()
 
