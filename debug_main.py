@@ -1,23 +1,16 @@
 import glob
-import time
 import os
 import shutil
 import datetime
 
 from mysrc.settings import *
 from mysrc.result_classes import ResultInfoAll
-from mysrc.program_rannner import exac_program, in_file, out_file
+from mysrc.program_rannner import exac_program
 
-def delete_file():
-    """不要なファイルを削除する"""
-    time.sleep(3) # コマンド実行の関係で少し待機させる
-    if os.path.isfile(in_file): os.remove(in_file)
-    if os.path.isfile(out_file): os.remove(out_file)
-
-def make_all_result(resultAll: ResultInfoAll) -> None:
+def make_results(results: ResultInfoAll) -> None:
     """ファイルに出力処理のまとめ"""
-    resultAll.make_html_file()
-    resultAll.make_csv_file()
+    results.make_html_file()
+    results.make_csv_file()
     if is_make_fig:
         import mysrc.statistics_lib as sl #外部モジュールのimportが必要なのでここに
         sl.statisticsMain()
@@ -45,13 +38,12 @@ def make_log() -> None:
 def main() -> None:
     """main処理"""
 
-    resultAll = ResultInfoAll()
+    results = ResultInfoAll()
     init_log()
     for filename in glob.glob(os.path.join(input_file_path, "*")):
         result = exac_program(filename)
-        resultAll.add_result(result)
-    make_all_result(resultAll)
-    delete_file()
+        results.add_result(result)
+    make_results(results)
 
 if __name__ == "__main__":
     main()
