@@ -4,36 +4,29 @@ import datetime
 import os
 import datetime
 
-from mysrc.MyLib import ResultInfoAll
-from mysrc.HTMLtemplate import *
+from mysrc.result_classes import ResultInfoAll
+from mysrc.html_templates import *
 from mysrc.settings import *
 
-CSVHeader = ["Test Case Name", "Score", "Time"] + statisticsInfoArray
-
-def InitAll() -> None:
+def init_all() -> None:
     """初期化処理のまとめ"""
-    InitLogFile()
+    init_log()
 
-def MakeAllResult(resultAll: ResultInfoAll) -> None:
+def make_all_result(resultAll: ResultInfoAll) -> None:
     """ファイルに出力処理のまとめ"""
     resultAll.make_html_file()
-    resultAll.MakeCSVFile()
-    if makeFigure:
-        import mysrc.StatisticsLib as sl #外部モジュールのimportが必要なのでここに
+    resultAll.make_csv_file()
+    if is_make_fig:
+        import mysrc.statistics_lib as sl #外部モジュールのimportが必要なのでここに
         sl.statisticsMain()
-    MakeLog()
+    make_log()
 
-def InitLogFile() -> None:
+def init_log() -> None:
     """Logフォルダの初期化"""
-    shutil.rmtree(resultFilePath, ignore_errors=True)
-    os.mkdir(resultFilePath)
+    shutil.rmtree(result_file_path, ignore_errors=True)
+    os.mkdir(result_file_path)
 
-def InitCSV() -> None:
-    """CSVフォルダを初期化する"""
-    shutil.rmtree(statisticsDirec, ignore_errors=True)
-    os.mkdir(statisticsDirec)
-
-def MakeLog() -> None:
+def make_log() -> None:
     """html, csv, mainファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     if logFilePath not in glob.glob("*"): os.mkdir(logFilePath)
@@ -45,4 +38,4 @@ def MakeLog() -> None:
     # htmlファイルコピー
     shutil.copy("result.html", path)
     # csvファイルコピー
-    shutil.copy(os.path.join(statisticsDirec, csvFileName), path)
+    shutil.copy(os.path.join(statistics_path, csv_file_name), path)

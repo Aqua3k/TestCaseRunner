@@ -8,15 +8,15 @@ import subprocess
 import psutil
 
 from mysrc.settings import *
-from mysrc.MyLib import *
-from mysrc.HTMLtemplate import *
-from mysrc.Output import InitAll, MakeAllResult
+from mysrc.result_classes import *
+from mysrc.html_templates import *
+from mysrc.output import init_all, make_all_result
 
-inFile = "in.txt"
-outFile = "out.txt"
-nextInputFileName = None #次に実行するケースの名前
+in_file = "in.txt"
+out_file = "out.txt"
+next_in_file = None #次に実行するケースの名前
 
-def GetScoreFromStandardOutput(string: str) -> int:
+def get_score_from_stdout(string: str) -> int:
     """標準出力から得点を取り出す
     
     Args:
@@ -41,48 +41,48 @@ def GetScoreFromStandardOutput(string: str) -> int:
     except: ret = 0
     return ret
 
-def EndProcess():
-    """プログラム終了の処理"""
+def delete_file():
+    """不要なファイルを削除する"""
     time.sleep(3) # コマンド実行の関係で少し待機させる
-    if os.path.isfile(inFile): os.remove(inFile)
-    if os.path.isfile(outFile): os.remove(outFile)
+    if os.path.isfile(in_file): os.remove(in_file)
+    if os.path.isfile(out_file): os.remove(out_file)
 
-def ExacProg() -> ResultInfo:
+def exac_program() -> ResultInfo:
     """プログラムを実行して結果を返す
     
     Returns:
         ResultInfo: 実行結果の情報
     """
-    t_start = time.time()
-    name = os.path.basename(nextInputFileName)
+    start_time = time.time()
+    name = os.path.basename(next_in_file)
     
-    score, errStatus, stdout = ExacCommand(name)
+    score, err_stat, stdout = exac_command(name)
 
-    t_end = time.time()
+    end_time = time.time()
 
     lis = []
     # TODO: デバッグ用の情報を取得する
 
     # 標準出力をファイル出力
-    outFileName = "stdout" + name
-    path = os.path.join(resultFilePath, outFileName)
+    out_file_name = "stdout" + name
+    path = os.path.join(result_file_path, out_file_name)
     with open(path, mode='w') as f:
         f.write(stdout)
 
     #Pythonは自動でimportガードがついてるので一度モジュールを削除する
     if 'main' in sys.modules: del sys.modules["main"]
 
-    return ResultInfo(name, score, t_end-t_start, errStatus, stdout, lis)
+    return ResultInfo(name, score, end_time - start_time, err_stat, stdout, lis)
 
 
-def kill(proc_pid):
-    """プロセルをkillする"""
+def kill_process(proc_pid):
+    """プロセスをkillする"""
     process = psutil.Process(proc_pid)
     for proc in process.children(recursive=True):
         proc.kill()
     process.kill()
 
-def ExacCommand(name: str):
+def exac_command(name: str):
     """プログラムを実行する
     
     Args:
@@ -91,35 +91,35 @@ def ExacCommand(name: str):
     Returns:
         int, int, str: 得点, 結果のステータス, 標準出力
     """
-    errStatus = ResultInfo.AC
+    err_stat = ResultInfo.AC
     score = ""
     stdout = ""
 
-    cmd = command.format(inFile=inFile, outFile=outFile)
+    cmd = command.format(in_file=in_file, out_file=out_file)
 
     #inファイルコピー
-    path = os.path.join(inputFilePath, name)
-    shutil.copy(path, inFile)
+    path = os.path.join(input_file_path, name)
+    shutil.copy(path, in_file)
     
     try:
         #実行
         proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        result = proc.communicate(timeout=timeLimit)
+        result = proc.communicate(timeout=time_limit)
 
-        if proc.returncode != 0: errStatus = ResultInfo.RE
+        if proc.returncode != 0: err_stat = ResultInfo.RE
         stdout = result[1]
-        score = GetScoreFromStandardOutput(stdout)
+        score = get_score_from_stdout(stdout)
 
         #outをコピー
-        path = os.path.join(resultFilePath, name)
-        shutil.copy(outFile, path)
+        path = os.path.join(result_file_path, name)
+        shutil.copy(out_file, path)
 
     except: #ここに入るのはTLEしたときだけ
-        errStatus = ResultInfo.TLE
-        kill(proc.pid) #proc.kill()ではうまくいかなかったので
+        err_stat = ResultInfo.TLE
+        kill_process(proc.pid) #proc.kill()ではうまくいかなかったので
     
-    if errStatus == ResultInfo.RE or errStatus == ResultInfo.TLE:
-        if errStatus == ResultInfo.RE:
+    if err_stat == ResultInfo.RE or err_stat == ResultInfo.TLE:
+        if err_stat == ResultInfo.RE:
             score = "RE"
             msg = "RE "
         else:
@@ -127,19 +127,19 @@ def ExacCommand(name: str):
             msg = "TLE"
         print(msg + " in ", name)
     
-    return score, errStatus, stdout
+    return score, err_stat, stdout
 
 def main() -> None:
     """main処理"""
-    global nextInputFileName
+    global next_in_file
     resultAll = ResultInfoAll()
-    InitAll()
-    for filename in glob.glob(os.path.join(inputFilePath, "*")):
-        nextInputFileName = filename
-        result = ExacProg()
+    init_all()
+    for filename in glob.glob(os.path.join(input_file_path, "*")):
+        next_in_file = filename
+        result = exac_program()
         resultAll.add_result(result)
-    MakeAllResult(resultAll)
-    EndProcess()
+    make_all_result(resultAll)
+    delete_file()
 
 if __name__ == "__main__":
     main()
