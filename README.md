@@ -20,16 +20,16 @@ in以下に任意個の入力用のtxtファイルを入れてください
 入力ファイルの名前は任意で問題ありません  
 
 ## 設定ファイル(settings.py)の設定   
-### statisticsInfoArray  
+### statistics_info_define_array  
 結果出力時にwatchしたい変数を指定します  
 main.pyの中で使っている変数名list[str]の形式で書いてください  
 例としてNとMを見たいときは  
-statisticsInfoArray = ["N", "M"]  
+statistics_info_define_array = ["N", "M"]  
 と書いてください  
 ただし、main.pyの中でグローバルスコープに入っている変数しか指定できず、配列は指定できません   
 この機能を使いたくないときは空のリスト[]を指定しておいてください  
 
-### makeFigure
+### is_make_fig
 この変数がTrueだと図を作成する処理が走ります  
 前述のように、図の出力にはpandasとmatplotlibが必要です  
 図を出力したくない場合やpandasとmatplotlibがインストールされていない場合はFalseにしてください
