@@ -1,45 +1,12 @@
-import sys
 import glob
 import time
 import os
 import shutil
-import subprocess
-
-import psutil
+import datetime
 
 from mysrc.settings import *
-from mysrc.result_classes import *
-from mysrc.html_templates import *
-from mysrc.output import init_all, make_all_result
-
-in_file = "in.txt"
-out_file = "out.txt"
-next_in_file = None #次に実行するケースの名前
-
-def get_score_from_stdout(string: str) -> int:
-    """標準出力から得点を取り出す
-    
-    Args:
-        string(str): 得点を取り出す元の文字列
-    Returns:
-        int: 得点
-    """
-    u = string.lower()
-    if "score" in u:
-        idx = u.index("score")
-    else:
-        idx = 0
-    s = ""
-    flg = False
-    for t in u[idx:]:
-        if "0" <= t <= "9":
-            s += t
-            flg = True
-        else:
-            if flg: break
-    try   : ret = int(s)
-    except: ret = 0
-    return ret
+from mysrc.result_classes import ResultInfoAll
+from mysrc.program_rannner import exac_program, in_file, out_file
 
 def delete_file():
     """不要なファイルを削除する"""
@@ -47,96 +14,41 @@ def delete_file():
     if os.path.isfile(in_file): os.remove(in_file)
     if os.path.isfile(out_file): os.remove(out_file)
 
-def exac_program() -> ResultInfo:
-    """プログラムを実行して結果を返す
-    
-    Returns:
-        ResultInfo: 実行結果の情報
-    """
-    start_time = time.time()
-    name = os.path.basename(next_in_file)
-    
-    score, err_stat, stdout = exac_command(name)
+def make_all_result(resultAll: ResultInfoAll) -> None:
+    """ファイルに出力処理のまとめ"""
+    resultAll.make_html_file()
+    resultAll.make_csv_file()
+    if is_make_fig:
+        import mysrc.statistics_lib as sl #外部モジュールのimportが必要なのでここに
+        sl.statisticsMain()
+    make_log()
 
-    end_time = time.time()
+def init_log() -> None:
+    """Logフォルダの初期化"""
+    shutil.rmtree(result_file_path, ignore_errors=True)
+    os.mkdir(result_file_path)
 
-    lis = []
-    # TODO: デバッグ用の情報を取得する
+def make_log() -> None:
+    """html, csv, mainファイルをコピーしてlog以下に保存する"""
+    timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+    if logFilePath not in glob.glob("*"): os.mkdir(logFilePath)
+    path =  os.path.join(logFilePath, str(timeInfo))
+    os.mkdir(path)
 
-    # 標準出力をファイル出力
-    out_file_name = "stdout" + name
-    path = os.path.join(result_file_path, out_file_name)
-    with open(path, mode='w') as f:
-        f.write(stdout)
-
-    #Pythonは自動でimportガードがついてるので一度モジュールを削除する
-    if 'main' in sys.modules: del sys.modules["main"]
-
-    return ResultInfo(name, score, end_time - start_time, err_stat, stdout, lis)
-
-
-def kill_process(proc_pid):
-    """プロセスをkillする"""
-    process = psutil.Process(proc_pid)
-    for proc in process.children(recursive=True):
-        proc.kill()
-    process.kill()
-
-def exac_command(name: str):
-    """プログラムを実行する
-    
-    Args:
-        name(str): 実行対象の入力ファイルの名前
-    
-    Returns:
-        int, int, str: 得点, 結果のステータス, 標準出力
-    """
-    err_stat = ResultInfo.AC
-    score = ""
-    stdout = ""
-
-    cmd = command.format(in_file=in_file, out_file=out_file)
-
-    #inファイルコピー
-    path = os.path.join(input_file_path, name)
-    shutil.copy(path, in_file)
-    
-    try:
-        #実行
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        result = proc.communicate(timeout=time_limit)
-
-        if proc.returncode != 0: err_stat = ResultInfo.RE
-        stdout = result[1]
-        score = get_score_from_stdout(stdout)
-
-        #outをコピー
-        path = os.path.join(result_file_path, name)
-        shutil.copy(out_file, path)
-
-    except: #ここに入るのはTLEしたときだけ
-        err_stat = ResultInfo.TLE
-        kill_process(proc.pid) #proc.kill()ではうまくいかなかったので
-    
-    if err_stat == ResultInfo.RE or err_stat == ResultInfo.TLE:
-        if err_stat == ResultInfo.RE:
-            score = "RE"
-            msg = "RE "
-        else:
-            score = "TLE"
-            msg = "TLE"
-        print(msg + " in ", name)
-    
-    return score, err_stat, stdout
+    # mainファイルコピー
+    shutil.copy("main.py", path)
+    # htmlファイルコピー
+    shutil.copy("result.html", path)
+    # csvファイルコピー
+    shutil.copy(os.path.join(statistics_path, csv_file_name), path)
 
 def main() -> None:
     """main処理"""
-    global next_in_file
+
     resultAll = ResultInfoAll()
-    init_all()
+    init_log()
     for filename in glob.glob(os.path.join(input_file_path, "*")):
-        next_in_file = filename
-        result = exac_program()
+        result = exac_program(filename)
         resultAll.add_result(result)
     make_all_result(resultAll)
     delete_file()
