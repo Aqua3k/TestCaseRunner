@@ -15,14 +15,14 @@ class ResultInfo:
     AC = 0
     RE = 1
     TLE = 2
-    def __init__(self, name: str, score: str, time: float, err_stat: int, stdOut: str, otherList: list[Any]):
+    def __init__(self, name: str, score: str, time: float, err_stat: int, stdOut: str, otherList):
         self.name      = name
         self.score     = score
         self.time      = time
         self.err_stat = err_stat
         self.otherList = copy.deepcopy(otherList)
         self.stdOut    = stdOut
-    def get_all_members(self) -> list[str]:
+    def get_all_members(self):
         """結果を配列にする"""
         ret = [self.name, self.score, self.time] + copy.deepcopy(self.otherList)
         return ret
@@ -127,7 +127,7 @@ class ResultInfoAll:
         shutil.rmtree(statistics_path, ignore_errors=True)
         os.mkdir(statistics_path)
 
-    def add_line_to_csv(self, array: list[str]) -> None:
+    def add_line_to_csv(self, array) -> None:
         """CSVファイルに1行出力する"""
         path = os.path.join(statistics_path, csv_file_name)
         array = list(map(str, array))
