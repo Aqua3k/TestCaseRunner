@@ -10,10 +10,6 @@ from mysrc.program_rannner import exac_program
 def make_results(results: ResultInfoAll) -> None:
     """ファイルに出力処理のまとめ"""
     results.make_html_file()
-    results.make_csv_file()
-    if is_make_fig:
-        import mysrc.statistics_lib as sl #外部モジュールのimportが必要なのでここに
-        sl.statisticsMain()
     make_log()
 
 def init_log() -> None:
@@ -32,8 +28,6 @@ def make_log() -> None:
     shutil.copy("main.py", path)
     # htmlファイルコピー
     shutil.copy("result.html", path)
-    # csvファイルコピー
-    shutil.copy(os.path.join(statistics_path, csv_file_name), path)
     # inファイルコピー
     shutil.copytree("in", os.path.join(path, "in"))
     # outファイルコピー
