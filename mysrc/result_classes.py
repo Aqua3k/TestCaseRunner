@@ -1,14 +1,11 @@
 import os
 import datetime
-import csv
-import shutil
 import copy
-from typing import Any
 
 from mysrc.html_templates import *
 from mysrc.settings import *
 
-csv_header = ["Test Case Name", "Score", "Time"] + statistics_info_define_array
+csv_header = ["Test Case Name", "Score", "Time"]
 
 class ResultInfo:
     """実行結果の情報管理用のクラス"""
@@ -114,23 +111,3 @@ class ResultInfoAll:
         html_str_list = html_str.split("\n")
         html_str_list.insert(html_str_list.index(tag) + 1, text)
         return "\n".join(html_str_list)
-    
-    def make_csv_file(self) -> None:
-        """CSVファイルを作成"""
-        self.init_csv()
-        self.add_line_to_csv(csv_header)
-        for result in self.result_all:
-            self.add_line_to_csv(result.get_all_members())
-    
-    def init_csv(self) -> None:
-        """CSVフォルダを初期化する"""
-        shutil.rmtree(statistics_path, ignore_errors=True)
-        os.mkdir(statistics_path)
-
-    def add_line_to_csv(self, array) -> None:
-        """CSVファイルに1行出力する"""
-        path = os.path.join(statistics_path, csv_file_name)
-        array = list(map(str, array))
-        with open(path, 'a', newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(array)
