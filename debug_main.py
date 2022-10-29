@@ -22,7 +22,7 @@ def init_log() -> None:
     os.mkdir(result_file_path)
 
 def make_log() -> None:
-    """html, csv, mainファイルをコピーしてlog以下に保存する"""
+    """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     if logFilePath not in glob.glob("*"): os.mkdir(logFilePath)
     path =  os.path.join(logFilePath, str(timeInfo))
@@ -34,6 +34,10 @@ def make_log() -> None:
     shutil.copy("result.html", path)
     # csvファイルコピー
     shutil.copy(os.path.join(statistics_path, csv_file_name), path)
+    # inファイルコピー
+    shutil.copytree("in", os.path.join(path, "in"))
+    # outファイルコピー
+    shutil.copytree("out", os.path.join(path, "out"))
 
 def main() -> None:
     """main処理"""
