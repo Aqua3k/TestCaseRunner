@@ -41,7 +41,6 @@ def main():
             break
         elif event == 'RUN SCRIPT':
             run_script()
-            subprocess.run(["start", "result.html"], shell=True)
             update_window()
         else:
             key, folder = event

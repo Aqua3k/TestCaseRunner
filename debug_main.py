@@ -28,6 +28,7 @@ def make_log() -> None:
     shutil.copy("main.py", path)
     # htmlファイルコピー
     shutil.copy("result.html", path)
+    os.remove("result.html") #ファイル削除
     # inファイルコピー
     shutil.copytree("in", os.path.join(path, "in"))
     # outファイルコピー
