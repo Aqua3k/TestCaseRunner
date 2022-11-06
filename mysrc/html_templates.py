@@ -1,8 +1,8 @@
 html_link_str = '<a href="{path}" target="_blank" rel="noopener noreferrer">{string}</a><br>'
 
 css_link1   = '<link rel="stylesheet" href="https://newcss.net/new.min.css">'
-css_link2   = '<link rel="stylesheet" href="mysrc/SortTable.css">'
-script_link = '<script type="text/javascript" src="mysrc/Table.js"></script>'
+css_link2   = '<link rel="stylesheet" href="../../mysrc/SortTable.css">'
+script_link = '<script type="text/javascript" src="../../mysrc/Table.js"></script>'
 
 table_heading     = '<table id="sortTable">{body}</table>'
 table_line        = '<tr>{text}</tr>'
