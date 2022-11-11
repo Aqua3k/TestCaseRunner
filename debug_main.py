@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 import datetime
+from concurrent.futures import ProcessPoolExecutor
 
 from mysrc.settings import *
 from mysrc.result_classes import ResultInfoAll
@@ -39,9 +40,14 @@ def main() -> None:
 
     results = ResultInfoAll()
     init_log()
-    for filename in glob.glob(os.path.join(input_file_path, "*")):
-        result = exac_program(filename)
-        results.add_result(result)
+    futures  = []
+    with ProcessPoolExecutor() as executor:
+        for filename in glob.glob(os.path.join(input_file_path, "*")):
+            future = executor.submit(exac_program, filename)
+            futures.append(future)
+    
+    for future in futures:
+        results.add_result(future.result())
     make_results(results)
 
 if __name__ == "__main__":
