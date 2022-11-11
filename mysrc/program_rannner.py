@@ -2,8 +2,6 @@ import time
 import os
 import subprocess
 
-import psutil #NOTE:pipでインストールする必要あり
-
 from mysrc.settings import *
 from mysrc.result_classes import *
 from mysrc.html_templates import *
@@ -19,7 +17,6 @@ def exac_program(next_file) -> ResultInfo:
     end_time = time.time()
 
     lis = []
-    # TODO: デバッグ用の情報を取得する
 
     # 標準出力をファイル出力
     out_file_name = "stdout" + os.path.basename(next_file)
@@ -28,13 +25,6 @@ def exac_program(next_file) -> ResultInfo:
         f.write(stdout)
 
     return ResultInfo(os.path.basename(next_file), score, end_time - start_time, err_stat, stdout, lis)
-
-def kill_process(proc_pid):
-    """プロセスをkillする"""
-    process = psutil.Process(proc_pid)
-    for proc in process.children(recursive=True):
-        proc.kill()
-    process.kill()
 
 def exac_command(input_file_path: str):
     """プログラムを実行する
@@ -54,18 +44,15 @@ def exac_command(input_file_path: str):
 
     cmd = command.format(in_file=input_file_path, out_file=out_file_path)
     
-    try:
-        #実行
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        result = proc.communicate(timeout=time_limit)
+    proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-        if proc.returncode != 0: err_stat = ResultInfo.RE
-        stdout = result[1]
-        score = get_score_from_stdout(stdout)
-
-    except: #ここに入るのはTLEしたときだけ
-        err_stat = ResultInfo.TLE
-        kill_process(proc.pid) #proc.kill()ではうまくいかなかったので
+    if proc.returncode != 0:
+        print(proc.stdout)
+        print(proc.stderr)
+        err_stat = ResultInfo.RE
+    
+    if err_stat == ResultInfo.AC:
+        score = get_score_from_stdout(proc.stdout)
     
     if err_stat == ResultInfo.RE or err_stat == ResultInfo.TLE:
         if err_stat == ResultInfo.RE:
