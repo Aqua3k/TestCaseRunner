@@ -12,16 +12,15 @@ class ResultInfo:
     AC = 0
     RE = 1
     TLE = 2
-    def __init__(self, name: str, score: str, time: float, err_stat: int, stdOut: str, otherList):
+    def __init__(self, name: str, score: str, time: float, err_stat: int, stdOut: str):
         self.name      = name
         self.score     = score
         self.time      = time
         self.err_stat = err_stat
-        self.otherList = copy.deepcopy(otherList)
         self.stdOut    = stdOut
     def get_all_members(self):
         """結果を配列にする"""
-        ret = [self.name, self.score, self.time] + copy.deepcopy(self.otherList)
+        ret = [self.name, self.score, self.time]
         return ret
     def __lt__(self, other) -> bool:
         """__lt__を定義しておくとクラスのままソートが可能になる"""
@@ -66,7 +65,6 @@ class ResultInfoAll:
                 table += table_colored_cell.format(color="gold", text=text)
             else: assert 0, "error in MakeHTML function."
             table += table_cell.format(text=str(round(result.time, 3)))
-            for x in result.otherList: table += table_cell.format(text=str(x))
             table_body.append(table_line.format(text=table))
         table_all = "<h2>Table</h2>"
         table_all += table_heading.format(body="\n".join(table_body))

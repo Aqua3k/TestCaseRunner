@@ -16,15 +16,13 @@ def exac_program(next_file) -> ResultInfo:
     score, err_stat, stdout = exac_command(next_file)
     end_time = time.time()
 
-    lis = []
-
     # 標準出力をファイル出力
     out_file_name = "stdout" + os.path.basename(next_file)
     path = os.path.join(result_file_path, out_file_name)
     with open(path, mode='w') as f:
         f.write(stdout)
 
-    return ResultInfo(os.path.basename(next_file), score, end_time - start_time, err_stat, stdout, lis)
+    return ResultInfo(os.path.basename(next_file), score, end_time - start_time, err_stat, stdout)
 
 def exac_command(input_file_path: str):
     """プログラムを実行する
