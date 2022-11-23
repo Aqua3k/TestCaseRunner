@@ -4,7 +4,7 @@ import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor
 
-from mysrc.settings import *
+from mysrc.settings import get_setting
 from mysrc.result_classes import ResultInfoAll
 from mysrc.program_rannner import exac_program
 
@@ -15,14 +15,17 @@ def make_results(results: ResultInfoAll) -> None:
 
 def init_log() -> None:
     """Logフォルダの初期化"""
-    shutil.rmtree(result_file_path, ignore_errors=True)
-    os.mkdir(result_file_path)
+    settings = get_setting()
+    shutil.rmtree(settings.output_file_path, ignore_errors=True)
+    os.mkdir(settings.output_file_path)
 
 def make_log() -> None:
     """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
     timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    if logFilePath not in glob.glob("*"): os.mkdir(logFilePath)
-    path =  os.path.join(logFilePath, str(timeInfo))
+    settings = get_setting()
+    if settings.log_file_path not in glob.glob("*"):
+        os.mkdir(settings.log_file_path)
+    path =  os.path.join(settings.log_file_path, str(timeInfo))
     os.mkdir(path)
 
     # mainファイルコピー
@@ -41,8 +44,9 @@ def main() -> None:
     results = ResultInfoAll()
     init_log()
     futures  = []
+    settings = get_setting()
     with ProcessPoolExecutor() as executor:
-        for filename in glob.glob(os.path.join(input_file_path, "*")):
+        for filename in glob.glob(os.path.join(settings.input_file_path, "*")):
             future = executor.submit(exac_program, filename)
             futures.append(future)
     

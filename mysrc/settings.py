@@ -1,12 +1,25 @@
-time_limit = 2 #実行を打ち切る時間
+import configparser
 
-#ファイル関係
-input_file_path = "in"        #入力ファイルの場所
-result_file_path = "out"      #ファイル出力する場所
+class Settings:
+    input_file_path = None
+    output_file_path = None
+    log_file_path = None
+    command = None
 
-#log
-logFilePath = "log"         #Logファイルを出力するパス
+config = None
+def get_config():
+    global config
+    if config == None:
+        config = configparser.ConfigParser()
+        config.read(r'mysrc\config.ini', encoding='utf-8')
+    return config
 
-#コマンド関係
-#実行コマンド ただし、inFileに入力ファイルパス、outFileに出力ファイルパスが入る
-command = "cargo run --release --bin tester python main.py < {in_file} > {out_file}"
+def get_setting():
+    config = get_config()
+    settings = Settings()
+    settings.input_file_path = config["Files"]["in"]
+    settings.output_file_path = config["Files"]["out"]
+    settings.log_file_path = config["Files"]["log"]
+    settings.command = config["Command"]["command"]
+
+    return settings

@@ -1,9 +1,8 @@
 import os
 import datetime
-import copy
 
 from mysrc.html_templates import *
-from mysrc.settings import *
+from mysrc.settings import get_setting
 
 csv_header = ["Test Case Name", "Score", "Time"]
 
@@ -42,15 +41,17 @@ class ResultInfoAll:
         table += '<th>in</th>'
         table += '<th>out</th>'
         table += '<th>stdout</th>'
-        for s in csv_header: table += table_cell_heading.format(text=s)
+        for s in csv_header:
+            table += table_cell_heading.format(text=s)
         table_body.append(table_line.format(text=table))
+        settings = get_setting()
         for result in self.result_all:
             table = ""
-            link1 = html_link_str.format(path=os.path.join(input_file_path, result.name), string="+")
+            link1 = html_link_str.format(path=os.path.join(settings.input_file_path, result.name), string="+")
             table += table_cell.format(text=link1)
-            link2 = html_link_str.format(path=os.path.join(result_file_path, result.name), string="+")
+            link2 = html_link_str.format(path=os.path.join(settings.output_file_path, result.name), string="+")
             table += table_cell.format(text=link2)
-            link3 = html_link_str.format(path=os.path.join(result_file_path, "stdout" + result.name), string="+")
+            link3 = html_link_str.format(path=os.path.join(settings.output_file_path, "stdout" + result.name), string="+")
             table += table_cell.format(text=link3)
 
             table += table_cell.format(text=result.name)
