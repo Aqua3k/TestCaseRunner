@@ -2,7 +2,7 @@ import time
 import os
 import subprocess
 
-from mysrc.settings import get_setting
+from mysrc.config import get_setting
 from mysrc.result_classes import *
 from mysrc.html_templates import *
 

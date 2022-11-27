@@ -4,7 +4,7 @@ import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor
 
-from mysrc.settings import get_setting
+from mysrc.config import get_setting
 from mysrc.result_classes import ResultInfoAll
 from mysrc.program_rannner import exac_program
 

@@ -2,7 +2,7 @@ import os
 import datetime
 
 from mysrc.html_templates import *
-from mysrc.settings import get_setting
+from mysrc.config import get_setting
 
 csv_header = ["Test Case Name", "Score", "Time"]
 
