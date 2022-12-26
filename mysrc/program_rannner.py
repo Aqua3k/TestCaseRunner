@@ -2,7 +2,7 @@ import time
 import os
 import subprocess
 
-from mysrc.settings import *
+from mysrc.config import get_setting
 from mysrc.result_classes import *
 from mysrc.html_templates import *
 
@@ -17,8 +17,9 @@ def exac_program(next_file) -> ResultInfo:
     end_time = time.time()
 
     # 標準出力をファイル出力
+    settings = get_setting()
     out_file_name = "stdout" + os.path.basename(next_file)
-    path = os.path.join(result_file_path, out_file_name)
+    path = os.path.join(settings.output_file_path, out_file_name)
     with open(path, mode='w') as f:
         f.write(stdout)
 
@@ -37,11 +38,13 @@ def exac_command(input_file_path: str):
     score = ""
     stdout = ""
 
+    settings = get_setting()
     basename = os.path.basename(input_file_path)
-    out_file_path = os.path.join(result_file_path, basename)
+    out_file_path = os.path.join(settings.output_file_path, basename)
 
-    cmd = command.format(in_file=input_file_path, out_file=out_file_path)
-    
+    com_str = settings.command
+    cmd = com_str.replace("in_file", input_file_path).replace("out_file", out_file_path)
+        
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     if proc.returncode != 0:
