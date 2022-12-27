@@ -6,16 +6,18 @@ import PySimpleGUI as sg
 from debug_main import main as runner_main
 from mysrc.config import get_setting, write_config
 
+description = (
+    "説明\n"
+    "RUN SCRIPT: スクリプトを実行します。\n"
+    "EDIT SETTINGS: 設定を変更します。\n"
+    "SHOW LOGS: 過去の実行記録を確認します。\n"
+)
+
 def get_layout():
-# ウィンドウに配置するコンポーネント
     layout = [
-                [sg.Button('UPDATE')],
-                [sg.Button('RUN SCRIPT')],
-                [sg.Button('EDIT SETTINGS')],
-                [sg.Button('SHOW LOGS')]
+                [sg.Text(description)],
+                [sg.Button('RUN SCRIPT'), sg.Button('EDIT SETTINGS'), sg.Button('SHOW LOGS')],
     ]
-    for folder in glob.glob(r"log\*"):
-        layout.append([sg.Text(folder), sg.Button('VIEW RESULT', key=("view", folder)), sg.Button('DELETE', key=("delete", folder))])
     return layout
 
 def get_default_values():
@@ -112,7 +114,6 @@ def get_log_viewer_window_layout():
             results,
             headings=meta_data_headers,
             auto_size_columns=False,
-            #col_widths=[15, 5, 10, 10, 10],
             justification='left',
             text_color='#000000',
             background_color='#cccccc',
@@ -136,13 +137,10 @@ def main():
         event, values = window.read()
         if event == "__TIMEOUT__":
             continue
-        elif event == "UPDATE":
-            update_window()
         elif event == sg.WIN_CLOSED:
             break
         elif event == 'RUN SCRIPT':
             run_script()
-            update_window()
         elif event == 'EDIT SETTINGS':
             config_window = sg.Window('Setting Editor', get_config_window_layout())
             while True:
@@ -178,19 +176,6 @@ def main():
                     assert len(files) == 1
                     html_path = files[0]
                     subprocess.run(["start", html_path], shell=True)
-        else:
-            key, folder = event
-            if key == "view":
-                path = os.path.join(folder, "*.html")
-                files = glob.glob(path)
-                assert len(files) == 1
-                html_path = files[0]
-                subprocess.run(["start", html_path], shell=True)
-            elif key == "delete":
-                shutil.rmtree(folder)
-                update_window()
-            else:
-                assert 0
 
     window.close()
 
