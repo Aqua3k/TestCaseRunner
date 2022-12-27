@@ -78,6 +78,8 @@ class ResultInfoAll:
         body += self.make_summary()
         body += table_all
 
+        body = self.make_mata_data() + body
+
         result_file_name = "result.html"
         with open(result_file_name ,'w', encoding='utf-8', newline='\n') as html:
             text = html_text.format(body=body, title="Result")
@@ -85,6 +87,27 @@ class ResultInfoAll:
             text = self.insert_text_into_html_head("<body>", text, css_link2)
             text = self.insert_text_into_html_head("<body>", text, script_link)
             html.writelines(text)
+    
+    def make_mata_data(self) -> str:
+        """メタデータを作成する"""
+        file_name_list, scores_list = [], []
+        for result in self.result_all:
+            file_name_list.append(os.path.basename(result.name))
+            scores_list.append(0 if result.score == "None" or result.err_stat != ResultInfo.AC else int(result.score))
+
+        string = []
+        string.append("<!--")
+        string.append("FILE NUMBER")
+        string.append(f"{len(self.result_all)}")
+        string.append("AVERAGE SCORE")
+        string.append(f"{sum(scores_list)/len(self.result_all)}")
+        string.append("MAX SCORE")
+        string.append(f"{max(scores_list)}")
+        string.append("MIN SCORE")
+        string.append(f"{min(scores_list)}")
+        string.append("-->")
+        string.append("")
+        return "\n".join(string)
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
