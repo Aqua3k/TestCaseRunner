@@ -81,7 +81,7 @@ def get_results():
             if "0" <= s <= "9" or s in ".-":
                 ret += s
         try:
-            return int(ret)
+            return int(float(ret))
         except:
             return 0
 
@@ -96,7 +96,13 @@ def get_results():
                 for i,line in enumerate(lines):
                     if header in line:
                         break
-                meta_data.append(get_digits(lines[i+1]))
+                if header in ["AVERAGE SCORE", "MAX SCORE", "MIN SCORE"]:
+                    data = get_digits(lines[i+1])
+                    data = format(data, ".3E")
+                else:
+                    data = get_digits(lines[i+1])
+                meta_data.append(data)
+                
         return meta_data
 
     ret = []
