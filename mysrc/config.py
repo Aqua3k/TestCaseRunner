@@ -25,11 +25,6 @@ def get_config():
         config.read(r'mysrc\config.ini', encoding='utf-8')
     return config
 
-def delete_config():
-    #configを更新したときなどに一度保存しておいたconfigオブジェクトを捨てる
-    global config
-    config = None
-
 def get_setting():
     config = get_config()
     settings = Settings()
@@ -39,16 +34,3 @@ def get_setting():
     settings.command = config[command_section][command_option]
 
     return settings
-
-def write_config(in_path, command):
-    config = configparser.RawConfigParser()
-    config.add_section(file_section)
-    config.add_section(command_section)
-
-    config.set(file_section, in_file_option, in_path)
-    config.set(command_section, command_option, command)
-
-    with open(config_file, 'w') as file:
-        config.write(file)
-    delete_config()
-
