@@ -2,11 +2,8 @@ __pycache__/
 in/
 out/
 log/
-statistics/
 *.html
-summary.txt
 target/
 *.lock
 *.toml
 src/
-*.ini

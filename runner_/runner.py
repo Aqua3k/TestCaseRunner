@@ -3,60 +3,52 @@ import os
 import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
-from typing import List, Dict, Any, Union, Callable
-import time
-import subprocess
+from typing import List, Dict, Union, Callable
 from dataclasses import dataclass
 from enum import Enum, auto
+import configparser
 
-from mysrc.config import get_setting, Settings
-from mysrc.result_classes import ResultInfoAll, ResultInfo
-
-def make_results(results: ResultInfoAll) -> None:
-    """ファイルに出力処理のまとめ"""
-    results.make_html_file()
-    make_log()
-
-def init_log() -> None:
-    """Logフォルダの初期化"""
-    settings = get_setting()
-    shutil.rmtree(settings.output_file_path, ignore_errors=True)
-    os.mkdir(settings.output_file_path)
-
-def make_log() -> None:
-    """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-    timeInfo = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    settings = get_setting()
-    if settings.log_file_path not in glob.glob("*"):
-        os.mkdir(settings.log_file_path)
-    path =  os.path.join(settings.log_file_path, str(timeInfo))
-    os.mkdir(path)
-
-    # mainファイルコピー
-    shutil.copy("main.py", path)
-    # htmlファイルコピー
-    shutil.copy("result.html", path)
-    os.remove("result.html") #ファイル削除
-    # inファイルコピー
-    shutil.copytree("in", os.path.join(path, "in"))
-    # outファイルコピー
-    shutil.copytree("out", os.path.join(path, "out"))
+from runner_.html_templates import *
 
 class ResultStatus(Enum):
-    AC = auto()
-    RE = auto()
-    TLE = auto()
-    RUNNER_ERROR = auto()
+    """テストケースを実行した結果のステータス定義"""
+    AC = auto()             # 正常終了
+    RE = auto()             # 実行時エラー
+    TLE = auto()            # 実行時間制限超過
+    RUNNER_ERROR = auto()   # runnerプログラムのエラー(テストケースの結果ではないが都合がいいのでここで定義しちゃう)
 
 @dataclass
 class TestCaseResult:
-    error_status: ResultStatus
-    stdout: str
-    stderr: str
-    attribute: Dict[str, Union[int, float]]
+    """テストケースの結果をまとめて管理するクラス"""
+    error_status: ResultStatus              # 終了のステータス
+    stdout: str                             # 標準出力(なければ空文字でいい)
+    stderr: str                             # 標準エラー出力(なければ空文字でいい)
+    attribute: Dict[str, Union[int, float]] # 結果ファイルに乗せたい情報の一覧
+
+@dataclass
+class Settings:
+    input_file_path: str
+    output_file_path: str
+    log_file_path: str
+
+config = None
+def get_config():
+    global config
+    if config == None:
+        config = configparser.ConfigParser()
+        config.read(r'runner_/config.ini', encoding='utf-8')
+    return config
+
+def get_setting():
+    config = get_config()
+    input_file_path = config["path"]["in"]
+    output_file_path = config["path"]["out"]
+    log_file_path = config["path"]["log"]
+
+    return Settings(input_file_path, output_file_path, log_file_path)
 
 class TestCaseRunner:
-    def __init__(self, settings: Settings, handler: Callable[[str, str], Any]):
+    def __init__(self, settings: Settings, handler: Callable[[str, str], TestCaseResult]):
         self.input_file_path = settings.input_file_path
         self.output_file_path = settings.output_file_path
         self.handler = handler
@@ -79,7 +71,7 @@ class TestCaseRunner:
         return results
 
 class TestCase:
-    def __init__(self, input_file, output_file, run_handler: Callable[[str, str], Any]):
+    def __init__(self, input_file, output_file, run_handler: Callable[[str, str], TestCaseResult]):
         self.input_file = input_file
         self.stdout_file = output_file
         path, base_name = os.path.split(output_file)
@@ -95,7 +87,6 @@ class TestCase:
             f.write(self.test_result.stderr)
         return self
 
-from mysrc.html_templates import *
 class HtmlMaker:
     @dataclass
     class Column:
@@ -104,6 +95,7 @@ class HtmlMaker:
 
     def __init__(self, results: List[TestCase]):
         self.results = results
+        self.attributes = self.sortup_attributes()
     
     def sortup_attributes(self):
         attributes = set()
@@ -151,8 +143,7 @@ class HtmlMaker:
         Column("status", get_status),
     ]
     def make(self):
-        attributes = self.sortup_attributes()
-        for attribute in attributes:
+        for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
         table_body = []
@@ -171,8 +162,7 @@ class HtmlMaker:
         
         table_all = "<h2>Table</h2>"
         table_all += table_heading.format(body="\n".join(table_body))
-        now = datetime.datetime.now()
-        body = f'<h6>Creation date and time: {now.strftime("%Y/%m/%d %H:%M:%S")}</h6>'
+        body = f'<h6>Creation date and time: {datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")}</h6>'
         
         body += "<h2>Summary</h2>"
         body += self.make_summary()
@@ -188,15 +178,21 @@ class HtmlMaker:
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
-        return ""
-        file_name_list, scores_list = [], []
-        for result in self.result_all:
-            file_name_list.append(os.path.basename(result.name))
-            scores_list.append(0 if result.score == "None" or result.err_stat != ResultInfo.AC else int(result.score))
-
         string = []
-        string.append("Input file number: " + str(len(self.result_all)))
-        string.append("Average Score: " + str(sum(scores_list)/len(self.result_all)))
+        string.append("Input file number: " + str(len(self.results)))
+        if "score" not in self.attributes:
+            return "<br>\n".join(string)
+
+        file_name_list, scores_list = [], []
+        for result in self.results:
+            file_name_list.append(result.test_case_name)
+            s = 0
+            if result.test_result.error_status == ResultStatus.AC:
+                if "score" in result.test_result.attribute:
+                    s = result.test_result.attribute["score"]
+            scores_list.append(s)
+
+        string.append("Average Score: " + str(sum(scores_list)/len(self.results)))
         string.append("")
         string.append("Max Score: " + str(max(scores_list)))
         string.append("FileName: " + file_name_list[scores_list.index(max(scores_list))])
@@ -212,31 +208,35 @@ class HtmlMaker:
         html_str_list.insert(html_str_list.index(tag) + 1, text)
         return "\n".join(html_str_list)
 
-def test_handler(input, output):
-    cmd = f"cargo run --release --bin tester python main.py < {input}"
-    start_time = time.time()
-    proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    erapsed_time = time.time() - start_time
-    err_stat = ResultStatus.AC
-    if proc.returncode != 0:
-        print(proc.stdout)
-        print(proc.stderr)
-        err_stat = ResultStatus.RE
-    score = 0
-    result = {
-        "score": score,
-        "time": erapsed_time,
-    }
-    return TestCaseResult(err_stat, proc.stdout, proc.stderr, result)
+def init_log() -> None:
+    """Logフォルダの初期化"""
+    settings = get_setting()
+    shutil.rmtree(settings.output_file_path, ignore_errors=True)
+    os.mkdir(settings.output_file_path)
 
-def main():
+def make_log() -> None:
+    """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
+    settings = get_setting()
+    if settings.log_file_path not in glob.glob("*"):
+        os.mkdir(settings.log_file_path)
+    path = os.path.join(settings.log_file_path, str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    os.mkdir(path)
+
+    # mainファイルコピー
+    shutil.copy("main.py", path)
+    # htmlファイルコピー
+    shutil.copy("result.html", path)
+    os.remove("result.html") #ファイル削除
+    # inファイルコピー
+    shutil.copytree("in", os.path.join(path, "in"))
+    # outファイルコピー
+    shutil.copytree("out", os.path.join(path, "out"))
+
+def run(run_handler: Callable[[str, str], TestCaseResult]):
     init_log()
     setting = get_setting()
-    runner = TestCaseRunner(setting, test_handler)
+    runner = TestCaseRunner(setting, run_handler)
     results = runner.run()
     html_maker = HtmlMaker(results)
     html_maker.make()
-    #make_results(results)
-
-if __name__ == "__main__":
-    main()
+    make_log()
