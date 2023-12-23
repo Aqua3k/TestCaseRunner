@@ -11,12 +11,11 @@ class ResultInfo:
     AC = 0
     RE = 1
     TLE = 2
-    def __init__(self, name: str, score: str, time: float, err_stat: int, stdOut: str):
+    def __init__(self, name: str, score: str, time: float, err_stat: int):
         self.name      = name
         self.score     = score
         self.time      = time
         self.err_stat = err_stat
-        self.stdOut    = stdOut
     def get_all_members(self):
         """結果を配列にする"""
         ret = [self.name, self.score, self.time]
@@ -55,7 +54,8 @@ class ResultInfoAll:
             table += table_cell.format(text=link3)
 
             table += table_cell.format(text=result.name)
-            if result.err_stat == ResultInfo.AC:
+            if 1:
+            #if result.err_stat == ResultInfo.AC:
                 text = str(result.score)
                 table += table_cell.format(text=text)
             elif result.err_stat == ResultInfo.RE:
