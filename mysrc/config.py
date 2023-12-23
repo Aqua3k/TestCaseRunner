@@ -1,21 +1,11 @@
 import configparser
+from dataclasses import dataclass
 
-out_path="out"
-log_path="log"
-
-file_section = "Files"
-command_section = "Command"
-
-in_file_option = "in"
-command_option = "command"
-
-config_file = r"mysrc\config.ini"
-
+@dataclass
 class Settings:
-    input_file_path = None
-    output_file_path = None
-    log_file_path = None
-    command = None
+    input_file_path: str
+    output_file_path: str
+    log_file_path: str
 
 config = None
 def get_config():
@@ -27,10 +17,8 @@ def get_config():
 
 def get_setting():
     config = get_config()
-    settings = Settings()
-    settings.input_file_path = config[file_section][in_file_option]
-    settings.output_file_path = out_path
-    settings.log_file_path = log_path
-    settings.command = config[command_section][command_option]
+    input_file_path = config["path"]["in"]
+    output_file_path = config["path"]["out"]
+    log_file_path = config["path"]["log"]
 
-    return settings
+    return Settings(input_file_path, output_file_path, log_file_path)
