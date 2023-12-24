@@ -98,12 +98,12 @@ class HtmlMaker:
         self.attributes = self.sortup_attributes()
     
     def sortup_attributes(self):
-        attributes = set()
+        attributes = dict() # setだと順番が保持されないのでdictにする
         for result in self.results:
             test_result = result.test_result
             for attribute in test_result.attribute.keys():
-                attributes.add(attribute)
-        return list(attributes)
+                attributes[attribute] = ""
+        return list(attributes.keys())
     
     def get_in(self, attribute, row: int):
         return table_cell.format(text=html_link_str.format(path=self.results[row].input_file, string="+"))
