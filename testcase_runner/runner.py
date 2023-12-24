@@ -257,7 +257,7 @@ def run(run_handler: Callable[[str, str], TestCaseResult],
             run_handlerとして渡す関数の形式について
                 引数は 入力ファイルへのパス, 出力ファイルへのパス の2つ
                 戻り値はTestCaseResultクラス 実行結果を各メンバに登録して返す
-        runner_setting (RunnerSettings, optional): _description_. Defaults to DefaultRunnerSettings().
+        runner_setting (RunnerSettings, optional): Defaults to DefaultRunnerSettings().
             ランナーを実行するときの設定
             オプション引数を渡さないとDefaultRunnerSettingsクラスの設定になる
     """
