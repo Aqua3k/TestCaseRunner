@@ -6,9 +6,13 @@ from concurrent.futures import ProcessPoolExecutor, Future
 from typing import List, Dict, Union, Callable
 from dataclasses import dataclass
 from enum import Enum, auto
-import configparser
+from pathlib import Path
 
-from runner_.html_templates import *
+from testcase_runner.html_templates import *
+
+output_file_path = "out"
+log_file_path = "log"
+html_file_name = "result.html"
 
 class ResultStatus(Enum):
     """テストケースを実行した結果のステータス定義"""
@@ -26,46 +30,52 @@ class TestCaseResult:
     attribute: Dict[str, Union[int, float]] # 結果ファイルに乗せたい情報の一覧
 
 @dataclass
-class Settings:
+class RunnerSettings:
     input_file_path: str
-    output_file_path: str
-    log_file_path: str
+    source_file_path: str
+    stdout_file_output: bool
+    stderr_file_output: bool
 
-config = None
-def get_config():
-    global config
-    if config == None:
-        config = configparser.ConfigParser()
-        config.read(r'runner_/config.ini', encoding='utf-8')
-    return config
+class DefaultRunnerSettings(RunnerSettings):
+    """ランナーのデフォルト設定
 
-def get_setting():
-    config = get_config()
-    input_file_path = config["path"]["in"]
-    output_file_path = config["path"]["out"]
-    log_file_path = config["path"]["log"]
+    runのオプション引数でRunnerSettingsを渡さないとこの設定が使われる
+    """
+    def __init__(self):
+        super().__init__(
+            "in",
+            "main.py",
+            True,
+            True,
+        )
 
-    return Settings(input_file_path, output_file_path, log_file_path)
+runner_setting = DefaultRunnerSettings()
+def set_setting(setting):
+    global runner_setting
+    runner_setting = setting
+
+def get_setting()->RunnerSettings:
+    return runner_setting
 
 class TestCaseRunner:
-    def __init__(self, settings: Settings, handler: Callable[[str, str], TestCaseResult]):
+    def __init__(self, handler: Callable[[str, str], TestCaseResult]):
+        settings = get_setting()
         self.input_file_path = settings.input_file_path
-        self.output_file_path = settings.output_file_path
         self.handler = handler
     
     def run(self)->List[List[Union[str, TestCaseResult]]]:
         futures:List[Future] = []
-        results: List[TestCase] = []
         test_cases: List[TestCase] = []
         for input_file in glob.glob(os.path.join(self.input_file_path, "*")):
-            output_file = os.path.join(self.output_file_path, os.path.basename(input_file))
+            output_file = os.path.join(output_file_path, os.path.basename(input_file))
             test_case = TestCase(input_file, output_file, self.handler)
             test_cases.append(test_case)
         with ProcessPoolExecutor() as executor:
             for test_case in test_cases:
                 future = executor.submit(test_case.run_test_case)
                 futures.append(future)
-        
+
+        results: List[TestCase] = []
         for future in futures:
             results.append(future.result())
         return results
@@ -81,10 +91,13 @@ class TestCase:
     
     def run_test_case(self)->'TestCase':
         self.test_result: TestCaseResult = self.handler(self.input_file, self.stdout_file)
-        with open(self.stdout_file, mode='w') as f:
-            f.write(self.test_result.stdout)
-        with open(self.stderr_file, mode='w') as f:
-            f.write(self.test_result.stderr)
+        settings = get_setting()
+        if settings.stdout_file_output:
+            with open(self.stdout_file, mode='w') as f:
+                f.write(self.test_result.stdout)
+        if settings.stderr_file_output:
+            with open(self.stderr_file, mode='w') as f:
+                f.write(self.test_result.stderr)
         return self
 
 class HtmlMaker:
@@ -98,12 +111,12 @@ class HtmlMaker:
         self.attributes = self.sortup_attributes()
     
     def sortup_attributes(self):
-        attributes = set()
+        attributes = dict() # setだと順番が保持されないのでdictにする
         for result in self.results:
             test_result = result.test_result
             for attribute in test_result.attribute.keys():
-                attributes.add(attribute)
-        return list(attributes)
+                attributes[attribute] = ""
+        return list(attributes.keys())
     
     def get_in(self, attribute, row: int):
         return table_cell.format(text=html_link_str.format(path=self.results[row].input_file, string="+"))
@@ -168,8 +181,7 @@ class HtmlMaker:
         body += self.make_summary()
         body += table_all
 
-        result_file_name = "result.html"
-        with open(result_file_name ,'w', encoding='utf-8', newline='\n') as html:
+        with open(html_file_name ,'w', encoding='utf-8', newline='\n') as html:
             text = html_text.format(body=body, title="Result")
             text = self.insert_text_into_html_head("<body>", text, css_link1)
             text = self.insert_text_into_html_head("<body>", text, css_link2)
@@ -192,13 +204,13 @@ class HtmlMaker:
                     s = result.test_result.attribute["score"]
             scores_list.append(s)
 
-        string.append("Average Score: " + str(sum(scores_list)/len(self.results)))
+        string.append(f"Average Score: {sum(scores_list)/len(self.results)}")
         string.append("")
-        string.append("Max Score: " + str(max(scores_list)))
-        string.append("FileName: " + file_name_list[scores_list.index(max(scores_list))])
+        string.append(f"Max Score: {max(scores_list)}")
+        string.append(f"FileName: {file_name_list[scores_list.index(max(scores_list))]}")
         string.append("")
-        string.append("Minimum Score: " + str(min(scores_list)))
-        string.append("FileName: " + file_name_list[scores_list.index(min(scores_list))])
+        string.append(f"Minimum Score: {min(scores_list)}")
+        string.append(f"FileName: {file_name_list[scores_list.index(min(scores_list))]}")
         string.append("")
         return "<br>\n".join(string)
     
@@ -210,32 +222,48 @@ class HtmlMaker:
 
 def init_log() -> None:
     """Logフォルダの初期化"""
-    settings = get_setting()
-    shutil.rmtree(settings.output_file_path, ignore_errors=True)
-    os.mkdir(settings.output_file_path)
+    shutil.rmtree(output_file_path, ignore_errors=True)
+    os.mkdir(output_file_path)
 
 def make_log() -> None:
     """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
     settings = get_setting()
-    if settings.log_file_path not in glob.glob("*"):
-        os.mkdir(settings.log_file_path)
-    path = os.path.join(settings.log_file_path, str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    if log_file_path not in glob.glob("*"):
+        os.mkdir(log_file_path)
+    path = os.path.join(log_file_path, str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
     os.mkdir(path)
 
+    settings = get_setting()
     # mainファイルコピー
-    shutil.copy("main.py", path)
+    source_file_path = Path(settings.source_file_path)
+    if source_file_path.is_file():
+        shutil.copy(source_file_path, path)
     # htmlファイルコピー
-    shutil.copy("result.html", path)
-    os.remove("result.html") #ファイル削除
+    shutil.copy(html_file_name, path)
+    os.remove(html_file_name) #ファイル削除
     # inファイルコピー
-    shutil.copytree("in", os.path.join(path, "in"))
-    # outファイルコピー
-    shutil.copytree("out", os.path.join(path, "out"))
+    shutil.copytree(settings.input_file_path, os.path.join(path, "in"))
+    # outディレクトリのファイルをコピーしてディレクトリを消す
+    shutil.copytree(output_file_path, os.path.join(path, "out"))
+    shutil.rmtree(output_file_path, ignore_errors=True)
 
-def run(run_handler: Callable[[str, str], TestCaseResult]):
+def run(run_handler: Callable[[str, str], TestCaseResult],
+        runner_setting:RunnerSettings=DefaultRunnerSettings()):
+    """run_handlerで指定した関数の処理を並列実行して結果をHTMLファイルにまとめる
+
+    Args:
+        run_handler (Callable[[str, str], TestCaseResult]):
+            並列実行したい処理
+            run_handlerとして渡す関数の形式について
+                引数は 入力ファイルへのパス, 出力ファイルへのパス の2つ
+                戻り値はTestCaseResultクラス 実行結果を各メンバに登録して返す
+        runner_setting (RunnerSettings, optional): Defaults to DefaultRunnerSettings().
+            ランナーを実行するときの設定
+            オプション引数を渡さないとDefaultRunnerSettingsクラスの設定になる
+    """
+    set_setting(runner_setting)
     init_log()
-    setting = get_setting()
-    runner = TestCaseRunner(setting, run_handler)
+    runner = TestCaseRunner(run_handler)
     results = runner.run()
     html_maker = HtmlMaker(results)
     html_maker.make()
