@@ -1,7 +1,7 @@
 import time
 import subprocess
 
-from testcase_runner.runner import run, ResultStatus, TestCaseResult
+from testcase_runner.testcase_runner import run_testcase, ResultStatus, TestCaseResult
 
 def run_program(input, output):
     """プログラムを走らせる処理をここに書く
@@ -38,4 +38,4 @@ def run_program(input, output):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    run(run_program)
+    run_testcase(run_program)

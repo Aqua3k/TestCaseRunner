@@ -31,25 +31,13 @@ class TestCaseResult:
 
 @dataclass
 class RunnerSettings:
-    input_file_path: str
-    source_file_path: str
-    stdout_file_output: bool
-    stderr_file_output: bool
+    input_file_path: str = "in"
+    copy_source_file: bool = True
+    source_file_path: str = "main.py"
+    stdout_file_output: bool = True
+    stderr_file_output: bool = True
 
-class DefaultRunnerSettings(RunnerSettings):
-    """ランナーのデフォルト設定
-
-    runのオプション引数でRunnerSettingsを渡さないとこの設定が使われる
-    """
-    def __init__(self):
-        super().__init__(
-            "in",
-            "main.py",
-            True,
-            True,
-        )
-
-runner_setting = DefaultRunnerSettings()
+runner_setting = RunnerSettings()
 def set_setting(setting):
     global runner_setting
     runner_setting = setting
@@ -235,9 +223,10 @@ def make_log() -> None:
 
     settings = get_setting()
     # mainファイルコピー
-    source_file_path = Path(settings.source_file_path)
-    if source_file_path.is_file():
-        shutil.copy(source_file_path, path)
+    if settings.copy_source_file:
+        source_file_path = Path(settings.source_file_path)
+        if source_file_path.is_file():
+            shutil.copy(source_file_path, path)
     # htmlファイルコピー
     shutil.copy(html_file_name, path)
     os.remove(html_file_name) #ファイル削除
@@ -247,8 +236,8 @@ def make_log() -> None:
     shutil.copytree(output_file_path, os.path.join(path, "out"))
     shutil.rmtree(output_file_path, ignore_errors=True)
 
-def run(run_handler: Callable[[str, str], TestCaseResult],
-        runner_setting:RunnerSettings=DefaultRunnerSettings()):
+def run_testcase(run_handler: Callable[[str, str], TestCaseResult],
+        runner_setting:RunnerSettings=RunnerSettings()):
     """run_handlerで指定した関数の処理を並列実行して結果をHTMLファイルにまとめる
 
     Args:
@@ -257,9 +246,9 @@ def run(run_handler: Callable[[str, str], TestCaseResult],
             run_handlerとして渡す関数の形式について
                 引数は 入力ファイルへのパス, 出力ファイルへのパス の2つ
                 戻り値はTestCaseResultクラス 実行結果を各メンバに登録して返す
-        runner_setting (RunnerSettings, optional): Defaults to DefaultRunnerSettings().
+        runner_setting (RunnerSettings, optional): Defaults to RunnerSettings().
             ランナーを実行するときの設定
-            オプション引数を渡さないとDefaultRunnerSettingsクラスの設定になる
+            オプション引数を渡さないとデフォルトのRunnerSettingsクラスの設定になる
     """
     set_setting(runner_setting)
     init_log()
