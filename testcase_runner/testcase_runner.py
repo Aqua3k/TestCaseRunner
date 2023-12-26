@@ -4,7 +4,7 @@ import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
 from typing import List, Dict, Union, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 
@@ -28,10 +28,11 @@ class ResultStatus(Enum):
 @dataclass
 class TestCaseResult:
     """テストケースの結果をまとめて管理するクラス"""
-    error_status: ResultStatus              # 終了のステータス
-    stdout: str                             # 標準出力(なければ空文字でいい)
-    stderr: str                             # 標準エラー出力(なければ空文字でいい)
-    attribute: Dict[str, Union[int, float]] # 結果ファイルに乗せたい情報の一覧
+    error_status: ResultStatus = ResultStatus.AC # 終了のステータス
+    stdout: str = ""                             # 標準出力(なければ空文字でいい)
+    stderr: str = ""                             # 標準エラー出力(なければ空文字でいい)
+    attribute: Dict[str, Union[int, float]] \
+        = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
 
 @dataclass
 class RunnerSettings:
@@ -40,6 +41,13 @@ class RunnerSettings:
     source_file_path: str = "main.py"
     stdout_file_output: bool = True
     stderr_file_output: bool = True
+
+@dataclass
+class TestCase:
+    testcase_name: str
+    input_file: str
+    stdout_file: str
+    stderr_file: str
 
 runner_setting = RunnerSettings()
 def set_setting(setting):
@@ -50,47 +58,41 @@ def get_setting()->RunnerSettings:
     return runner_setting
 
 class TestCaseRunner:
-    def __init__(self, handler: Callable[['TestCase'], TestCaseResult]):
+    def __init__(self, handler: Callable[[TestCase], TestCaseResult]):
         settings = get_setting()
         self.input_file_path = settings.input_file_path
         self.handler = handler
     
-    def run(self)->List[List[Union[str, TestCaseResult]]]:
+    def run_all_testcase(self)->List[List[Union[TestCase, TestCaseResult]]]:
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         for input_file in glob.glob(os.path.join(self.input_file_path, "*")):
-            output_file = os.path.join(output_file_path, os.path.basename(input_file))
-            test_case = TestCase(input_file, output_file, self.handler)
-            test_cases.append(test_case)
+            stdout_file = os.path.join(output_file_path, os.path.basename(input_file))
+            path, base_name = os.path.split(stdout_file)
+            stderr_file = os.path.join(path, "stdout" + base_name)
+            testcase_name = os.path.basename(input_file)
+            testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file)
+            test_cases.append(testcase)
         with ProcessPoolExecutor() as executor:
-            for test_case in test_cases:
-                future = executor.submit(test_case.run_test_case)
+            for testcase in test_cases:
+                future = executor.submit(self.run_testcase, testcase)
                 futures.append(future)
 
         results: List[TestCase] = []
         for future in futures:
             results.append(future.result())
         return results
-
-class TestCase:
-    def __init__(self, input_file, output_file, run_handler: Callable[['TestCase'], TestCaseResult]):
-        self.input_file = input_file
-        self.stdout_file = output_file
-        path, base_name = os.path.split(output_file)
-        self.stderr_file = os.path.join(path, "stdout" + base_name)
-        self.test_case_name = os.path.basename(self.input_file)
-        self.handler = run_handler
     
-    def run_test_case(self)->'TestCase':
-        self.test_result: TestCaseResult = self.handler(self)
+    def run_testcase(self, testcase: TestCase)->TestCaseResult:
+        test_result: TestCaseResult = self.handler(testcase)
         settings = get_setting()
         if settings.stdout_file_output:
-            with open(self.stdout_file, mode='w') as f:
-                f.write(self.test_result.stdout)
+            with open(testcase.stdout_file, mode='w') as f:
+                f.write(test_result.stdout)
         if settings.stderr_file_output:
-            with open(self.stderr_file, mode='w') as f:
-                f.write(self.test_result.stderr)
-        return self
+            with open(testcase.stderr_file, mode='w') as f:
+                f.write(test_result.stderr)
+        return testcase, test_result
 
 class HtmlMaker:
     @dataclass
@@ -98,26 +100,29 @@ class HtmlMaker:
         title: str
         getter: Callable[[int], str]
 
-    def __init__(self, results: List[TestCase]):
-        self.results = results
+    def __init__(self, results: List[List[Union[TestCase, TestCaseResult]]]):
+        self.testcases: List[TestCase] = []
+        self.results: List[TestCaseResult] = []
+        for t, r in results:
+            self.testcases.append(t)
+            self.results.append(r)
         self.attributes = self.sortup_attributes()
     
     def sortup_attributes(self):
         attributes = dict() # setだと順番が保持されないのでdictにする
-        for result in self.results:
-            test_result = result.test_result
+        for test_result in self.results:
             for attribute in test_result.attribute.keys():
                 attributes[attribute] = ""
         return list(attributes.keys())
     
     def get_in(self, attribute, row: int):
-        return table_cell.format(text=html_link_str.format(path=self.results[row].input_file, string="+"))
+        return table_cell.format(text=html_link_str.format(path=self.testcases[row].input_file, string="+"))
     def get_stdout(self, attribute, row: int):
-        return table_cell.format(text=html_link_str.format(path=self.results[row].stdout_file, string="+"))
+        return table_cell.format(text=html_link_str.format(path=self.testcases[row].stdout_file, string="+"))
     def get_testcase_name(self, attribute, row: int):
-        return table_cell.format(text=self.results[row].test_case_name)
+        return table_cell.format(text=self.testcases[row].testcase_name)
     def get_stderr(self, attribute, row: int):
-        return table_cell.format(text=html_link_str.format(path=self.results[row].stderr_file, string="+"))
+        return table_cell.format(text=html_link_str.format(path=self.testcases[row].stderr_file, string="+"))
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
         ResultStatus.RE: ("RE", "gold"),
@@ -125,13 +130,13 @@ class HtmlMaker:
         ResultStatus.RUNNER_ERROR: ("IE", "red"),
     }
     def get_status(self, attribute, row: int):
-        status = self.results[row].test_result.error_status
+        status = self.results[row].error_status
         if status not in self.status_texts:
             status = ResultStatus.RUNNER_ERROR
         text, color = self.status_texts[status]
         return table_colored_cell.format(color=color, text=text)
     def get_other(self, _, attribute: str, row: int):
-        attributes = self.results[row].test_result.attribute
+        attributes = self.results[row].attribute
         if attribute not in attributes:
             value = "---"
         else:
@@ -183,20 +188,20 @@ class HtmlMaker:
     def make_summary(self) -> str:
         """サマリ情報を作る"""
         string = []
-        string.append("Input file number: " + str(len(self.results)))
+        string.append("Input file number: " + str(len(self.testcases)))
         if "score" not in self.attributes:
             return "<br>\n".join(string)
 
         file_name_list, scores_list = [], []
-        for result in self.results:
-            file_name_list.append(result.test_case_name)
+        for testcase, result in zip(self.testcases, self.results):
+            file_name_list.append(testcase.testcase_name)
             s = 0
-            if result.test_result.error_status == ResultStatus.AC:
-                if "score" in result.test_result.attribute:
-                    s = result.test_result.attribute["score"]
+            if result.error_status == ResultStatus.AC:
+                if "score" in result.attribute:
+                    s = result.attribute["score"]
             scores_list.append(s)
 
-        string.append(f"Average Score: {sum(scores_list)/len(self.results)}")
+        string.append(f"Average Score: {sum(scores_list)/len(self.testcases)}")
         string.append("")
         string.append(f"Max Score: {max(scores_list)}")
         string.append(f"FileName: {file_name_list[scores_list.index(max(scores_list))]}")
@@ -257,7 +262,7 @@ def run_testcase(run_handler: Callable[[TestCase], TestCaseResult],
     set_setting(runner_setting)
     init_log()
     runner = TestCaseRunner(run_handler)
-    results = runner.run()
+    results = runner.run_all_testcase()
     html_maker = HtmlMaker(results)
     html_maker.make()
     make_log()
