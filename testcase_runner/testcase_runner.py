@@ -15,8 +15,12 @@ log_file_path = "log"
 html_file_name = "result.html"
 
 class ResultStatus(Enum):
-    """テストケースを実行した結果のステータス定義"""
-    AC = auto()             # 正常終了
+    """テストケースを実行した結果のステータス定義
+
+    結果ファイルに載るだけで特別な処理をするわけではない
+    """
+    AC = auto()             # Accepted
+    WA = auto()             # Wrong Answer
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
     RUNNER_ERROR = auto()   # runnerプログラムのエラー(テストケースの結果ではないが都合がいいのでここで定義しちゃう)
@@ -46,7 +50,7 @@ def get_setting()->RunnerSettings:
     return runner_setting
 
 class TestCaseRunner:
-    def __init__(self, handler: Callable[[str, str], TestCaseResult]):
+    def __init__(self, handler: Callable[['TestCase'], TestCaseResult]):
         settings = get_setting()
         self.input_file_path = settings.input_file_path
         self.handler = handler
@@ -69,7 +73,7 @@ class TestCaseRunner:
         return results
 
 class TestCase:
-    def __init__(self, input_file, output_file, run_handler: Callable[[str, str], TestCaseResult]):
+    def __init__(self, input_file, output_file, run_handler: Callable[['TestCase'], TestCaseResult]):
         self.input_file = input_file
         self.stdout_file = output_file
         path, base_name = os.path.split(output_file)
@@ -78,7 +82,7 @@ class TestCase:
         self.handler = run_handler
     
     def run_test_case(self)->'TestCase':
-        self.test_result: TestCaseResult = self.handler(self.input_file, self.stdout_file)
+        self.test_result: TestCaseResult = self.handler(self)
         settings = get_setting()
         if settings.stdout_file_output:
             with open(self.stdout_file, mode='w') as f:
@@ -236,15 +240,15 @@ def make_log() -> None:
     shutil.copytree(output_file_path, os.path.join(path, "out"))
     shutil.rmtree(output_file_path, ignore_errors=True)
 
-def run_testcase(run_handler: Callable[[str, str], TestCaseResult],
+def run_testcase(run_handler: Callable[[TestCase], TestCaseResult],
         runner_setting:RunnerSettings=RunnerSettings()):
     """run_handlerで指定した関数の処理を並列実行して結果をHTMLファイルにまとめる
 
     Args:
-        run_handler (Callable[[str, str], TestCaseResult]):
+        run_handler (Callable[[TestCase], TestCaseResult]):
             並列実行したい処理
             run_handlerとして渡す関数の形式について
-                引数は 入力ファイルへのパス, 出力ファイルへのパス の2つ
+                引数は テストケース クラス
                 戻り値はTestCaseResultクラス 実行結果を各メンバに登録して返す
         runner_setting (RunnerSettings, optional): Defaults to RunnerSettings().
             ランナーを実行するときの設定

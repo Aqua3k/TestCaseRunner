@@ -1,17 +1,13 @@
 import time
 import subprocess
 
-from testcase_runner.testcase_runner import run_testcase, ResultStatus, TestCaseResult
+from testcase_runner.testcase_runner import run_testcase, ResultStatus, TestCaseResult, TestCase
 
-def run_program(input, output):
+def run_program(testcase: TestCase):
     """プログラムを走らせる処理をここに書く
     
     Args:
-        input(str): 入力ファイルへのパス
-        
-        output(str):
-            出力ファイルへのパス
-            このパスに結果を出力する必要はないが、念のため引数として渡している
+        testcase(TestCases): TestCaseクラス
     
     Returns:
         TestCaseResult: テストケースの結果
@@ -21,7 +17,7 @@ def run_program(input, output):
     
     keyとして`score`があると、スコアの平均/最大値/最小値がHTMLファイルに載る
     """
-    cmd = f"cargo run --release --bin tester python main.py < {input}"
+    cmd = f"cargo run --release --bin tester python main.py < {testcase.input_file}"
     start_time = time.time()
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     erapsed_time = time.time() - start_time
