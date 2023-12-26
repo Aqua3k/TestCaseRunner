@@ -125,6 +125,7 @@ class HtmlMaker:
         return table_cell.format(text=html_link_str.format(path=self.testcases[row].stderr_file, string="+"))
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
+        ResultStatus.WA: ("WA", "gold"),
         ResultStatus.RE: ("RE", "gold"),
         ResultStatus.TLE: ("TLE", "gold"),
         ResultStatus.RUNNER_ERROR: ("IE", "red"),
