@@ -34,7 +34,7 @@ class TestCaseResult:
     attribute: Dict[str, Union[int, float]] \
         = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
 
-@dataclass
+@dataclass(frozen=True)
 class RunnerSettings:
     input_file_path: str = "in"
     copy_source_file: bool = True
@@ -42,7 +42,7 @@ class RunnerSettings:
     stdout_file_output: bool = True
     stderr_file_output: bool = True
 
-@dataclass
+@dataclass(frozen=True)
 class TestCase:
     testcase_name: str
     input_file: str
@@ -218,12 +218,12 @@ class HtmlMaker:
         html_str_list.insert(html_str_list.index(tag) + 1, text)
         return "\n".join(html_str_list)
 
-def init_log() -> None:
+def init_log():
     """Logフォルダの初期化"""
     shutil.rmtree(output_file_path, ignore_errors=True)
     os.mkdir(output_file_path)
 
-def make_log() -> None:
+def make_log():
     """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
     settings = get_setting()
     if log_file_path not in glob.glob("*"):
