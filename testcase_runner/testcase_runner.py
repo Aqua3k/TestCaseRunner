@@ -10,8 +10,6 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from testcase_runner.html_templates import *
-
 output_file_path = "out"
 log_file_path = "log"
 html_file_name = "result.html"
@@ -126,7 +124,6 @@ class HtmlMaker:
             "value": "+",
             }
         return template.render(data)
-        return table_cell.format(text=html_link_str.format(path=self.testcases[row].input_file, string="+"))
     def get_stdout(self, attribute, row: int):
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
@@ -134,14 +131,12 @@ class HtmlMaker:
             "value": "+",
             }
         return template.render(data)
-        return table_cell.format(text=html_link_str.format(path=self.testcases[row].stdout_file, string="+"))
     def get_testcase_name(self, attribute, row: int):
         template = self.environment.get_template("cell.j2")
         data = {
             "value": self.testcases[row].testcase_name,
             }
         return template.render(data)
-        return table_cell.format(text=self.testcases[row].testcase_name)
     def get_stderr(self, attribute, row: int):
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
@@ -149,7 +144,6 @@ class HtmlMaker:
             "value": "+",
             }
         return template.render(data)
-        return table_cell.format(text=html_link_str.format(path=self.testcases[row].stderr_file, string="+"))
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
         ResultStatus.WA: ("WA", "gold"),
@@ -168,7 +162,6 @@ class HtmlMaker:
             "value": text,
             }
         return template.render(data)
-        return table_colored_cell.format(color=color, text=text)
     def get_other(self, _, attribute: str, row: int):
         attributes = self.results[row].attribute
         if attribute not in attributes:
@@ -182,7 +175,6 @@ class HtmlMaker:
             "value": value,
             }
         return template.render(data)
-        return table_cell.format(text=str(value))
 
     columns = [
         Column("in", get_in),
@@ -195,35 +187,16 @@ class HtmlMaker:
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
-        table_body = []
-        # テーブルのタイトルを作る
-        table = ""
-        for column in self.columns:
-            table += f'<th>{column.title}</th>'
-        table_body.append(table_line.format(text=table))
-
-        # テーブル本体を作る
-        for row in range(len(self.results)):
-            body = ""
-            for column in self.columns:
-                body += column.getter(self, column.title, row)
-            table_body.append(table_line.format(text=body))
-        
-        table_all = "<h2>Table</h2>"
-        table_all += table_heading.format(body="\n".join(table_body))
-        body = f'<h6>Creation date and time: {datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S")}</h6>'
-        
-        body += "<h2>Summary</h2>"
-        body += self.make_summary()
-        body += table_all
-
-        with open(html_file_name ,'w', encoding='utf-8', newline='\n') as html:
-            text = html_text.format(body=body, title="Result")
-            text = self.insert_text_into_html_head("<body>", text, css_link1)
-            text = self.insert_text_into_html_head("<body>", text, css_link2)
-            text = self.insert_text_into_html_head("<body>", text, script_link)
-            html.writelines(text)
-        self.jinja_test()
+        template = self.environment.get_template("main.j2")  # ファイル名を指定
+        data = {
+            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "summary": self.make_summary(),
+            "testcase_num": len(self.testcases),
+            "table": self.make_table()
+            }
+        output = template.render(data)
+        with open("result.html", mode="w") as f:
+            f.write(output)
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
@@ -245,17 +218,11 @@ class HtmlMaker:
             "max_score": max(scores_list),
             "max_score_case": file_name_list[scores_list.index(max(scores_list))],
             "max_score": min(scores_list),
-            "min_score": file_name_list[scores_list.index(min(scores_list))],
+            "min_score_case": file_name_list[scores_list.index(min(scores_list))],
             }
         return template.render(data)
     
-    def insert_text_into_html_head(self, tag: str, html_str: str, text: str) -> str:
-        """HTMLの文字列のtagの中に別の文字列を挿入する"""
-        html_str_list = html_str.split("\n")
-        html_str_list.insert(html_str_list.index(tag) + 1, text)
-        return "\n".join(html_str_list)
-    
-    def get_row(self):
+    def make_table(self):
         ret = []
         for row in range(len(self.results)):
             d = {}
@@ -263,24 +230,6 @@ class HtmlMaker:
                 d[column.title] = column.getter(self, column.title, row)
             ret.append(d)
         return ret
-    
-    def jinja_test(self):
-
-        # テンプレートをロード
-        template = self.environment.get_template("main.j2")  # ファイル名を指定
-
-        # テンプレートに渡すデータ
-        data = {
-            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
-            "summary": self.make_summary(),
-            "testcase_num": 10,
-            "data": self.get_row()
-            }
-
-        # テンプレートをレンダリング
-        output = template.render(data)
-        with open("jinja_test.html", mode="w") as f:
-            f.write(output)
 
 def init_log():
     """Logフォルダの初期化"""

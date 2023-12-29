@@ -25,13 +25,13 @@
     <table>
         <thead>
             <tr>
-                {% for key in data[0].keys() %}
+                {% for key in table[0].keys() %}
                     <th>{{ key }}</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
-            {% for row in data %}
+            {% for row in table %}
             <tr>
                 {% for value in row.values() %}
                     {{ value }}
