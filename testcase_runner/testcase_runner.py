@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 
+from jinja2 import Environment, FileSystemLoader
+
 from testcase_runner.html_templates import *
 
 output_file_path = "out"
@@ -107,6 +109,8 @@ class HtmlMaker:
             self.testcases.append(t)
             self.results.append(r)
         self.attributes = self.sortup_attributes()
+        loader = FileSystemLoader(r"testcase_runner\templates")
+        self.environment = Environment(loader=loader)
     
     def sortup_attributes(self):
         attributes = dict() # setだと順番が保持されないのでdictにする
@@ -116,12 +120,35 @@ class HtmlMaker:
         return list(attributes.keys())
     
     def get_in(self, attribute, row: int):
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": self.testcases[row].input_file,
+            "value": "+",
+            }
+        return template.render(data)
         return table_cell.format(text=html_link_str.format(path=self.testcases[row].input_file, string="+"))
     def get_stdout(self, attribute, row: int):
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": self.testcases[row].stdout_file,
+            "value": "+",
+            }
+        return template.render(data)
         return table_cell.format(text=html_link_str.format(path=self.testcases[row].stdout_file, string="+"))
     def get_testcase_name(self, attribute, row: int):
+        template = self.environment.get_template("cell.j2")
+        data = {
+            "value": self.testcases[row].testcase_name,
+            }
+        return template.render(data)
         return table_cell.format(text=self.testcases[row].testcase_name)
     def get_stderr(self, attribute, row: int):
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": self.testcases[row].stderr_file,
+            "value": "+",
+            }
+        return template.render(data)
         return table_cell.format(text=html_link_str.format(path=self.testcases[row].stderr_file, string="+"))
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
@@ -135,6 +162,12 @@ class HtmlMaker:
         if status not in self.status_texts:
             status = ResultStatus.RUNNER_ERROR
         text, color = self.status_texts[status]
+        template = self.environment.get_template("cell_with_color.j2")
+        data = {
+            "color": color,
+            "value": text,
+            }
+        return template.render(data)
         return table_colored_cell.format(color=color, text=text)
     def get_other(self, _, attribute: str, row: int):
         attributes = self.results[row].attribute
@@ -144,6 +177,11 @@ class HtmlMaker:
             value = attributes[attribute]
             if type(value) is float:
                 value = round(value, 3)
+        template = self.environment.get_template("cell.j2")
+        data = {
+            "value": value,
+            }
+        return template.render(data)
         return table_cell.format(text=str(value))
 
     columns = [
@@ -185,13 +223,12 @@ class HtmlMaker:
             text = self.insert_text_into_html_head("<body>", text, css_link2)
             text = self.insert_text_into_html_head("<body>", text, script_link)
             html.writelines(text)
+        self.jinja_test()
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
-        string = []
-        string.append("Input file number: " + str(len(self.testcases)))
         if "score" not in self.attributes:
-            return "<br>\n".join(string)
+            return ""
 
         file_name_list, scores_list = [], []
         for testcase, result in zip(self.testcases, self.results):
@@ -202,21 +239,48 @@ class HtmlMaker:
                     s = result.attribute["score"]
             scores_list.append(s)
 
-        string.append(f"Average Score: {sum(scores_list)/len(self.testcases)}")
-        string.append("")
-        string.append(f"Max Score: {max(scores_list)}")
-        string.append(f"FileName: {file_name_list[scores_list.index(max(scores_list))]}")
-        string.append("")
-        string.append(f"Minimum Score: {min(scores_list)}")
-        string.append(f"FileName: {file_name_list[scores_list.index(min(scores_list))]}")
-        string.append("")
-        return "<br>\n".join(string)
+        template = self.environment.get_template("score_summary.j2")
+        data = {
+            "average": sum(scores_list)/len(self.testcases),
+            "max_score": max(scores_list),
+            "max_score_case": file_name_list[scores_list.index(max(scores_list))],
+            "max_score": min(scores_list),
+            "min_score": file_name_list[scores_list.index(min(scores_list))],
+            }
+        return template.render(data)
     
     def insert_text_into_html_head(self, tag: str, html_str: str, text: str) -> str:
         """HTMLの文字列のtagの中に別の文字列を挿入する"""
         html_str_list = html_str.split("\n")
         html_str_list.insert(html_str_list.index(tag) + 1, text)
         return "\n".join(html_str_list)
+    
+    def get_row(self):
+        ret = []
+        for row in range(len(self.results)):
+            d = {}
+            for column in self.columns:
+                d[column.title] = column.getter(self, column.title, row)
+            ret.append(d)
+        return ret
+    
+    def jinja_test(self):
+
+        # テンプレートをロード
+        template = self.environment.get_template("main.j2")  # ファイル名を指定
+
+        # テンプレートに渡すデータ
+        data = {
+            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "summary": self.make_summary(),
+            "testcase_num": 10,
+            "data": self.get_row()
+            }
+
+        # テンプレートをレンダリング
+        output = template.render(data)
+        with open("jinja_test.html", mode="w") as f:
+            f.write(output)
 
 def init_log():
     """Logフォルダの初期化"""

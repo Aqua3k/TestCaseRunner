@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <script type="text/javascript" src="../../mysrc/Table.js"></script>
+    <link rel="stylesheet" href="../../mysrc/SortTable.css">
+    <link rel="stylesheet" href="https://newcss.net/new.min.css">
+
+    <header>
+        <h1>Test Result</h1>
+    </header>
+    
+    <h6>Creation date and time: {{ date }}</h6>
+
+    <h2>Summary</h2>
+    
+    Input file number: {{ testcase_num }}<br>
+
+    {% if summary %}
+        {{ summary }}
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                {% for key in data[0].keys() %}
+                    <th>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                {% for value in row.values() %}
+                    {{ value }}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
