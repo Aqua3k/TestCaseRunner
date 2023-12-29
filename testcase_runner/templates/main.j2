@@ -4,9 +4,17 @@
     <meta charset="UTF-8">
 </head>
 <body>
-    <script type="text/javascript" src="../../mysrc/Table.js"></script>
-    <link rel="stylesheet" href="../../mysrc/SortTable.css">
-    <link rel="stylesheet" href="https://newcss.net/new.min.css">
+    {% if script_list %}
+        {% for script in script_list %}
+            {{ script }}
+        {% endfor %}
+    {% endif %}
+
+    {% if css_list %}
+        {% for css in css_list %}
+            {{ css }}
+        {% endfor %}
+    {% endif %}
 
     <header>
         <h1>Test Result</h1>
@@ -22,11 +30,11 @@
         {{ summary }}
     {% endif %}
 
-    <table>
+    <table id="sortTable">
         <thead>
             <tr>
                 {% for key in table[0].keys() %}
-                    <th>{{ key }}</th>
+                    <th cmanSortBtn>{{ key }}</th>
                 {% endfor %}
             </tr>
         </thead>

@@ -192,7 +192,9 @@ class HtmlMaker:
             "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
             "summary": self.make_summary(),
             "testcase_num": len(self.testcases),
-            "table": self.make_table()
+            "script_list": self.make_script_list(),
+            "css_list": self.make_css_list(),
+            "table": self.make_table(),
             }
         output = template.render(data)
         with open("result.html", mode="w") as f:
@@ -229,6 +231,21 @@ class HtmlMaker:
             for column in self.columns:
                 d[column.title] = column.getter(self, column.title, row)
             ret.append(d)
+        return ret
+    
+    def make_script_list(self):
+        template = self.environment.get_template("script.j2")
+        ret = [
+            template.render({"link": r"../../testcase_runner/Table.js"}),
+        ]
+        return ret
+    
+    def make_css_list(self):
+        template = self.environment.get_template("css.j2")
+        ret = [
+            template.render({"link": r"../../testcase_runner/SortTable.css"}),
+            template.render({"link": r"https://newcss.net/new.min.css"}),
+        ]
         return ret
 
 def init_log():
