@@ -7,12 +7,15 @@ from typing import List, Dict, Tuple, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
+import hashlib
+import json
 
 from jinja2 import Environment, FileSystemLoader
 
 output_file_path = "out"
 log_file_path = "log"
 html_file_name = "result.html"
+json_file_name = "result.json"
 
 class ResultStatus(Enum):
     """テストケースを実行した結果のステータス定義
@@ -72,7 +75,7 @@ class TestCaseRunner:
     def run(self):
         futures:List[Future] = []
         test_cases: List[TestCase] = []
-        for input_file in glob.glob(os.path.join(self.input_file_path, "*")):
+        for input_file in sorted(glob.glob(os.path.join(self.input_file_path, "*"))):
             stdout_file = os.path.join(output_file_path, os.path.basename(input_file))
             path, base_name = os.path.split(stdout_file)
             stderr_file = os.path.join(path, "stdout" + base_name)
@@ -197,6 +200,12 @@ class LogManager:
             self.testcases.append(t)
             self.results.append(r)
         self.attributes = self.sortup_attributes()
+        
+        self.make_html()
+        self.make_json_file()
+
+    def make_html(self):
+
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
@@ -212,6 +221,7 @@ class LogManager:
         output = template.render(data)
         with open("result.html", mode="w") as f:
             f.write(output)
+        self.make_json_file()
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
@@ -278,9 +288,56 @@ class LogManager:
                 shutil.copy(source_file_path, path)
         # htmlファイルコピー
         shutil.copy(html_file_name, path)
+        shutil.copy(json_file_name, path)
         os.remove(html_file_name) #ファイル削除
+        os.remove(json_file_name) #ファイル削除
         # inファイルコピー
         shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
         # outディレクトリのファイルをコピーしてディレクトリを消す
         shutil.copytree(output_file_path, os.path.join(path, "out"))
         shutil.rmtree(output_file_path, ignore_errors=True)
+    
+    def make_json_file(self):
+        # 必要なデータ
+        # ファイルのテストケース数
+        # ファイルのハッシュをまとめた値
+        # ファイル名のハッシュ値をまとめた値
+        # scoreを持っているか？
+        # (scoreがあるなら)スコアの配列
+        file_hash = ""
+        file_names = ""
+        scores = []
+        for testcase, result in zip(self.testcases, self.results):
+            path = testcase.input_file
+            file_names += file_names
+            file_hash += self.calculate_file_hash(path)
+            if "score" in result.attribute:
+                scores.append(int(result.attribute["score"]))
+            else:
+                scores.append(0)
+        
+        file_content_hash = self.calculate_string_hash(file_hash)
+        file_name_hash = self.calculate_string_hash(file_names)
+        
+        json_file = {
+            "testcase_num": len(self.testcases),
+            "file_content_hash": file_content_hash,
+            "file_name_hash": file_name_hash,
+            "has_score": "score" in self.attributes,
+            "scores": scores,
+        }
+        with open(json_file_name, 'w') as f:
+            json.dump(json_file, f, indent=2)
+
+    def calculate_file_hash(self, file_path, hash_algorithm='sha256'):
+        hash_obj = hashlib.new(hash_algorithm)
+        with open(file_path, 'rb') as file:
+            while chunk := file.read(4096):
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+    
+    def calculate_string_hash(self, input_string: str, hash_algorithm='sha256'):
+        encoded_string = input_string.encode('utf-8')
+        hash_obj = hashlib.new(hash_algorithm)
+        hash_obj.update(encoded_string)
+        return hash_obj.hexdigest()
