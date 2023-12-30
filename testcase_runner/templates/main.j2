@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    {% if script_list %}
+        {% for script in script_list %}
+            {{ script }}
+        {% endfor %}
+    {% endif %}
+
+    {% if css_list %}
+        {% for css in css_list %}
+            {{ css }}
+        {% endfor %}
+    {% endif %}
+
+    <header>
+        <h1>Test Result</h1>
+    </header>
+    
+    <h6>Creation date and time: {{ date }}</h6>
+
+    <h2>Summary</h2>
+    
+    Input file number: {{ testcase_num }}<br>
+
+    {% if summary %}
+        {{ summary }}
+    {% endif %}
+
+    <h2>Table</h2>
+
+    <table id="sortTable">
+        <thead>
+            <tr>
+                {% for key in table[0].keys() %}
+                    <th cmanSortBtn>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+            <tr>
+                {% for value in row.values() %}
+                    {{ value }}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
