@@ -1,7 +1,13 @@
 import time
 import subprocess
 
-from testcase_runner.testcase_runner import run_testcase, ResultStatus, TestCaseResult, TestCase
+from testcase_runner.testcase_runner import (
+    TestCaseRunner,
+    ResultStatus,
+    TestCaseResult,
+    TestCase,
+    RunnerSettings,
+    )
 
 def run_program(testcase: TestCase):
     """プログラムを走らせる処理をここに書く
@@ -34,4 +40,9 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    run_testcase(run_program)
+    setting = RunnerSettings(
+        copy_source_file=True,
+        source_file_path="main.py"
+    )
+    runner = TestCaseRunner(run_program, setting)
+    runner.run()
