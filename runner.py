@@ -40,4 +40,8 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    run_testcase(run_program)
+    setting = RunnerSettings(
+        copy_source_file=True,
+        source_file_path="main.py"
+    )
+    run_testcase(run_program, setting)

@@ -36,9 +36,18 @@ class TestCaseResult:
 
 @dataclass(frozen=True)
 class RunnerSettings:
+    """ランナーの設定
+    
+    input_file_path: 入力ファイル群が置いてあるディレクトリへのパス
+    copy_source_file: ソースファイルをコピーするかどうか
+    source_file_path: コピーするソースファイルへのパス
+    stdout_file_output: 標準出力をファイル出力するかどうか
+    stderr_file_output: 標準エラー出力をファイル出力するかどうか
+    log_folder_name: logを保存するフォルダの名前
+    """
     input_file_path: str = "in"
-    copy_source_file: bool = True
-    source_file_path: str = "main.py"
+    copy_source_file: bool = False
+    source_file_path: str = ""
     stdout_file_output: bool = True
     stderr_file_output: bool = True
     log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
