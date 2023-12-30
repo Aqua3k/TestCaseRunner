@@ -41,6 +41,7 @@ class RunnerSettings:
     source_file_path: str = "main.py"
     stdout_file_output: bool = True
     stderr_file_output: bool = True
+    log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
 
 @dataclass(frozen=True)
 class TestCase:
@@ -258,7 +259,11 @@ def make_log():
     settings = get_setting()
     if log_file_path not in glob.glob("*"):
         os.mkdir(log_file_path)
-    path = os.path.join(log_file_path, str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')))
+    path = os.path.join(log_file_path, settings.log_folder_name)
+    i = 1
+    while os.path.exists(path):
+        path = os.path.join(log_file_path, f"{settings.log_folder_name}_{i}")
+        i += 1
     os.mkdir(path)
 
     settings = get_setting()

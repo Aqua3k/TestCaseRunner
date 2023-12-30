@@ -1,7 +1,13 @@
 import time
 import subprocess
 
-from testcase_runner.testcase_runner import run_testcase, ResultStatus, TestCaseResult, TestCase
+from testcase_runner.testcase_runner import (
+    run_testcase,
+    ResultStatus,
+    TestCaseResult,
+    TestCase,
+    RunnerSettings,
+    )
 
 def run_program(testcase: TestCase):
     """プログラムを走らせる処理をここに書く
