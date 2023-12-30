@@ -2,7 +2,7 @@ import time
 import subprocess
 
 from testcase_runner.testcase_runner import (
-    run_testcase,
+    TestCaseRunner,
     ResultStatus,
     TestCaseResult,
     TestCase,
@@ -44,4 +44,5 @@ if __name__ == "__main__":
         copy_source_file=True,
         source_file_path="main.py"
     )
-    run_testcase(run_program, setting)
+    runner = TestCaseRunner(run_program, setting)
+    runner.run()

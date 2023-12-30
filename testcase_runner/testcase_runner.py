@@ -3,7 +3,7 @@ import os
 import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
-from typing import List, Dict, Union, Callable
+from typing import List, Dict, Tuple, Union, Callable
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
@@ -59,21 +59,17 @@ class TestCase:
     stdout_file: str
     stderr_file: str
 
-runner_setting = RunnerSettings()
-def set_setting(setting):
-    global runner_setting
-    runner_setting = setting
-
-def get_setting()->RunnerSettings:
-    return runner_setting
-
 class TestCaseRunner:
-    def __init__(self, handler: Callable[[TestCase], TestCaseResult]):
-        settings = get_setting()
-        self.input_file_path = settings.input_file_path
+    def __init__(self,
+                 handler: Callable[[TestCase], TestCaseResult],
+                 setting: RunnerSettings = RunnerSettings(),
+                 ):
+        self.settings = setting
+        self.input_file_path = self.settings.input_file_path
         self.handler = handler
+        self.log_manager = LogManager(setting)
     
-    def run_all_testcase(self)->List[List[Union[TestCase, TestCaseResult]]]:
+    def run(self):
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         for input_file in glob.glob(os.path.join(self.input_file_path, "*")):
@@ -85,38 +81,39 @@ class TestCaseRunner:
             test_cases.append(testcase)
         with ProcessPoolExecutor() as executor:
             for testcase in test_cases:
-                future = executor.submit(self.run_testcase, testcase)
+                future = executor.submit(self._run_testcase, testcase)
                 futures.append(future)
 
         results: List[TestCase] = []
         for future in futures:
             results.append(future.result())
-        return results
+        
+        self.__make_log(results)
     
-    def run_testcase(self, testcase: TestCase)->TestCaseResult:
+    def _run_testcase(self, testcase: TestCase)->Tuple[TestCase, TestCaseResult]:
         test_result: TestCaseResult = self.handler(testcase)
-        settings = get_setting()
-        if settings.stdout_file_output:
+        if self.settings.stdout_file_output:
             with open(testcase.stdout_file, mode='w') as f:
                 f.write(test_result.stdout)
-        if settings.stderr_file_output:
+        if self.settings.stderr_file_output:
             with open(testcase.stderr_file, mode='w') as f:
                 f.write(test_result.stderr)
         return testcase, test_result
+    
+    def __make_log(self, results):
+        self.log_manager.make_result_log(results)
+        self.log_manager.finalize()
 
-class HtmlMaker:
+class LogManager:
     @dataclass
     class Column:
         title: str
         getter: Callable[[int], str]
 
-    def __init__(self, results: List[List[Union[TestCase, TestCaseResult]]]):
-        self.testcases: List[TestCase] = []
-        self.results: List[TestCaseResult] = []
-        for t, r in results:
-            self.testcases.append(t)
-            self.results.append(r)
-        self.attributes = self.sortup_attributes()
+    def __init__(self, settings: RunnerSettings):
+        self.settings = settings
+        shutil.rmtree(output_file_path, ignore_errors=True)
+        os.mkdir(output_file_path)
         loader = FileSystemLoader(r"testcase_runner\templates")
         self.environment = Environment(loader=loader)
     
@@ -193,7 +190,13 @@ class HtmlMaker:
         Column("testcase", get_testcase_name),
         Column("status", get_status),
     ]
-    def make(self):
+    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+        self.testcases: List[TestCase] = []
+        self.results: List[TestCaseResult] = []
+        for t, r in results:
+            self.testcases.append(t)
+            self.results.append(r)
+        self.attributes = self.sortup_attributes()
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
@@ -258,56 +261,26 @@ class HtmlMaker:
         ]
         return ret
 
-def init_log():
-    """Logフォルダの初期化"""
-    shutil.rmtree(output_file_path, ignore_errors=True)
-    os.mkdir(output_file_path)
-
-def make_log():
-    """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-    settings = get_setting()
-    if log_file_path not in glob.glob("*"):
-        os.mkdir(log_file_path)
-    path = os.path.join(log_file_path, settings.log_folder_name)
-    i = 1
-    while os.path.exists(path):
-        path = os.path.join(log_file_path, f"{settings.log_folder_name}_{i}")
-        i += 1
-    os.mkdir(path)
-
-    settings = get_setting()
-    # mainファイルコピー
-    if settings.copy_source_file:
-        source_file_path = Path(settings.source_file_path)
-        if source_file_path.is_file():
-            shutil.copy(source_file_path, path)
-    # htmlファイルコピー
-    shutil.copy(html_file_name, path)
-    os.remove(html_file_name) #ファイル削除
-    # inファイルコピー
-    shutil.copytree(settings.input_file_path, os.path.join(path, "in"))
-    # outディレクトリのファイルをコピーしてディレクトリを消す
-    shutil.copytree(output_file_path, os.path.join(path, "out"))
-    shutil.rmtree(output_file_path, ignore_errors=True)
-
-def run_testcase(run_handler: Callable[[TestCase], TestCaseResult],
-        runner_setting:RunnerSettings=RunnerSettings()):
-    """run_handlerで指定した関数の処理を並列実行して結果をHTMLファイルにまとめる
-
-    Args:
-        run_handler (Callable[[TestCase], TestCaseResult]):
-            並列実行したい処理
-            run_handlerとして渡す関数の形式について
-                引数は テストケース クラス
-                戻り値はTestCaseResultクラス 実行結果を各メンバに登録して返す
-        runner_setting (RunnerSettings, optional): Defaults to RunnerSettings().
-            ランナーを実行するときの設定
-            オプション引数を渡さないとデフォルトのRunnerSettingsクラスの設定になる
-    """
-    set_setting(runner_setting)
-    init_log()
-    runner = TestCaseRunner(run_handler)
-    results = runner.run_all_testcase()
-    html_maker = HtmlMaker(results)
-    html_maker.make()
-    make_log()
+    def finalize(self):
+        """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
+        if log_file_path not in glob.glob("*"):
+            os.mkdir(log_file_path)
+        path = os.path.join(log_file_path, self.settings.log_folder_name)
+        i = 1
+        while os.path.exists(path):
+            path = os.path.join(log_file_path, f"{self.settings.log_folder_name}_{i}")
+            i += 1
+        os.mkdir(path)
+        # mainファイルコピー
+        if self.settings.copy_source_file:
+            source_file_path = Path(self.settings.source_file_path)
+            if source_file_path.is_file():
+                shutil.copy(source_file_path, path)
+        # htmlファイルコピー
+        shutil.copy(html_file_name, path)
+        os.remove(html_file_name) #ファイル削除
+        # inファイルコピー
+        shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
+        # outディレクトリのファイルをコピーしてディレクトリを消す
+        shutil.copytree(output_file_path, os.path.join(path, "out"))
+        shutil.rmtree(output_file_path, ignore_errors=True)
