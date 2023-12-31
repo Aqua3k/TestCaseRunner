@@ -306,15 +306,12 @@ class LogManager:
         # (scoreがあるなら)スコアの配列
         file_hash = ""
         file_names = ""
-        scores = []
+        attributes = []
         for testcase, result in zip(self.testcases, self.results):
             path = testcase.input_file
             file_names += file_names
             file_hash += self.calculate_file_hash(path)
-            if "score" in result.attribute:
-                scores.append(int(result.attribute["score"]))
-            else:
-                scores.append(0)
+            attributes.append(result.attribute)
         
         file_content_hash = self.calculate_string_hash(file_hash)
         file_name_hash = self.calculate_string_hash(file_names)
@@ -324,7 +321,7 @@ class LogManager:
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
             "has_score": "score" in self.attributes,
-            "scores": scores,
+            "scores": attributes,
         }
         with open(json_file_name, 'w') as f:
             json.dump(json_file, f, indent=2)
