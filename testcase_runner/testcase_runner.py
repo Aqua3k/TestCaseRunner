@@ -5,10 +5,11 @@ import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
 from typing import List, Dict, Tuple, Union, Callable
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import IntEnum, auto
 from pathlib import Path
 import hashlib
 import json
+from collections import defaultdict
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -17,7 +18,7 @@ log_file_path = "log"
 html_file_name = "result.html"
 json_file_name = "result.json"
 
-class ResultStatus(Enum):
+class ResultStatus(IntEnum):
     """テストケースを実行した結果のステータス定義
 
     結果ファイルに載るだけで特別な処理をするわけではない
@@ -306,12 +307,18 @@ class LogManager:
         # (scoreがあるなら)スコアの配列
         file_hash = ""
         file_names = ""
-        attributes = []
+        contents = defaultdict(list)
         for testcase, result in zip(self.testcases, self.results):
             path = testcase.input_file
             file_names += file_names
             file_hash += self.calculate_file_hash(path)
-            attributes.append(result.attribute)
+            contents["input_file"].append(testcase.input_file)
+            contents["stdout_file"].append(testcase.stdout_file)
+            contents["stderr_file"].append(testcase.stderr_file)
+            contents["status"].append(result.error_status)
+            for key in self.attributes:
+                value = result.attribute[key] if key in result.attribute else None
+                contents[key].append(value)
         
         file_content_hash = self.calculate_string_hash(file_hash)
         file_name_hash = self.calculate_string_hash(file_names)
@@ -321,7 +328,7 @@ class LogManager:
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
             "has_score": "score" in self.attributes,
-            "scores": attributes,
+            "contents": contents,
         }
         with open(json_file_name, 'w') as f:
             json.dump(json_file, f, indent=2)

@@ -1,5 +1,6 @@
 import time
 import subprocess
+import random
 
 from testcase_runner.testcase_runner import (
     TestCaseRunner,
@@ -28,11 +29,11 @@ def run_program(testcase: TestCase):
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     erapsed_time = time.time() - start_time
     err_stat = ResultStatus.AC
+    score = random.randint(0, 100)
     if proc.returncode != 0:
         print(proc.stdout)
         print(proc.stderr)
         err_stat = ResultStatus.RE
-    score = 0
     attribute = {
         "score": score,
         "time": erapsed_time,
