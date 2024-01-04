@@ -222,10 +222,10 @@ class LogManager:
         output = template.render(data)
         with open("result.html", mode="w") as f:
             f.write(output)
-        self.make_json_file()
 
     def make_summary(self) -> str:
         """サマリ情報を作る"""
+        self.average_score = None
         if "score" not in self.attributes:
             return ""
 
@@ -238,9 +238,10 @@ class LogManager:
                     s = result.attribute["score"]
             scores_list.append(s)
 
+        self.average_score = sum(scores_list)/len(self.testcases)
         template = self.environment.get_template("score_summary.j2")
         data = {
-            "average": sum(scores_list)/len(self.testcases),
+            "average": self.average_score,
             "max_score": max(scores_list),
             "max_score_case": file_name_list[scores_list.index(max(scores_list))],
             "max_score": min(scores_list),
@@ -299,12 +300,6 @@ class LogManager:
         shutil.rmtree(output_file_path, ignore_errors=True)
     
     def make_json_file(self):
-        # 必要なデータ
-        # ファイルのテストケース数
-        # ファイルのハッシュをまとめた値
-        # ファイル名のハッシュ値をまとめた値
-        # scoreを持っているか？
-        # (scoreがあるなら)スコアの配列
         file_hash = ""
         file_names = ""
         contents = defaultdict(list)
@@ -328,6 +323,7 @@ class LogManager:
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
             "has_score": "score" in self.attributes,
+            "average_score": self.average_score,
             "contents": contents,
         }
         with open(json_file_name, 'w') as f:
