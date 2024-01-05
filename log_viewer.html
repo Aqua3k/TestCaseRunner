@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Viewer</title>
+</head>
+<body>
+
+<div id="responseArea"></div>
+
+<script>
+window.onload = function() {
+    sendHTTPRequest();
+};
+
+function sendHTTPRequest() {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "http://localhost:5000/api/log_table", true); // エンドポイントのURLを指定
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                var responseText = xhr.responseText;
+                document.getElementById('responseArea').innerHTML = responseText; // レスポンスをWebページに表示
+            } else {
+                alert('HTTPリクエストが失敗しました。');
+            }
+        }
+    };
+    xhr.send();
+}
+</script>
+
+</body>
+</html>

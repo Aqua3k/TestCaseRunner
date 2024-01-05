@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    {% if script_list %}
+        {% for script in script_list %}
+            {{ script }}
+        {% endfor %}
+    {% endif %}
+
+    {% if css_list %}
+        {% for css in css_list %}
+            {{ css }}
+        {% endfor %}
+    {% endif %}
+
+    <header>
+        <h1>Low Viewer</h1>
+    </header>
+    
+    <table id="sortTable">
+        <thead>
+            <tr>
+                {% for key in table[0].keys() %}
+                    <th cmanSortBtn>{{ key }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in table %}
+            <tr>
+                {% for value in row.values() %}
+                    {{ value }}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
