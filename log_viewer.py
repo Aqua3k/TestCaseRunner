@@ -23,10 +23,11 @@ class Log():
         self.file_name_hash = json_data["file_name_hash"]
         self.has_score = json_data["has_score"]
         self.average_score = json_data["average_score"]
-        self.df = pd.DataFrame(contents)
+        self.__df = pd.DataFrame(contents)
     
-    def show_log(self):
-        print(self.df)
+    @property
+    def df(self):
+        return self.__df
     
     def get_iuput_file_hash(self):
         return (self.testcase_num, self.file_content_hash, self.file_name_hash)
@@ -38,6 +39,9 @@ class LogViewer():
         heading, table = self.make_table()
         self.table_length = len(table)
         self.row_select = [False for i in range(self.table_length)]
+        colors = []
+        for i in range(self.table_length):
+            colors.append([i, "white"])
         layout = [
             [sg.Table(values=table, headings=heading,
             display_row_numbers=False, auto_size_columns=False,
@@ -69,7 +73,7 @@ class LogViewer():
         colors = []
         for i in range(self.table_length):
             if self.row_select[i]:
-                colors.append((i, "black", "yellow"))
+                colors.append((i, "yellow"))
         heading, table = self.make_table()
         self.main_window['-TABLE-'].update(row_colors=colors, values=table)
 
@@ -111,11 +115,30 @@ class LogViewer():
         merged_df = pd.merge(self.logs[index1].df, self.logs[index2].df, on='input_file')
         print(merged_df)
     
-    def show_log(self):
-        pass
+    def get_data_frame(self, index: int):
+        return self.logs[index].df
 
     def show_diff(self):
         pass
 
 a = LogViewer()
+
+df = a.get_data_frame(0)
+
+df.info()
+p = df.describe()
+print(p)
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# ヒストグラムを描画
+df.hist()
+plt.show()
+
+# ボックスプロットを描画
+sns.boxplot(data=df)
+plt.show()
+
+exit()
 a.main_loop()
