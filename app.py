@@ -3,7 +3,7 @@ import os
 from typing import List
 import json
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
@@ -103,10 +103,27 @@ log_manager = LogViewer()
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/api/log_table', methods=['GET'])  # /data エンドポイントに対するGETリクエストを処理
-def get_data():
-    # レスポンスの内容を返す
+@app.route('/api/log_table', methods=['POST'])
+def post_handler():
+    assert request.is_json
+    data = request.json
+    match data["type"]:
+        case "0":
+            pass
+        case "1":
+            erase_log()
+        case "2":
+            show_diff()
+        case _:
+            assert 0
+
     return log_manager.make_html_contents()
 
+def erase_log():
+    pass
+
+def show_diff():
+    pass
+
 if __name__ == '__main__':
-    app.run(debug=True)  # デバッグモードでFlaskアプリケーションを実行
+    app.run(debug=True)
