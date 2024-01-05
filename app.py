@@ -21,6 +21,7 @@ class Log():
         tmp = os.path.split(path)[0]
         self.html_path = os.path.join(tmp, html_path)
         self.foleder_name = os.path.basename(tmp)
+        self.created_date = json_data["created_date"]
         contents = json_data["contents"]
         self.testcase_num = json_data["testcase_num"]
         self.file_content_hash = json_data["file_content_hash"]
@@ -70,7 +71,6 @@ class LogViewer():
     def make_html_contents(self):
         template = self.environment.get_template("log_viewer_main.j2")  # ファイル名を指定
         data = {
-            "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
         return template.render(data)
@@ -83,7 +83,8 @@ class LogViewer():
         for i, log in enumerate(self.logs):
             d = {}
             checkbox = checkbox_template.render({"name": i})
-            d["check_box"] = cell_template.render({"value": checkbox})
+            d["select"] = cell_template.render({"value": checkbox})
+            d["created date"] = cell_template.render({"value": log.created_date})
             data = {
                 "link": log.html_path,
                 "value": log.foleder_name,
@@ -95,13 +96,6 @@ class LogViewer():
                 score = "None"
             d["average score"] = cell_template.render({"value": score})
             ret.append(d)
-        return ret
-    
-    def make_css_list(self):
-        template = self.environment.get_template("css.j2")
-        ret = [
-            template.render({"link": r"https://newcss.net/new.min.css"}),
-        ]
         return ret
 
 log_manager = LogViewer()

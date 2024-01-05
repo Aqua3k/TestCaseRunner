@@ -5,28 +5,62 @@
 </head>
 <body>
 
+<header>
+    <h1>Log Viewer</h1>
+</header>
+
+<link rel="stylesheet" href="https://newcss.net/new.min.css">
+
+<div class="button-container">
+    <button onclick="buttonClicked(1)">Button 1</button>
+    <button onclick="buttonClicked(2)">Button 2</button>
+</div>
+
 <div id="responseArea"></div>
 
 <script>
-window.onload = function() {
-    sendHTTPRequest();
-};
-
-function sendHTTPRequest() {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", "http://localhost:5000/api/log_table", true); // エンドポイントのURLを指定
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) {
-                var responseText = xhr.responseText;
-                document.getElementById('responseArea').innerHTML = responseText; // レスポンスをWebページに表示
-            } else {
-                alert('HTTPリクエストが失敗しました。');
-            }
-        }
+    window.onload = function() {
+        sendHTTPRequest();
     };
-    xhr.send();
-}
+
+    function sendHTTPRequest() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "http://localhost:5000/api/log_table", true); // エンドポイントのURLを指定
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    var responseText = xhr.responseText;
+                    document.getElementById('responseArea').innerHTML = responseText; // レスポンスをWebページに表示
+                } else {
+                    alert('HTTPリクエストが失敗しました。');
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    function buttonClicked(buttonNumber) {
+        // ボタンがクリックされたときの処理を記述
+        if (buttonNumber === 1) {
+            // ボタン1がクリックされたときの処理
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "http://localhost:5000/api/log_table", true); // エンドポイントのURLを指定
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        var responseText = xhr.responseText;
+                        document.getElementById('responseArea').innerHTML = responseText; // レスポンスをWebページに表示
+                    } else {
+                        alert('HTTPリクエストが失敗しました。');
+                    }
+                }
+            };
+            xhr.send();
+        } else if (buttonNumber === 2) {
+            // ボタン2がクリックされたときの処理
+            // 何かしらの動作を記述
+        }
+    }
 </script>
 
 </body>

@@ -319,6 +319,7 @@ class LogManager:
         file_name_hash = self.calculate_string_hash(file_names)
         
         json_file = {
+            "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(self.testcases),
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
