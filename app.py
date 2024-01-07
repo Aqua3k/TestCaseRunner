@@ -2,6 +2,8 @@ import glob
 import os
 from typing import List
 import json
+import shutil
+import time
 
 from flask import Flask, request
 from flask_cors import CORS
@@ -13,6 +15,7 @@ from testcase_runner.testcase_runner import ResultStatus
 log_dir = "log"
 log_file = "result.json"
 html_path = "result.html"
+css_path = "https://newcss.net/new.min.css"
 
 class Log():
     def __init__(self, path):
@@ -36,6 +39,10 @@ class Log():
     
     def get_hash(self):
         return (self.testcase_num, self.file_content_hash, self.file_name_hash)
+    
+    def erase_log_folder(self):
+        path = os.path.join(log_dir, self.foleder_name)
+        shutil.rmtree(path)
 
 class LogViewer():
     def __init__(self):
@@ -52,6 +59,11 @@ class LogViewer():
                 path = os.path.join(dir, log_file)
                 log = Log(path)
                 self.logs.append(log)
+    
+    def erase_log(self, index: int):
+        assert 0 <= index < len(self.logs)
+        self.logs[index].erase_log_folder()
+        self.logs.pop(index)
         
     def is_inputfiles_same(self, index_list: List[int]):
         s = set()
@@ -63,7 +75,7 @@ class LogViewer():
         if not self.is_inputfiles_same([index1, index2]):
             return
         merged_df = pd.merge(self.logs[index1].df, self.logs[index2].df, on='input_file')
-        print(merged_df)
+        return merged_df
     
     def get_data_frame(self, index: int):
         return self.logs[index].df
@@ -83,7 +95,7 @@ class LogViewer():
         for i, log in enumerate(self.logs):
             d = {}
             checkbox = checkbox_template.render({"name": i})
-            d["select"] = cell_template.render({"value": checkbox})
+            d[""] = cell_template.render({"value": checkbox})
             d["created date"] = cell_template.render({"value": log.created_date})
             data = {
                 "link": log.html_path,
@@ -107,23 +119,35 @@ CORS(app)
 def post_handler():
     assert request.is_json
     data = request.json
+    ret = ""
+    print("recieve request!")
     match data["type"]:
         case "0":
-            pass
+            print("update")
+            ret = log_manager.make_html_contents()
         case "1":
-            erase_log()
+            print("erase")
+            erase_log(data["checkbox"])
         case "2":
-            show_diff()
+            ret = get_diff_html(data["checkbox"])
+            print("diff")
         case _:
             assert 0
 
-    return log_manager.make_html_contents()
+    return ret
 
-def erase_log():
-    pass
+def erase_log(checkbox_list):
+    for index in checkbox_list:
+        print(index)
+        log_manager.erase_log(int(index))
+    time.sleep(0.5)
 
-def show_diff():
-    pass
+def get_diff_html(checkbox_list):
+    index1 = int(checkbox_list[0])
+    index2 = int(checkbox_list[1])
+    merged_df = log_manager.show_two_data(index1, index2)
+    print(merged_df.to_html(index=False))
+    return merged_df.to_html(index=False)
 
 if __name__ == '__main__':
     app.run(debug=True)
