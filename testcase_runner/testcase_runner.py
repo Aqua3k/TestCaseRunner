@@ -5,16 +5,23 @@ import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
 from typing import List, Dict, Tuple, Union, Callable
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import IntEnum, auto
 from pathlib import Path
+import hashlib
+import json
+from collections import defaultdict
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 output_file_path = "out"
 log_file_path = "log"
 html_file_name = "result.html"
+json_file_name = "result.json"
 
-class ResultStatus(Enum):
+class ResultStatus(IntEnum):
     """テストケースを実行した結果のステータス定義
 
     結果ファイルに載るだけで特別な処理をするわけではない
@@ -72,7 +79,7 @@ class TestCaseRunner:
     def run(self):
         futures:List[Future] = []
         test_cases: List[TestCase] = []
-        for input_file in glob.glob(os.path.join(self.input_file_path, "*")):
+        for input_file in sorted(glob.glob(os.path.join(self.input_file_path, "*"))):
             stdout_file = os.path.join(output_file_path, os.path.basename(input_file))
             path, base_name = os.path.split(stdout_file)
             stderr_file = os.path.join(path, "stdout" + base_name)
@@ -190,31 +197,15 @@ class LogManager:
         Column("testcase", get_testcase_name),
         Column("status", get_status),
     ]
-    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+    def analyze_result(self, results):
         self.testcases: List[TestCase] = []
         self.results: List[TestCaseResult] = []
         for t, r in results:
             self.testcases.append(t)
             self.results.append(r)
         self.attributes = self.sortup_attributes()
-        for attribute in self.attributes:
-            self.columns.append(self.Column(attribute, self.get_other))
-        
-        template = self.environment.get_template("main.j2")  # ファイル名を指定
-        data = {
-            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
-            "summary": self.make_summary(),
-            "testcase_num": len(self.testcases),
-            "script_list": self.make_script_list(),
-            "css_list": self.make_css_list(),
-            "table": self.make_table(),
-            }
-        output = template.render(data)
-        with open("result.html", mode="w") as f:
-            f.write(output)
 
-    def make_summary(self) -> str:
-        """サマリ情報を作る"""
+        self.average_score = None
         if "score" not in self.attributes:
             return ""
 
@@ -226,16 +217,49 @@ class LogManager:
                 if "score" in result.attribute:
                     s = result.attribute["score"]
             scores_list.append(s)
+        self.average_score = sum(scores_list)/len(self.testcases)
 
-        template = self.environment.get_template("score_summary.j2")
+    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+        self.analyze_result(results)
+        self.make_json_file()
+        self.make_html()
+    
+    def make_figure(self):
+        # ヒストグラムを描画
+        self.df.hist()
+        plt.savefig('histgram.png')
+        plt.close()
+
+        # 相関係数のヒートマップ
+        corr = self.df.corr(numeric_only=True)
+        heatmap = sns.heatmap(corr, annot=True)
+        heatmap.set_title('Correlation Coefficient Heatmap')
+        plt.savefig('heatmap.png')
+        
+        ret = []
+        template = self.environment.get_template("figure.j2")
+        fig = template.render({"link": os.path.join("fig", "histgram.png")})
+        ret.append(fig)
+        fig = template.render({"link": os.path.join("fig", "heatmap.png")})
+        ret.append(fig)
+        return "".join(ret)
+
+    def make_html(self):
+        for attribute in self.attributes:
+            self.columns.append(self.Column(attribute, self.get_other))
+        
+        template = self.environment.get_template("main.j2")
         data = {
-            "average": sum(scores_list)/len(self.testcases),
-            "max_score": max(scores_list),
-            "max_score_case": file_name_list[scores_list.index(max(scores_list))],
-            "max_score": min(scores_list),
-            "min_score_case": file_name_list[scores_list.index(min(scores_list))],
+            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "summary": f"<pre>{self.df.describe()}</pre>",
+            "script_list": self.make_script_list(),
+            "figures": self.make_figure(),
+            "css_list": self.make_css_list(),
+            "table": self.make_table(),
             }
-        return template.render(data)
+        output = template.render(data)
+        with open("result.html", mode="w") as f:
+            f.write(output)
     
     def make_table(self):
         ret = []
@@ -278,9 +302,70 @@ class LogManager:
                 shutil.copy(source_file_path, path)
         # htmlファイルコピー
         shutil.copy(html_file_name, path)
+        shutil.copy(json_file_name, path)
         os.remove(html_file_name) #ファイル削除
+        os.remove(json_file_name) #ファイル削除
         # inファイルコピー
         shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
         # outディレクトリのファイルをコピーしてディレクトリを消す
         shutil.copytree(output_file_path, os.path.join(path, "out"))
         shutil.rmtree(output_file_path, ignore_errors=True)
+        
+        # 画像をコピー
+        fig_dir = os.path.join(path, "fig")
+
+        os.mkdir(fig_dir)
+        fr = "histgram.png"
+        to = os.path.join(fig_dir, "histgram.png")
+        shutil.copy(fr, to)
+        os.remove(fr)
+
+        fr = "heatmap.png"
+        to = os.path.join(fig_dir, "heatmap.png")
+        shutil.copy(fr, to)
+        os.remove(fr)
+    
+    def make_json_file(self):
+        file_hash = ""
+        file_names = ""
+        contents = defaultdict(list)
+        for testcase, result in zip(self.testcases, self.results):
+            path = testcase.input_file
+            file_names += file_names
+            file_hash += self.calculate_file_hash(path)
+            contents["input_file"].append(testcase.input_file)
+            contents["stdout_file"].append(testcase.stdout_file)
+            contents["stderr_file"].append(testcase.stderr_file)
+            contents["status"].append(self.status_texts[result.error_status])
+            for key in self.attributes:
+                value = result.attribute[key] if key in result.attribute else None
+                contents[key].append(value)
+        
+        file_content_hash = self.calculate_string_hash(file_hash)
+        file_name_hash = self.calculate_string_hash(file_names)
+        
+        json_file = {
+            "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+            "testcase_num": len(self.testcases),
+            "file_content_hash": file_content_hash,
+            "file_name_hash": file_name_hash,
+            "has_score": "score" in self.attributes,
+            "average_score": self.average_score,
+            "contents": contents,
+        }
+        self.df = pd.DataFrame(contents)
+        with open(json_file_name, 'w') as f:
+            json.dump(json_file, f, indent=2)
+
+    def calculate_file_hash(self, file_path, hash_algorithm='sha256'):
+        hash_obj = hashlib.new(hash_algorithm)
+        with open(file_path, 'rb') as file:
+            while chunk := file.read(4096):
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+    
+    def calculate_string_hash(self, input_string: str, hash_algorithm='sha256'):
+        encoded_string = input_string.encode('utf-8')
+        hash_obj = hashlib.new(hash_algorithm)
+        hash_obj.update(encoded_string)
+        return hash_obj.hexdigest()

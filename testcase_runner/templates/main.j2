@@ -17,18 +17,20 @@
     {% endif %}
 
     <header>
-        <h1>Test Result</h1>
+        <h1>Result</h1>
     </header>
     
     <h6>Creation date and time: {{ date }}</h6>
 
     <h2>Summary</h2>
-    
-    Input file number: {{ testcase_num }}<br>
 
     {% if summary %}
         {{ summary }}
     {% endif %}
+
+    <h2>Figures</h2>
+
+    {{ figures }}
 
     <h2>Table</h2>
 
