@@ -11,6 +11,9 @@ import hashlib
 import json
 from collections import defaultdict
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 output_file_path = "out"
@@ -194,37 +197,14 @@ class LogManager:
         Column("testcase", get_testcase_name),
         Column("status", get_status),
     ]
-    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+    def analyze_result(self, results):
         self.testcases: List[TestCase] = []
         self.results: List[TestCaseResult] = []
         for t, r in results:
             self.testcases.append(t)
             self.results.append(r)
         self.attributes = self.sortup_attributes()
-        
-        self.make_html()
-        self.make_json_file()
 
-    def make_html(self):
-
-        for attribute in self.attributes:
-            self.columns.append(self.Column(attribute, self.get_other))
-        
-        template = self.environment.get_template("main.j2")  # ファイル名を指定
-        data = {
-            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
-            "summary": self.make_summary(),
-            "testcase_num": len(self.testcases),
-            "script_list": self.make_script_list(),
-            "css_list": self.make_css_list(),
-            "table": self.make_table(),
-            }
-        output = template.render(data)
-        with open("result.html", mode="w") as f:
-            f.write(output)
-
-    def make_summary(self) -> str:
-        """サマリ情報を作る"""
         self.average_score = None
         if "score" not in self.attributes:
             return ""
@@ -237,17 +217,28 @@ class LogManager:
                 if "score" in result.attribute:
                     s = result.attribute["score"]
             scores_list.append(s)
-
         self.average_score = sum(scores_list)/len(self.testcases)
-        template = self.environment.get_template("score_summary.j2")
+
+    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+        self.analyze_result(results)
+        self.make_json_file()
+        self.make_html()
+
+    def make_html(self):
+        for attribute in self.attributes:
+            self.columns.append(self.Column(attribute, self.get_other))
+        
+        template = self.environment.get_template("main.j2")  # ファイル名を指定
         data = {
-            "average": self.average_score,
-            "max_score": max(scores_list),
-            "max_score_case": file_name_list[scores_list.index(max(scores_list))],
-            "max_score": min(scores_list),
-            "min_score_case": file_name_list[scores_list.index(min(scores_list))],
+            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "summary": f"<pre>{self.df.describe()}</pre>",
+            "script_list": self.make_script_list(),
+            "css_list": self.make_css_list(),
+            "table": self.make_table(),
             }
-        return template.render(data)
+        output = template.render(data)
+        with open("result.html", mode="w") as f:
+            f.write(output)
     
     def make_table(self):
         ret = []
@@ -310,7 +301,7 @@ class LogManager:
             contents["input_file"].append(testcase.input_file)
             contents["stdout_file"].append(testcase.stdout_file)
             contents["stderr_file"].append(testcase.stderr_file)
-            contents["status"].append(result.error_status)
+            contents["status"].append(self.status_texts[result.error_status])
             for key in self.attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
@@ -327,6 +318,7 @@ class LogManager:
             "average_score": self.average_score,
             "contents": contents,
         }
+        self.df = pd.DataFrame(contents)
         with open(json_file_name, 'w') as f:
             json.dump(json_file, f, indent=2)
 

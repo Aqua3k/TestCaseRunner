@@ -10,8 +10,6 @@ from flask_cors import CORS
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
-from testcase_runner.testcase_runner import ResultStatus
-
 log_dir = "log"
 log_file = "result.json"
 html_path = "result.html"
