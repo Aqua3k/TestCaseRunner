@@ -223,16 +223,37 @@ class LogManager:
         self.analyze_result(results)
         self.make_json_file()
         self.make_html()
+    
+    def make_figure(self):
+        # ヒストグラムを描画
+        self.df.hist()
+        plt.savefig('histgram.png')
+        plt.close()
+
+        # 相関係数のヒートマップ
+        corr = self.df.corr(numeric_only=True)
+        heatmap = sns.heatmap(corr, annot=True)
+        heatmap.set_title('Correlation Coefficient Heatmap')
+        plt.savefig('heatmap.png')
+        
+        ret = []
+        template = self.environment.get_template("figure.j2")
+        fig = template.render({"link": os.path.join("fig", "histgram.png")})
+        ret.append(fig)
+        fig = template.render({"link": os.path.join("fig", "heatmap.png")})
+        ret.append(fig)
+        return "".join(ret)
 
     def make_html(self):
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
-        template = self.environment.get_template("main.j2")  # ファイル名を指定
+        template = self.environment.get_template("main.j2")
         data = {
             "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
             "summary": f"<pre>{self.df.describe()}</pre>",
             "script_list": self.make_script_list(),
+            "figures": self.make_figure(),
             "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
@@ -289,6 +310,20 @@ class LogManager:
         # outディレクトリのファイルをコピーしてディレクトリを消す
         shutil.copytree(output_file_path, os.path.join(path, "out"))
         shutil.rmtree(output_file_path, ignore_errors=True)
+        
+        # 画像をコピー
+        fig_dir = os.path.join(path, "fig")
+
+        os.mkdir(fig_dir)
+        fr = "histgram.png"
+        to = os.path.join(fig_dir, "histgram.png")
+        shutil.copy(fr, to)
+        os.remove(fr)
+
+        fr = "heatmap.png"
+        to = os.path.join(fig_dir, "heatmap.png")
+        shutil.copy(fr, to)
+        os.remove(fr)
     
     def make_json_file(self):
         file_hash = ""
