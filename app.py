@@ -69,14 +69,11 @@ class LogViewer():
             s.add(self.logs[index].get_hash())
         return len(s) == 1
 
-    def show_two_data(self, index1: int, index2: int):
+    def get_merged_data_frame(self, index1: int, index2: int):
         if not self.is_inputfiles_same([index1, index2]):
             return
         merged_df = pd.merge(self.logs[index1].df, self.logs[index2].df, on='input_file')
         return merged_df
-    
-    def get_data_frame(self, index: int):
-        return self.logs[index].df
     
     def make_html_contents(self):
         template = self.environment.get_template("log_viewer_main.j2")  # ファイル名を指定
@@ -108,6 +105,25 @@ class LogViewer():
             ret.append(d)
         return ret
 
+    def get_diff_html(self, checkbox_list):
+        index1 = int(checkbox_list[0])
+        index2 = int(checkbox_list[1])
+        merged_df = log_manager.get_merged_data_frame(index1, index2)
+        print(merged_df.to_html(index=False))
+        table = merged_df.to_html(index=False)
+        
+        css_template = self.environment.get_template("css.j2")
+        css = css_template.render({"link": css_path})
+        
+        template = self.environment.get_template("diff_main.j2")
+        data = {
+            "css_list": [css],
+            "table": table,
+        }
+        contents = template.render(data)
+        return merged_df.to_json()
+        return contents
+
 log_manager = LogViewer()
 
 app = Flask(__name__)
@@ -127,7 +143,7 @@ def post_handler():
             print("erase")
             erase_log(data["checkbox"])
         case "2":
-            ret = get_diff_html(data["checkbox"])
+            ret = log_manager.get_diff_html(data["checkbox"])
             print("diff")
         case _:
             assert 0
@@ -139,13 +155,6 @@ def erase_log(checkbox_list):
         print(index)
         log_manager.erase_log(int(index))
     time.sleep(0.5)
-
-def get_diff_html(checkbox_list):
-    index1 = int(checkbox_list[0])
-    index2 = int(checkbox_list[1])
-    merged_df = log_manager.show_two_data(index1, index2)
-    print(merged_df.to_html(index=False))
-    return merged_df.to_html(index=False)
 
 if __name__ == '__main__':
     app.run(debug=True)

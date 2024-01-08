@@ -43,9 +43,44 @@ function popupWindow() {
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200) {
-                const newWindow = window.open();
-                var responseText = xhr.responseText;
-                newWindow.document.write(responseText);
+            
+                // 新しいページを作成
+                var newPage = window.open('', '_blank');
+
+                // JSON文字列をJavaScriptオブジェクトに変換
+                var data = JSON.parse(xhr.responseText);
+                console.log(data);
+
+                // テーブルの要素を生成してJSONデータを表として表示
+                var table = newPage.document.createElement('table');
+                var tableHead = newPage.document.createElement('thead');
+                var tableBody = newPage.document.createElement('tbody');
+
+                // ヘッダー行を作成
+                var headerRow = newPage.document.createElement('tr');
+                var keys = Object.keys(data);
+                for (var i = 0; i < keys.length; i++) {
+                    var headerCell = newPage.document.createElement('th');
+                    headerCell.textContent = keys[i];
+                    headerRow.appendChild(headerCell);
+                }
+                tableHead.appendChild(headerRow);
+
+                // データ行を作成
+                var rowKeys = Object.keys(data[keys[0]]);
+                for (var j = 0; j < rowKeys.length; j++) {
+                    var row = newPage.document.createElement('tr');
+                    for (var k = 0; k < keys.length; k++) {
+                    var cell = newPage.document.createElement('td');
+                    cell.textContent = data[keys[k]][rowKeys[j]];
+                    row.appendChild(cell);
+                    }
+                    tableBody.appendChild(row);
+                }
+
+                table.appendChild(tableHead);
+                table.appendChild(tableBody);
+                newPage.document.body.appendChild(table);
             } else {
                 alert('HTTPリクエストが失敗しました。');
             }
