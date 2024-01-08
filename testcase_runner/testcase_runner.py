@@ -336,7 +336,7 @@ class LogManager:
             contents["input_file"].append(testcase.input_file)
             contents["stdout_file"].append(testcase.stdout_file)
             contents["stderr_file"].append(testcase.stderr_file)
-            contents["status"].append(self.status_texts[result.error_status])
+            contents["status"].append(self.status_texts[result.error_status][0])
             for key in self.attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)

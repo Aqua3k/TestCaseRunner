@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    {% if script_list %}
+        {% for script in script_list %}
+            {{ script }}
+        {% endfor %}
+    {% endif %}
+
+    {% if css_list %}
+        {% for css in css_list %}
+            {{ css }}
+        {% endfor %}
+    {% endif %}
+
+    <header>
+        <h1></h1>
+    </header>
+    
+    <h2>Legend</h2>
+
+    {{ legend }}
+
+    <h2>Table</h2>
+
+    {{ table }}
+
+</body>
+</html>
