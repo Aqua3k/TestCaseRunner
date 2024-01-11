@@ -121,7 +121,6 @@ class LogViewer():
             "table": table,
         }
         contents = template.render(data)
-        return merged_df.to_json()
         return contents
 
 log_manager = LogViewer()

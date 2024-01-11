@@ -37,6 +37,8 @@ def run_program(testcase: TestCase):
     attribute = {
         "score": score,
         "time": erapsed_time,
+        "foo": random.randint(0, 10),
+        "bar": random.randint(0, 10),
     }
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
