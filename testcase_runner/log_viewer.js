@@ -68,8 +68,8 @@ function eraseButtonHandler() {
 function diffButtonHandler() {
     console.log("diff button is clicked!");
     let checkboxList = getCheckboxList();
-    if (checkboxList.length != 2) {
-        alert('2つじゃないよ');
+    if (checkboxList.length == 0) {
+        alert('比較する対象を選択してください。');
         return;
     }
     popupWindow();
