@@ -4,6 +4,7 @@ from typing import List
 import json
 import shutil
 import time
+from copy import deepcopy
 
 from flask import Flask, request
 from flask_cors import CORS
@@ -105,11 +106,30 @@ class LogViewer():
             ret.append(d)
         return ret
 
-    def get_diff_html(self, checkbox_list):
-        index1 = int(checkbox_list[0])
-        index2 = int(checkbox_list[1])
-        merged_df = log_manager.get_merged_data_frame(index1, index2)
-        print(merged_df.to_html(index=False))
+    def get_diff_html(self, checkbox_list: List[int]):
+        def change_name_by_index(df: pd.DataFrame, index: int):
+            # input_file以外の列の名前を変える
+            replace = {}
+            for column in list(df.columns):
+                if column == "input_file":
+                    continue
+                replace[column] = f"{column}-{index+1}"
+            df.rename(columns=replace, inplace=True)
+
+        if not self.is_inputfiles_same(checkbox_list):
+            return ""
+        if len(checkbox_list) == 0:
+            return ""
+
+        # NOTE パフォーマンスが気になるなら↓のdeepcopyを使わないようにする
+        # deepcopyによって増えるメモリは高々2倍なので大きな問題にはならないと思う
+        data_frames = [deepcopy(self.logs[index].df) for index in checkbox_list]
+        for i, df in enumerate(data_frames):
+            change_name_by_index(df, i)
+        
+        merged_df = data_frames[0]
+        for df in data_frames[1:]:
+            merged_df = pd.merge(merged_df, df, on='input_file')
         table = merged_df.to_html(index=False)
         
         css_template = self.environment.get_template("css.j2")
@@ -121,7 +141,6 @@ class LogViewer():
             "table": table,
         }
         contents = template.render(data)
-        return merged_df.to_json()
         return contents
 
 log_manager = LogViewer()
@@ -143,7 +162,8 @@ def post_handler():
             print("erase")
             erase_log(data["checkbox"])
         case "2":
-            ret = log_manager.get_diff_html(data["checkbox"])
+            checkbox_list = list(map(int, data["checkbox"]))
+            ret = log_manager.get_diff_html(checkbox_list)
             print("diff")
         case _:
             assert 0

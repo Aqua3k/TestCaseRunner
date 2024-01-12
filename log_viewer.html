@@ -2,6 +2,27 @@
 <html>
 <head>
     <title>Log Viewer</title>
+    <style>
+        /* 上下に分割するためのスタイル */
+        .split-container {
+          display: flex;
+          flex-direction: column; /* 上下方向に並べる */
+          height: 100vh;
+        }
+        .top {
+          height: 50%; /* 上部の高さ */
+          background-color: white;
+          overflow: auto;
+        }
+        .bottom {
+          height: 70%; /* 下部の高さ */
+          width: 120%;
+          background-color: white;
+          padding: 0px;
+          overflow: auto;
+          overflow-x: visible;
+        }
+      </style>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://newcss.net/new.min.css">
     <script src="testcase_runner/log_viewer.js" defer></script>
@@ -12,12 +33,18 @@
     <h1>Log Viewer</h1>
 </header>
 
-<div class="button-container">
-    <button onclick="eraseButtonHandler()">Delete Log</button>
-    <button onclick="diffButtonHandler()">diff</button>
-</div>
-
-<div id="responseArea"></div>
+<div class="split-container">
+    <h2 >Results</h2>
+    <div class="top">
+        <div class="button-container">
+            <button onclick="eraseButtonHandler()">Delete Log</button>
+            <button onclick="diffButtonHandler()">View Diff</button>
+        </div>
+        <div id="responseArea"></div>
+    </div>
+    <div class="bottom" id="contentDisplay">
+    </div>
+  </div>
 
 </body>
 </html>
