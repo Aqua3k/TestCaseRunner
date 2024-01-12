@@ -18,6 +18,7 @@ from jinja2 import Environment, FileSystemLoader
 
 output_file_path = "out"
 log_file_path = "log"
+js_file_path = "js"
 html_file_name = "result.html"
 json_file_name = "result.json"
 
@@ -118,10 +119,12 @@ class LogManager:
         getter: Callable[[int], str]
 
     def __init__(self, settings: RunnerSettings):
+        self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
         shutil.rmtree(output_file_path, ignore_errors=True)
         os.mkdir(output_file_path)
-        loader = FileSystemLoader(r"testcase_runner\templates")
+        loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
+        print(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
     
     def sortup_attributes(self):
@@ -273,14 +276,14 @@ class LogManager:
     def make_script_list(self):
         template = self.environment.get_template("script.j2")
         ret = [
-            template.render({"link": r"../../testcase_runner/Table.js"}),
+            template.render({"link": r"js/Table.js"}),
         ]
         return ret
     
     def make_css_list(self):
         template = self.environment.get_template("css.j2")
         ret = [
-            template.render({"link": r"../../testcase_runner/SortTable.css"}),
+            template.render({"link": r"js/SortTable.css"}),
             template.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret
@@ -310,6 +313,9 @@ class LogManager:
         # outディレクトリのファイルをコピーしてディレクトリを消す
         shutil.copytree(output_file_path, os.path.join(path, "out"))
         shutil.rmtree(output_file_path, ignore_errors=True)
+
+        #HTMLの表示に必要なファイルをコピーする
+        shutil.copytree(os.path.join(self.base_dir, js_file_path), os.path.join(path, js_file_path))
         
         # 画像をコピー
         fig_dir = os.path.join(path, "fig")
