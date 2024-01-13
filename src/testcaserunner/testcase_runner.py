@@ -375,3 +375,34 @@ class LogManager:
         hash_obj = hashlib.new(hash_algorithm)
         hash_obj.update(encoded_string)
         return hash_obj.hexdigest()
+
+def run(
+        handler: Callable[[TestCase], TestCaseResult],
+        input_file_path: str = "in",
+        copy_source_file: bool = False,
+        source_file_path: str = "",
+        stdout_file_output: bool = True,
+        stderr_file_output: bool = True,
+        log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')),
+        ):
+    """ランナーを実行する
+
+    Args:
+        handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
+        input_file_path (str, optional): 入力ファイル群が置いてあるディレクトリへのパス. Defaults to "in".
+        copy_source_file (bool, optional): ログファイルを作るときにソースファイルをコピーするかどうか. Defaults to False.
+        source_file_path (str, optional): コピーするファイルへのパス. Defaults to "".
+        stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
+        stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
+        log_folder_name (str, optional): ログフォルダの名前. Defaults to str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')).
+    """
+    setting = RunnerSettings(
+        input_file_path,
+        copy_source_file,
+        source_file_path,
+        stdout_file_output,
+        stderr_file_output,
+        log_folder_name,
+    )
+    runner = TestCaseRunner(handler, setting)
+    runner.run()
