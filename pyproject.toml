@@ -2,11 +2,11 @@
 name = "testcaserunner"
 version = "0.01"
 dependencies = [
-    "numpy"
-    "Jinja2"
-    "matplotlib"
-    "pandas"
-    "seaborn"
+    "numpy",
+    "Jinja2",
+    "matplotlib",
+    "pandas",
+    "seaborn",
 ]
 
 [tool.setuptools]
