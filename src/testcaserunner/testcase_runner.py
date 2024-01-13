@@ -288,7 +288,7 @@ class LogManager:
             path = os.path.join(log_file_path, f"{self.settings.log_folder_name}_{i}")
             i += 1
         os.mkdir(path)
-        # mainファイルコピー
+        # 指定されたファイルをコピー
         for file in self.settings.copy_target_files:
             file_path = Path(file)
             if file_path.is_file():
