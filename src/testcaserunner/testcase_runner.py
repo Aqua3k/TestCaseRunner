@@ -406,3 +406,11 @@ def run(
     )
     runner = TestCaseRunner(handler, setting)
     runner.run()
+
+# 公開するメンバーを制御する
+__all__ = [
+    ResultStatus,
+    TestCaseResult,
+    TestCase,
+    run,
+]
