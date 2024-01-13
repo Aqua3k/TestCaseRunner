@@ -43,7 +43,14 @@ class TestCaseResult:
         = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
 
 @dataclass(frozen=True)
-class RunnerSettings:
+class TestCase:
+    testcase_name: str
+    input_file: str
+    stdout_file: str
+    stderr_file: str
+
+@dataclass(frozen=True)
+class _RunnerSettings:
     """ランナーの設定
     
     input_file_path: 入力ファイル群が置いてあるディレクトリへのパス
@@ -60,17 +67,10 @@ class RunnerSettings:
     stderr_file_output: bool = True
     log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
 
-@dataclass(frozen=True)
-class TestCase:
-    testcase_name: str
-    input_file: str
-    stdout_file: str
-    stderr_file: str
-
-class TestCaseRunner:
+class _TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
-                 setting: RunnerSettings = RunnerSettings(),
+                 setting: _RunnerSettings = _RunnerSettings(),
                  ):
         self.settings = setting
         self.input_file_path = self.settings.input_file_path
@@ -118,7 +118,7 @@ class LogManager:
         title: str
         getter: Callable[[int], str]
 
-    def __init__(self, settings: RunnerSettings):
+    def __init__(self, settings: _RunnerSettings):
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
         shutil.rmtree(output_file_path, ignore_errors=True)
@@ -395,7 +395,7 @@ def run(
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (str, optional): ログフォルダの名前. Defaults to str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')).
     """
-    setting = RunnerSettings(
+    setting = _RunnerSettings(
         input_file_path,
         copy_source_file,
         source_file_path,
@@ -403,7 +403,7 @@ def run(
         stderr_file_output,
         log_folder_name,
     )
-    runner = TestCaseRunner(handler, setting)
+    runner = _TestCaseRunner(handler, setting)
     runner.run()
 
 # 公開するメンバーを制御する
