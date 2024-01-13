@@ -1,0 +1,13 @@
+[project]
+name = "testcaserunner"
+version = "0.01"
+dependencies = [
+    "numpy"
+    "Jinja2"
+    "matplotlib"
+    "pandas"
+    "seaborn"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
