@@ -43,7 +43,14 @@ class TestCaseResult:
         = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
 
 @dataclass(frozen=True)
-class RunnerSettings:
+class TestCase:
+    testcase_name: str
+    input_file: str
+    stdout_file: str
+    stderr_file: str
+
+@dataclass(frozen=True)
+class _RunnerSettings:
     """ランナーの設定
     
     input_file_path: 入力ファイル群が置いてあるディレクトリへのパス
@@ -60,17 +67,10 @@ class RunnerSettings:
     stderr_file_output: bool = True
     log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
 
-@dataclass(frozen=True)
-class TestCase:
-    testcase_name: str
-    input_file: str
-    stdout_file: str
-    stderr_file: str
-
-class TestCaseRunner:
+class _TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
-                 setting: RunnerSettings = RunnerSettings(),
+                 setting: _RunnerSettings = _RunnerSettings(),
                  ):
         self.settings = setting
         self.input_file_path = self.settings.input_file_path
@@ -118,13 +118,12 @@ class LogManager:
         title: str
         getter: Callable[[int], str]
 
-    def __init__(self, settings: RunnerSettings):
+    def __init__(self, settings: _RunnerSettings):
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
         shutil.rmtree(output_file_path, ignore_errors=True)
         os.mkdir(output_file_path)
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
-        print(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
     
     def sortup_attributes(self):
@@ -375,3 +374,42 @@ class LogManager:
         hash_obj = hashlib.new(hash_algorithm)
         hash_obj.update(encoded_string)
         return hash_obj.hexdigest()
+
+def run(
+        handler: Callable[[TestCase], TestCaseResult],
+        input_file_path: str = "in",
+        copy_source_file: bool = False,
+        source_file_path: str = "",
+        stdout_file_output: bool = True,
+        stderr_file_output: bool = True,
+        log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')),
+        ):
+    """ランナーを実行する
+
+    Args:
+        handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
+        input_file_path (str, optional): 入力ファイル群が置いてあるディレクトリへのパス. Defaults to "in".
+        copy_source_file (bool, optional): ログファイルを作るときにソースファイルをコピーするかどうか. Defaults to False.
+        source_file_path (str, optional): コピーするファイルへのパス. Defaults to "".
+        stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
+        stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
+        log_folder_name (str, optional): ログフォルダの名前. Defaults to str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')).
+    """
+    setting = _RunnerSettings(
+        input_file_path,
+        copy_source_file,
+        source_file_path,
+        stdout_file_output,
+        stderr_file_output,
+        log_folder_name,
+    )
+    runner = _TestCaseRunner(handler, setting)
+    runner.run()
+
+# 公開するメンバーを制御する
+__all__ = [
+    "ResultStatus",
+    "TestCaseResult",
+    "TestCase",
+    "run",
+]
