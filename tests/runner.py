@@ -23,12 +23,13 @@ def run_program(testcase: TestCase):
     
     keyとして`score`があると、スコアの平均/最大値/最小値がHTMLファイルに載る
     """
-    cmd = f"python main.py < {testcase.input_file}"
+    cmd = f"python main.py < {testcase.input_file_path}"
     start_time = time.time()
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     erapsed_time = time.time() - start_time
     err_stat = ResultStatus.AC
     score = random.randint(0, 100)
+    print(next(testcase.read_testcase_lines()))
     if proc.returncode != 0:
         print(proc.stdout)
         print(proc.stderr)
