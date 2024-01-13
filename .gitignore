@@ -1,12 +1,3 @@
 __pycache__/
-in/
-out/
-log/
-*.html
-target/
-*.lock
-*.toml
-src/
 venv/
 *.pyc
-sandbox/
