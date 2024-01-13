@@ -124,7 +124,6 @@ class LogManager:
         shutil.rmtree(output_file_path, ignore_errors=True)
         os.mkdir(output_file_path)
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
-        print(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
     
     def sortup_attributes(self):
@@ -409,8 +408,8 @@ def run(
 
 # 公開するメンバーを制御する
 __all__ = [
-    ResultStatus,
-    TestCaseResult,
-    TestCase,
-    run,
+    "ResultStatus",
+    "TestCaseResult",
+    "TestCase",
+    "run",
 ]
