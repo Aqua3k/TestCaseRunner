@@ -10,6 +10,7 @@ from pathlib import Path
 import hashlib
 import json
 from collections import defaultdict
+import warnings
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -49,20 +50,10 @@ class TestCase:
     stdout_file: str
     stderr_file: str
 
-@dataclass(frozen=True)
+@dataclass
 class _RunnerSettings:
-    """ランナーの設定
-    
-    input_file_path: 入力ファイル群が置いてあるディレクトリへのパス
-    copy_source_file: ソースファイルをコピーするかどうか
-    source_file_path: コピーするソースファイルへのパス
-    stdout_file_output: 標準出力をファイル出力するかどうか
-    stderr_file_output: 標準エラー出力をファイル出力するかどうか
-    log_folder_name: logを保存するフォルダの名前
-    """
     input_file_path: str = "in"
-    copy_source_file: bool = False
-    source_file_path: str = ""
+    copy_target_files: List[str] = field(default_factory=list)
     stdout_file_output: bool = True
     stderr_file_output: bool = True
     log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
@@ -297,11 +288,15 @@ class LogManager:
             path = os.path.join(log_file_path, f"{self.settings.log_folder_name}_{i}")
             i += 1
         os.mkdir(path)
-        # mainファイルコピー
-        if self.settings.copy_source_file:
-            source_file_path = Path(self.settings.source_file_path)
-            if source_file_path.is_file():
-                shutil.copy(source_file_path, path)
+        # 指定されたファイルをコピー
+        for file in self.settings.copy_target_files:
+            file_path = Path(file)
+            if file_path.is_file():
+                shutil.copy(file, path)
+            elif file_path.is_dir():
+                warnings.warn(f"{file}はディレクトリパスです。コピーは行いません。")
+            else:
+                warnings.warn(f"{file}が見つかりません。コピーは行いません。")
         # htmlファイルコピー
         shutil.copy(html_file_name, path)
         shutil.copy(json_file_name, path)
@@ -378,27 +373,26 @@ class LogManager:
 def run(
         handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str = "in",
-        copy_source_file: bool = False,
-        source_file_path: str = "",
+        copy_target_files: List[str] = [],
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
-        log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')),
+        log_folder_name: Union[str, None] = None,
         ):
     """ランナーを実行する
 
     Args:
         handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
         input_file_path (str, optional): 入力ファイル群が置いてあるディレクトリへのパス. Defaults to "in".
-        copy_source_file (bool, optional): ログファイルを作るときにソースファイルをコピーするかどうか. Defaults to False.
-        source_file_path (str, optional): コピーするファイルへのパス. Defaults to "".
+        copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
-        log_folder_name (str, optional): ログフォルダの名前. Defaults to str(datetime.datetime.now().strftime('%Y%m%d%H%M%S')).
+        log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     """
+    if log_folder_name is None:
+        log_folder_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
     setting = _RunnerSettings(
         input_file_path,
-        copy_source_file,
-        source_file_path,
+        copy_target_files,
         stdout_file_output,
         stderr_file_output,
         log_folder_name,
