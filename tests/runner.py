@@ -40,4 +40,9 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    runner = run(run_program)
+    target = [
+        "main.py",  # 存在するファイル
+        "hoge.py",  # 存在しないファイル
+        "in",       # ファイルではなくディレクトリ
+    ]
+    runner = run(run_program, copy_target_files=target)
