@@ -46,9 +46,19 @@ class TestCaseResult:
 @dataclass(frozen=True)
 class TestCase:
     testcase_name: str
-    input_file: str
-    stdout_file: str
-    stderr_file: str
+    input_file_path: str
+    stdout_file_path: str
+    stderr_file_path: str
+
+    def read_testcase_lines(self):
+        """テストケースファイルの内容を1行ずつ取得するジェネレータ
+
+        Yields:
+            str: ファイルの各行の内容
+        """
+        with open(self.input_file_path, mode="r") as file:
+            for line in file:
+                yield line.strip()
 
 @dataclass
 class _RunnerSettings:
@@ -92,10 +102,10 @@ class _TestCaseRunner:
     def _run_testcase(self, testcase: TestCase)->Tuple[TestCase, TestCaseResult]:
         test_result: TestCaseResult = self.handler(testcase)
         if self.settings.stdout_file_output:
-            with open(testcase.stdout_file, mode='w') as f:
+            with open(testcase.stdout_file_path, mode='w') as f:
                 f.write(test_result.stdout)
         if self.settings.stderr_file_output:
-            with open(testcase.stderr_file, mode='w') as f:
+            with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return testcase, test_result
     
@@ -127,14 +137,14 @@ class LogManager:
     def get_in(self, attribute, row: int):
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
-            "link": self.testcases[row].input_file,
+            "link": self.testcases[row].input_file_path,
             "value": "+",
             }
         return template.render(data)
     def get_stdout(self, attribute, row: int):
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
-            "link": self.testcases[row].stdout_file,
+            "link": self.testcases[row].stdout_file_path,
             "value": "+",
             }
         return template.render(data)
@@ -147,7 +157,7 @@ class LogManager:
     def get_stderr(self, attribute, row: int):
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
-            "link": self.testcases[row].stderr_file,
+            "link": self.testcases[row].stderr_file_path,
             "value": "+",
             }
         return template.render(data)
@@ -330,12 +340,12 @@ class LogManager:
         file_names = ""
         contents = defaultdict(list)
         for testcase, result in zip(self.testcases, self.results):
-            path = testcase.input_file
+            path = testcase.input_file_path
             file_names += file_names
             file_hash += self.calculate_file_hash(path)
-            contents["input_file"].append(testcase.input_file)
-            contents["stdout_file"].append(testcase.stdout_file)
-            contents["stderr_file"].append(testcase.stderr_file)
+            contents["input_file"].append(testcase.input_file_path)
+            contents["stdout_file"].append(testcase.stdout_file_path)
+            contents["stderr_file"].append(testcase.stderr_file_path)
             contents["status"].append(self.status_texts[result.error_status][0])
             for key in self.attributes:
                 value = result.attribute[key] if key in result.attribute else None
