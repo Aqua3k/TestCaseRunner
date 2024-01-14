@@ -28,8 +28,8 @@ def run_program(testcase: TestCase):
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     erapsed_time = time.time() - start_time
     err_stat = ResultStatus.AC
-    score = random.randint(0, 100)
-    print(next(testcase.read_testcase_lines()))
+    n,m = map(int, next(testcase.read_testcase_lines()).split())
+    score = n+m
     if proc.returncode != 0:
         print(proc.stdout)
         print(proc.stderr)
@@ -37,6 +37,8 @@ def run_program(testcase: TestCase):
     attribute = {
         "score": score,
         "time": erapsed_time,
+        "n": n,
+        "m": m,
     }
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
