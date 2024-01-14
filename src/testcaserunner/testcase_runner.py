@@ -3,7 +3,7 @@ import os
 import shutil
 import datetime
 from concurrent.futures import ProcessPoolExecutor, Future
-from typing import List, Dict, Tuple, Union, Callable
+from typing import List, Dict, Any, Tuple, Union, Callable
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path
@@ -26,7 +26,6 @@ class ResultStatus(IntEnum):
     WA = auto()             # Wrong Answer
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
-    INTERNAL_ERROR = auto() # runnerプログラムのエラー(テストケースの結果ではないが都合がいいのでここで定義しちゃう)
 
 @dataclass
 class TestCaseResult:
@@ -72,7 +71,7 @@ class _TestCaseRunner:
         self.handler = handler
         self.log_manager = _LogManager(setting)
     
-    def run(self):
+    def run(self) -> None:
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         for input_file in sorted(glob.glob(os.path.join(self.input_file_path, "*"))):
@@ -92,7 +91,7 @@ class _TestCaseRunner:
         
         self.__make_log(results)
     
-    def _run_testcase(self, testcase: TestCase)->Tuple[TestCase, TestCaseResult]:
+    def _run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
         test_result: TestCaseResult = self.handler(testcase)
         if self.settings.stdout_file_output:
             with open(testcase.stdout_file_path, mode='w') as f:
@@ -102,7 +101,7 @@ class _TestCaseRunner:
                 f.write(test_result.stderr)
         return testcase, test_result
     
-    def __make_log(self, results):
+    def __make_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.log_manager.make_result_log(results)
         self.log_manager.finalize()
 
@@ -137,21 +136,21 @@ class _LogManager:
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
     
-    def sortup_attributes(self):
+    def sortup_attributes(self) -> List[str]:
         attributes = dict() # setだと順番が保持されないのでdictにする
         for test_result in self.results:
             for attribute in test_result.attribute.keys():
                 attributes[attribute] = ""
         return list(attributes.keys())
     
-    def get_in(self, attribute, row: int):
+    def get_in(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
             "link": self.testcases[row].input_file_path,
             "value": "+",
             }
         return template.render(data)
-    def get_stdout(self, attribute, row: int):
+    def get_stdout(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
         rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.log_path)
         data = {
@@ -159,13 +158,13 @@ class _LogManager:
             "value": "+",
             }
         return template.render(data)
-    def get_testcase_name(self, attribute, row: int):
+    def get_testcase_name(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell.j2")
         data = {
             "value": self.testcases[row].testcase_name,
             }
         return template.render(data)
-    def get_stderr(self, attribute, row: int):
+    def get_stderr(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
         rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.log_path)
         data = {
@@ -178,20 +177,17 @@ class _LogManager:
         ResultStatus.WA: ("WA", "gold"),
         ResultStatus.RE: ("RE", "gold"),
         ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.INTERNAL_ERROR: ("IE", "red"),
     }
-    def get_status(self, attribute, row: int):
+    def get_status(self, attribute: Any, row: int) -> str:
         status = self.results[row].error_status
-        if status not in self.status_texts:
-            status = ResultStatus.INTERNAL_ERROR
-        text, color = self.status_texts[status]
+        text, color = self.status_texts.get(status, ("IE", "red"))
         template = self.environment.get_template("cell_with_color.j2")
         data = {
             "color": color,
             "value": text,
             }
         return template.render(data)
-    def get_other(self, _, attribute: str, row: int):
+    def get_other(self, _: Any, attribute: str, row: int) -> None:
         attributes = self.results[row].attribute
         if attribute not in attributes:
             value = "---"
@@ -212,7 +208,7 @@ class _LogManager:
         Column("testcase", get_testcase_name),
         Column("status", get_status),
     ]
-    def analyze_result(self, results):
+    def analyze_result(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.testcases: List[TestCase] = []
         self.results: List[TestCaseResult] = []
         for t, r in results:
@@ -234,14 +230,14 @@ class _LogManager:
             scores_list.append(s)
         self.average_score = sum(scores_list)/len(self.testcases)
 
-    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]):
+    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.analyze_result(results)
         self.make_json_file()
         self.make_html()
     
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
-    def make_figure(self):
+    def make_figure(self) -> str:
         # ヒストグラムを描画
         self.df.hist()
         plt.savefig(os.path.join(self.fig_dir_path, self.histgram_fig_name))
@@ -262,7 +258,7 @@ class _LogManager:
         return "".join(ret)
 
     html_file_name = "result.html"
-    def make_html(self):
+    def make_html(self) -> None:
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
@@ -279,7 +275,7 @@ class _LogManager:
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
     
-    def make_table(self):
+    def make_table(self) -> Dict[str, str]:
         ret = []
         for row in range(len(self.results)):
             d = {}
@@ -288,14 +284,14 @@ class _LogManager:
             ret.append(d)
         return ret
     
-    def make_script_list(self):
+    def make_script_list(self) -> List[str]:
         template = self.environment.get_template("script.j2")
         ret = [
             template.render({"link": r"js/Table.js"}),
         ]
         return ret
     
-    def make_css_list(self):
+    def make_css_list(self) -> List[str]:
         template = self.environment.get_template("css.j2")
         ret = [
             template.render({"link": r"js/SortTable.css"}),
@@ -303,10 +299,9 @@ class _LogManager:
         ]
         return ret
 
-    def finalize(self):
+    def finalize(self) -> None:
         """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
         path = os.path.join(self.log_dir_path, self.settings.log_folder_name)
-        # 指定されたファイルをコピー
         for file in self.settings.copy_target_files:
             file_path = Path(file)
             if file_path.is_file():
@@ -315,13 +310,11 @@ class _LogManager:
                 warnings.warn(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
                 warnings.warn(f"{file}が見つかりません。コピーは行いません。")
-        # inファイルコピー
         shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
-        # HTMLの表示に必要なcssとjsファイルをコピーする
         shutil.copytree(os.path.join(self.base_dir, self.js_file_path), os.path.join(path, self.js_file_path))
     
     json_file_name = "result.json"
-    def make_json_file(self):
+    def make_json_file(self) -> None:
         file_hash = ""
         file_names = ""
         contents = defaultdict(list)
@@ -354,14 +347,14 @@ class _LogManager:
         with open(json_file_path, 'w') as f:
             json.dump(json_file, f, indent=2)
 
-    def calculate_file_hash(self, file_path, hash_algorithm='sha256'):
+    def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
         hash_obj = hashlib.new(hash_algorithm)
         with open(file_path, 'rb') as file:
             while chunk := file.read(4096):
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-    def calculate_string_hash(self, input_string: str, hash_algorithm='sha256'):
+    def calculate_string_hash(self, input_string: str, hash_algorithm: str ='sha256') -> str:
         encoded_string = input_string.encode('utf-8')
         hash_obj = hashlib.new(hash_algorithm)
         hash_obj.update(encoded_string)
@@ -374,7 +367,7 @@ def run(
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
         log_folder_name: Union[str, None] = None,
-        ):
+        ) -> None:
     """ランナーを実行する
 
     Args:
