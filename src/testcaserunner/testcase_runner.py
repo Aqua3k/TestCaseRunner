@@ -17,13 +17,6 @@ import seaborn as sns
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
-stdout_dir_path = "stdout"
-stderr_dir_path = "stderr"
-log_dir_path = "log"
-js_file_path = "js"
-html_file_name = "result.html"
-json_file_name = "result.json"
-
 class ResultStatus(IntEnum):
     """テストケースを実行した結果のステータス定義
 
@@ -33,7 +26,7 @@ class ResultStatus(IntEnum):
     WA = auto()             # Wrong Answer
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
-    RUNNER_ERROR = auto()   # runnerプログラムのエラー(テストケースの結果ではないが都合がいいのでここで定義しちゃう)
+    INTERNAL_ERROR = auto() # runnerプログラムのエラー(テストケースの結果ではないが都合がいいのでここで定義しちゃう)
 
 @dataclass
 class TestCaseResult:
@@ -63,28 +56,28 @@ class TestCase:
 
 @dataclass
 class _RunnerSettings:
-    input_file_path: str = "in"
-    copy_target_files: List[str] = field(default_factory=list)
-    stdout_file_output: bool = True
-    stderr_file_output: bool = True
-    log_folder_name: str = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+    input_file_path: str
+    copy_target_files: List[str]
+    stdout_file_output: bool
+    stderr_file_output: bool
+    log_folder_name: str
 
 class _TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
-                 setting: _RunnerSettings = _RunnerSettings(),
+                 setting: _RunnerSettings,
                  ):
         self.settings = setting
         self.input_file_path = self.settings.input_file_path
         self.handler = handler
-        self.log_manager = LogManager(setting)
+        self.log_manager = _LogManager(setting)
     
     def run(self):
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         for input_file in sorted(glob.glob(os.path.join(self.input_file_path, "*"))):
-            stdout_file = os.path.join(self.log_manager.log_path, stdout_dir_path, os.path.basename(input_file))
-            stderr_file = os.path.join(self.log_manager.log_path, stderr_dir_path, os.path.basename(input_file))
+            stdout_file = os.path.join(self.log_manager.stdout_log_path, os.path.basename(input_file))
+            stderr_file = os.path.join(self.log_manager.stderr_log_path, os.path.basename(input_file))
             testcase_name = os.path.basename(input_file)
             testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file)
             test_cases.append(testcase)
@@ -113,27 +106,33 @@ class _TestCaseRunner:
         self.log_manager.make_result_log(results)
         self.log_manager.finalize()
 
-class LogManager:
+class _LogManager:
     @dataclass
     class Column:
         title: str
         getter: Callable[[int], str]
 
+    log_dir_path = "log"
+    js_file_path = "js"
+    stdout_dir_path = "stdout"
+    stderr_dir_path = "stderr"
     def __init__(self, settings: _RunnerSettings):
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
-        if log_dir_path not in glob.glob("*"):
-            os.mkdir(log_dir_path)
-        self.log_path = os.path.join(log_dir_path, self.settings.log_folder_name)
+        if self.log_dir_path not in glob.glob("*"):
+            os.mkdir(self.log_dir_path)
+        self.log_path = os.path.join(self.log_dir_path, self.settings.log_folder_name)
         i = 1
         while os.path.exists(self.log_path):
-            self.log_path = os.path.join(log_dir_path, f"{self.settings.log_folder_name}-{i}")
+            self.log_path = os.path.join(self.log_dir_path, f"{self.settings.log_folder_name}-{i}")
             i += 1
         os.mkdir(self.log_path)
         self.fig_dir_path = os.path.join(self.log_path, "fig")
         os.mkdir(self.fig_dir_path)
-        os.mkdir(os.path.join(self.log_path, stdout_dir_path))
-        os.mkdir(os.path.join(self.log_path, stderr_dir_path))
+        self.stdout_log_path = os.path.join(self.log_path, self.stdout_dir_path)
+        os.mkdir(self.stdout_log_path)
+        self.stderr_log_path = os.path.join(self.log_path, self.stderr_dir_path)
+        os.mkdir(self.stderr_log_path)
 
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
@@ -179,12 +178,12 @@ class LogManager:
         ResultStatus.WA: ("WA", "gold"),
         ResultStatus.RE: ("RE", "gold"),
         ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.RUNNER_ERROR: ("IE", "red"),
+        ResultStatus.INTERNAL_ERROR: ("IE", "red"),
     }
     def get_status(self, attribute, row: int):
         status = self.results[row].error_status
         if status not in self.status_texts:
-            status = ResultStatus.RUNNER_ERROR
+            status = ResultStatus.INTERNAL_ERROR
         text, color = self.status_texts[status]
         template = self.environment.get_template("cell_with_color.j2")
         data = {
@@ -262,6 +261,7 @@ class LogManager:
         ret.append(fig)
         return "".join(ret)
 
+    html_file_name = "result.html"
     def make_html(self):
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
@@ -275,7 +275,7 @@ class LogManager:
             "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
-        html_file_path = os.path.join(self.log_path, html_file_name)
+        html_file_path = os.path.join(self.log_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
     
@@ -305,7 +305,7 @@ class LogManager:
 
     def finalize(self):
         """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-        path = os.path.join(log_dir_path, self.settings.log_folder_name)
+        path = os.path.join(self.log_dir_path, self.settings.log_folder_name)
         # 指定されたファイルをコピー
         for file in self.settings.copy_target_files:
             file_path = Path(file)
@@ -318,8 +318,9 @@ class LogManager:
         # inファイルコピー
         shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
         # HTMLの表示に必要なcssとjsファイルをコピーする
-        shutil.copytree(os.path.join(self.base_dir, js_file_path), os.path.join(path, js_file_path))
+        shutil.copytree(os.path.join(self.base_dir, self.js_file_path), os.path.join(path, self.js_file_path))
     
+    json_file_name = "result.json"
     def make_json_file(self):
         file_hash = ""
         file_names = ""
@@ -349,7 +350,7 @@ class LogManager:
             "contents": contents,
         }
         self.df = pd.DataFrame(contents)
-        json_file_path = os.path.join(self.log_path, json_file_name)
+        json_file_path = os.path.join(self.log_path, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(json_file, f, indent=2)
 
@@ -359,7 +360,7 @@ class LogManager:
             while chunk := file.read(4096):
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
-    
+
     def calculate_string_hash(self, input_string: str, hash_algorithm='sha256'):
         encoded_string = input_string.encode('utf-8')
         hash_obj = hashlib.new(hash_algorithm)
