@@ -142,11 +142,7 @@ class _LogManager:
         self.settings = settings
         if self.log_dir_path not in glob.glob("*"):
             os.mkdir(self.log_dir_path)
-        self.log_path = os.path.join(self.log_dir_path, self.settings.log_folder_name)
-        i = 1
-        while os.path.exists(self.log_path):
-            self.log_path = os.path.join(self.log_dir_path, f"{self.settings.log_folder_name}-{i}")
-            i += 1
+        self.log_path = self.determine_log_path_name()
         os.mkdir(self.log_path)
         self.fig_dir_path = os.path.join(self.log_path, "fig")
         os.mkdir(self.fig_dir_path)
@@ -158,6 +154,14 @@ class _LogManager:
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
     
+    def determine_log_path_name(self) -> str:
+        name = os.path.join(self.log_dir_path, self.settings.log_folder_name)
+        i = 1
+        while os.path.exists(name):
+            name = os.path.join(self.log_dir_path, f"{self.settings.log_folder_name}-{i}")
+            i += 1
+        return name
+
     def sortup_attributes(self) -> List[str]:
         attributes = dict() # setだと順番が保持されないのでdictにする
         for test_result in self.results:
