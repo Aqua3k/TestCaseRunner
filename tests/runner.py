@@ -24,9 +24,7 @@ def run_program(testcase: TestCase):
     keyとして`score`があると、スコアの平均/最大値/最小値がHTMLファイルに載る
     """
     cmd = f"python main.py < {testcase.input_file_path}"
-    start_time = time.time()
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    erapsed_time = time.time() - start_time
     err_stat = ResultStatus.AC
     n,m = map(int, next(testcase.read_testcase_lines()).split())
     score = n+m
@@ -36,7 +34,6 @@ def run_program(testcase: TestCase):
         err_stat = ResultStatus.RE
     attribute = {
         "score": score,
-        "time": erapsed_time,
         "n": n,
         "m": m,
     }
