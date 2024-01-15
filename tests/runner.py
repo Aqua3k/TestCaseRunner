@@ -48,4 +48,4 @@ if __name__ == "__main__":
         "hoge.py",  # 存在しないファイル
         "in",       # ファイルではなくディレクトリ
     ]
-    runner = run(run_program, copy_target_files=target)
+    runner = run(run_program, "in", copy_target_files=target)

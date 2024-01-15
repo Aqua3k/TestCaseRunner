@@ -17,6 +17,20 @@ import seaborn as sns
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
+class CustomException(Exception):
+    """ライブラリ内で使う例外の基底クラス"""
+    pass
+
+class InvalidPathException(CustomException):
+    """与えられたパスが正しくない場合の例外"""
+    def __init__(self, message):
+        super().__init__(message)
+
+class NoTestcaseFileException(CustomException):
+    """テストケースファイルが1つもない場合の例外"""
+    def __init__(self, message):
+        super().__init__(message)
+
 class ResultStatus(IntEnum):
     """テストケースを実行した結果のステータス定義
 
@@ -69,12 +83,20 @@ class _TestCaseRunner:
         self.settings = setting
         self.input_file_path = self.settings.input_file_path
         self.handler = handler
+        if not self.is_valid_path():
+            raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
         self.log_manager = _LogManager(setting)
+    
+    def is_valid_path(self) -> bool:
+        return Path(self.input_file_path).is_dir()
     
     def run(self) -> None:
         futures:List[Future] = []
         test_cases: List[TestCase] = []
-        for input_file in sorted(glob.glob(os.path.join(self.input_file_path, "*"))):
+        files = glob.glob(os.path.join(self.input_file_path, "*"))
+        if len(files) == 0:
+            raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
+        for input_file in sorted(files):
             stdout_file = os.path.join(self.log_manager.stdout_log_path, os.path.basename(input_file))
             stderr_file = os.path.join(self.log_manager.stderr_log_path, os.path.basename(input_file))
             testcase_name = os.path.basename(input_file)
@@ -82,16 +104,16 @@ class _TestCaseRunner:
             test_cases.append(testcase)
         with ProcessPoolExecutor() as executor:
             for testcase in test_cases:
-                future = executor.submit(self._run_testcase, testcase)
+                future = executor.submit(self.run_testcase, testcase)
                 futures.append(future)
 
         results: List[TestCase] = []
         for future in futures:
             results.append(future.result())
         
-        self.__make_log(results)
+        self.make_log(results)
     
-    def _run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
+    def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
         test_result: TestCaseResult = self.handler(testcase)
         if self.settings.stdout_file_output:
             with open(testcase.stdout_file_path, mode='w') as f:
@@ -101,7 +123,7 @@ class _TestCaseRunner:
                 f.write(test_result.stderr)
         return testcase, test_result
     
-    def __make_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
+    def make_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.log_manager.make_result_log(results)
         self.log_manager.finalize()
 
@@ -362,7 +384,7 @@ class _LogManager:
 
 def run(
         handler: Callable[[TestCase], TestCaseResult],
-        input_file_path: str = "in",
+        input_file_path: str,
         copy_target_files: List[str] = [],
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
@@ -392,6 +414,8 @@ def run(
 
 # 公開するメンバーを制御する
 __all__ = [
+    "InvalidPathException",
+    "NoTestcaseFileException",
     "ResultStatus",
     "TestCaseResult",
     "TestCase",
