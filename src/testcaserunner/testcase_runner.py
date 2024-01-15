@@ -11,6 +11,7 @@ import hashlib
 import json
 from collections import defaultdict
 import warnings
+import time
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -70,6 +71,7 @@ class TestCase:
 @dataclass
 class _RunnerSettings:
     input_file_path: str
+    measure_time: bool
     copy_target_files: List[str]
     stdout_file_output: bool
     stderr_file_output: bool
@@ -114,7 +116,11 @@ class _TestCaseRunner:
         self.make_log(results)
     
     def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
+        start_time = time.time()
         test_result: TestCaseResult = self.handler(testcase)
+        erapsed_time = time.time() - start_time
+        if self.settings.measure_time:
+            test_result.attribute["time"] = erapsed_time
         if self.settings.stdout_file_output:
             with open(testcase.stdout_file_path, mode='w') as f:
                 f.write(test_result.stdout)
@@ -153,7 +159,20 @@ class _LogManager:
 
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
-    
+
+    attributes_display_priority = {
+        "in": -8,
+        "out": -7,
+        "stdout": -6,
+        "testcase": -5,
+        "status": -4,
+        "stderr": -3,
+        "score": -2,
+        "time": -1,
+    }
+    def get_attribute_priority(self, attribute):
+        return self.attributes_display_priority.get(attribute, 0)
+
     def determine_log_path_name(self) -> str:
         name = os.path.join(self.log_dir_path, self.settings.log_folder_name)
         i = 1
@@ -303,6 +322,7 @@ class _LogManager:
     
     def make_table(self) -> Dict[str, str]:
         ret = []
+        self.columns = sorted(self.columns, key=lambda x: self.get_attribute_priority(x.title))
         for row in range(len(self.results)):
             d = {}
             for column in self.columns:
@@ -389,6 +409,7 @@ class _LogManager:
 def run(
         handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str,
+        measure_time: bool = True,
         copy_target_files: List[str] = [],
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
@@ -399,6 +420,7 @@ def run(
     Args:
         handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
         input_file_path (str, optional): 入力ファイル群が置いてあるディレクトリへのパス. Defaults to "in".
+        measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
         copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
@@ -408,6 +430,7 @@ def run(
         log_folder_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
     setting = _RunnerSettings(
         input_file_path,
+        measure_time,
         copy_target_files,
         stdout_file_output,
         stderr_file_output,
