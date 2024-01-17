@@ -1,6 +1,7 @@
-import time
 import subprocess
-import random
+import sys
+import os
+sys.path.append(r"..\src")
 
 from testcaserunner import (
     run,
