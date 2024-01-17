@@ -1,6 +1,6 @@
-import time
 import subprocess
-import random
+import sys
+sys.path.append(r"..\src")
 
 from testcaserunner import (
     run,
@@ -40,9 +40,4 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    target = [
-        "main.py",  # 存在するファイル
-        "hoge.py",  # 存在しないファイル
-        "in",       # ファイルではなくディレクトリ
-    ]
-    runner = run(run_program, "in", copy_target_files=target)
+    run(run_program, "in")
