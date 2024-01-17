@@ -1,6 +1,5 @@
 import subprocess
 import sys
-import os
 sys.path.append(r"..\src")
 
 from testcaserunner import (
@@ -41,9 +40,4 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    target = [
-        "main.py",  # 存在するファイル
-        "hoge.py",  # 存在しないファイル
-        "in",       # ファイルではなくディレクトリ
-    ]
-    run(run_program, "in", copy_target_files=target)
+    run(run_program, "in")
