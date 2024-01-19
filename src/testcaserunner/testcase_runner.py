@@ -443,6 +443,8 @@ def run(
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     """
+    if repeat_count <= 0:
+        raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
     if log_folder_name is None:
         log_folder_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
     setting = _RunnerSettings(

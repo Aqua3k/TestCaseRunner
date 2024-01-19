@@ -2,7 +2,6 @@ import subprocess
 import sys
 import shutil
 import os
-import warnings
 
 import pytest
 
@@ -82,6 +81,10 @@ def test_with_error_case0(setup_normally):
 def test_with_error_case1(setup_normally):
     with pytest.raises(NoTestcaseFileException):
         run(handler=no_error_program, input_file_path="no_files")
+
+def test_with_error_case2(setup_normally):
+    with pytest.raises(ValueError):
+        run(handler=no_error_program, input_file_path="no_files", repeat_count=-1)
 
 # 警告が出る
 def test_with_warning_case0(setup_normally):
