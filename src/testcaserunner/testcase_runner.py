@@ -57,6 +57,7 @@ class TestCase:
     input_file_path: str
     stdout_file_path: str
     stderr_file_path: str
+    testcase_index: int
 
     def read_testcase_lines(self):
         """テストケースファイルの内容を1行ずつ取得するジェネレータ
@@ -71,6 +72,7 @@ class TestCase:
 @dataclass
 class _RunnerSettings:
     input_file_path: str
+    repeat_count: int
     measure_time: bool
     copy_target_files: List[str]
     stdout_file_output: bool
@@ -92,18 +94,31 @@ class _TestCaseRunner:
     def is_valid_path(self) -> bool:
         return Path(self.input_file_path).is_dir()
     
+    def make_testcases(self, files: List[str]) -> List[TestCase]:
+        test_cases = []
+        testcase_index = 0
+        for input_file in sorted(files):
+            for rep in range(self.settings.repeat_count):
+                if self.settings.repeat_count != 0:
+                    name, extension = os.path.splitext(os.path.basename(input_file))
+                    basename = f"{name}_{rep+1}{extension}"
+                else:
+                    basename = os.path.basename(input_file)
+                stdout_file = os.path.join(self.log_manager.stdout_log_path, basename)
+                stderr_file = os.path.join(self.log_manager.stderr_log_path, basename)
+                testcase_name = os.path.basename(input_file)
+                testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file, testcase_index)
+                test_cases.append(testcase)
+                testcase_index += 1
+        return test_cases
+    
     def run(self) -> None:
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
         if len(files) == 0:
             raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
-        for input_file in sorted(files):
-            stdout_file = os.path.join(self.log_manager.stdout_log_path, os.path.basename(input_file))
-            stderr_file = os.path.join(self.log_manager.stderr_log_path, os.path.basename(input_file))
-            testcase_name = os.path.basename(input_file)
-            testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file)
-            test_cases.append(testcase)
+        test_cases = self.make_testcases(files)
         with ProcessPoolExecutor() as executor:
             for testcase in test_cases:
                 future = executor.submit(self.run_testcase, testcase)
@@ -409,6 +424,7 @@ class _LogManager:
 def run(
         handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str,
+        repeat_count: int = 1,
         measure_time: bool = True,
         copy_target_files: List[str] = [],
         stdout_file_output: bool = True,
@@ -419,17 +435,21 @@ def run(
 
     Args:
         handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
-        input_file_path (str, optional): 入力ファイル群が置いてあるディレクトリへのパス. Defaults to "in".
+        input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
+        repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
         measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
         copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     """
+    if repeat_count <= 0:
+        raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
     if log_folder_name is None:
         log_folder_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
     setting = _RunnerSettings(
         input_file_path,
+        repeat_count,
         measure_time,
         copy_target_files,
         stdout_file_output,
