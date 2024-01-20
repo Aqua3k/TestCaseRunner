@@ -33,6 +33,10 @@ def no_error_program(testcase: TestCase):
     }
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
+def error_program(testcase: TestCase):
+    foo = 1/0 # division by zero.
+    return TestCaseResult()
+
 @pytest.fixture
 def setup_normally():
     """logフォルダを消してno_filesフォルダを作る"""
@@ -80,8 +84,21 @@ def test_no_error_no_warning_case6(setup_normally):
 
 def test_no_error_no_warning_case7(setup_normally):
     with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", parallel_processing_method="PROCESS")
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case8(setup_normally):
+    with pytest.warns(None) as warning_info:
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="thread")
     assert len(warning_info) == 0
+
+def test_no_error_no_warning_case9(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", parallel_processing_method="THREAD")
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case10(setup_normally):
+    run(handler=error_program, input_file_path="in")
 
 # 例外が出る
 def test_with_error_case0(setup_normally):
