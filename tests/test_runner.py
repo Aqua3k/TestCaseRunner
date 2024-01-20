@@ -73,6 +73,16 @@ def test_no_error_no_warning_case5(setup_normally):
         run(handler=no_error_program, input_file_path="in", measure_time=False)
     assert len(warning_info) == 0
 
+def test_no_error_no_warning_case6(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", parallel_processing_method="process")
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case7(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", parallel_processing_method="thread")
+    assert len(warning_info) == 0
+
 # 例外が出る
 def test_with_error_case0(setup_normally):
     with pytest.raises(InvalidPathException):
@@ -85,6 +95,10 @@ def test_with_error_case1(setup_normally):
 def test_with_error_case2(setup_normally):
     with pytest.raises(ValueError):
         run(handler=no_error_program, input_file_path="no_files", repeat_count=-1)
+
+def test_with_error_case3(setup_normally):
+    with pytest.raises(ValueError):
+        run(handler=no_error_program, input_file_path="in", parallel_processing_method="test")
 
 # 警告が出る
 def test_with_warning_case0(setup_normally):

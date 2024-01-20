@@ -2,7 +2,7 @@ import glob
 import os
 import shutil
 import datetime
-from concurrent.futures import ProcessPoolExecutor, Future
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
 from typing import List, Dict, Any, Tuple, Union, Callable
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
@@ -75,6 +75,7 @@ class _RunnerSettings:
     repeat_count: int
     measure_time: bool
     copy_target_files: List[str]
+    parallel_processing_method: str
     stdout_file_output: bool
     stderr_file_output: bool
     log_folder_name: str
@@ -119,7 +120,13 @@ class _TestCaseRunner:
         if len(files) == 0:
             raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
         test_cases = self.make_testcases(files)
-        with ProcessPoolExecutor() as executor:
+        if self.settings.parallel_processing_method.lower() == "process":
+            executor_class = ProcessPoolExecutor
+        elif self.settings.parallel_processing_method.lower() == "thread":
+            executor_class = ThreadPoolExecutor
+        else:
+            raise ValueError("引数parallel_processing_methodの値が不正です。")
+        with executor_class() as executor:
             for testcase in test_cases:
                 future = executor.submit(self.run_testcase, testcase)
                 futures.append(future)
@@ -427,6 +434,7 @@ def run(
         repeat_count: int = 1,
         measure_time: bool = True,
         copy_target_files: List[str] = [],
+        parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
         log_folder_name: Union[str, None] = None,
@@ -439,6 +447,7 @@ def run(
         repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
         measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
         copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
+        parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
@@ -452,6 +461,7 @@ def run(
         repeat_count,
         measure_time,
         copy_target_files,
+        parallel_processing_method,
         stdout_file_output,
         stderr_file_output,
         log_folder_name,
