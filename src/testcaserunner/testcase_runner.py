@@ -41,6 +41,7 @@ class ResultStatus(IntEnum):
     WA = auto()             # Wrong Answer
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
+    IE = auto()             # 内部エラー
 
 @dataclass
 class TestCaseResult:
@@ -139,7 +140,13 @@ class _TestCaseRunner:
     
     def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
         start_time = time.time()
-        test_result: TestCaseResult = self.handler(testcase)
+        try:
+            test_result: TestCaseResult = self.handler(testcase)
+        except Exception as e:
+            msg = f"テストケース{os.path.basename(testcase.input_file_path)}において、\
+                引数で渡された関数の中で例外が発生しました。\n{str(e)}"
+            warnings.warn(msg)
+            test_result = TestCaseResult(error_status=ResultStatus.IE, stderr=str(e))
         erapsed_time = time.time() - start_time
         if self.settings.measure_time:
             test_result.attribute["time"] = erapsed_time
@@ -244,6 +251,7 @@ class _LogManager:
         ResultStatus.WA: ("WA", "gold"),
         ResultStatus.RE: ("RE", "gold"),
         ResultStatus.TLE: ("TLE", "gold"),
+        ResultStatus.IE: ("IE", "red"),
     }
     def get_status(self, attribute: Any, row: int) -> str:
         status = self.results[row].error_status
