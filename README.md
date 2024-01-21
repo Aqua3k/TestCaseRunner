@@ -16,14 +16,11 @@ Atcoderで開催されるAHC(AtCoder Heuristic Contest)の補助ツールとし�
 
 ## Install
 
-todo ↓確認する
 ```
 pip install git+https://github.com/Aqua3k/TestCaseRunner.git
 ```
 
 ## ドキュメント
 
-↓todoリンクにする
-
-API_REFERENCEをご覧ください。  
+[API_REFERENCE](API_REFERENCE.md)をご覧ください。  
 
