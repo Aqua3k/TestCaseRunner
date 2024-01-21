@@ -6,13 +6,6 @@
 
 テストケースを実行し、結果をHTML形式で`Log`フォルダ内に保存します。  
 
-第一引数`handler`には並列実行させたい関数を渡します。  
-`handler`は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスを戻り値に持つ関数でなくてはなりません。  
-
-第二引数`input_file_path`にはテストケースファイルがあるディレクトリへのパスを渡します。  
-`input_file_path`で渡されたファイルのパス直下のすべてのファイルに対して`handler`を実行します。  
-現時点ではフォルダ内を再帰的に走査するオプションはありません。  
-
 ```python
 def run(
         handler: Callable[[TestCase], TestCaseResult],
@@ -27,22 +20,45 @@ def run(
         ) -> None
 ```
 
-**arguments**  
+**普通に使う分には第一引数`handler`と第二引数`input_file_path`を設定するだけで十分です  
+詳細な設定を知りたい方のみ、第三引数以降のオプション引数の説明を参照してください**  
 
-※普通に使う分には第一引数`handler`と第二引数`input_file_path`を設定するだけで十分です  
-　詳細な設定を知りたい方のみ、第三引数以降のオプション引数の説明を参照してください  
+引数`handler`には並列実行させたい関数を渡します。  
+`handler`は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスを戻り値に持つ関数でなくてはなりません。  
 
-| 関数の仮引数名      | 型                                   | 説明 | 
-| ----------- | ------------------------------------ | ---- | 
-| handler | Callable[[TestCase], TestCaseResult] | テストケースに対する処理を実行する関数    | 
-| input_file_path | str | 入力テストケースが置いてあるディレクトリパス    | 
-| repeat_count |  int(optional, default to `1`) | それぞれのテストケースを何回実行するか    | 
-| measure_time |  bool(optional, default to `True`) | 実行時間を測定して結果ファイルに追加するかどうか    | 
-| copy_target_files |  List[str](optional, default to `[]`) | 作成するログディレクトリへコピーしたいファイルへのパスのリスト    | 
-| parallel_processing_method |  str(optional, default to `process`) | 並列化の方法<br>`process`もしくは`thread`が指定可能    | 
-| stdout_file_output |  str(optional, default to `True`) | 標準出力をファイルとして出力するかどうか    | 
-| stderr_file_output |  str(optional, default to `True`) | 標準エラー出力をファイルとして出力するかどうか    | 
-| log_folder_name |  Union[str, None](optional, default to `None`) | ログフォルダのフォルダ名<br>`None`の場合、現在時刻(YYYYMMDDHHMMSS)になる    |  
+引数`input_file_path`にはテストケースファイルがあるディレクトリへのパスを渡します。  
+`input_file_path`で渡されたディレクトリパス直下のすべてのファイルに対して`handler`を実行します。  
+現時点では、フォルダ内を再帰的に走査するオプションやファイルの拡張子を限定するオプションはありません。  
+
+引数`repeat_count`にはそれぞれのテストケースを何回実行するかを指定します。  
+オプション引数で、デフォルト値は1です。  
+使用するアルゴリズムでランダム値を使うなどが理由で結果が定まらない場合に、複数回実行してパフォーマンスを測りたいときに使用することを想定しています。  
+
+引数`measure_time`にTrueが指定された場合、個別テストケースに対するhandler関数の実行時間を測定し、結果ファイルに載せるかどうかを指定します。    
+オプション引数で、デフォルト値はTrueです。  
+
+引数`copy_target_files`はファイルパスのリストです。  
+オプション引数で、デフォルト値は[]です。  
+ここで与えられたパスはログディレクトリを作成する際に、HTMLファイルや入力テストケースファイルと一緒にコピーして保存されます。  
+与えられたパスのファイルが存在しなかった場合は警告メッセージが出力されます。
+
+引数`parallel_processing_method`は並列処理の実行方法を指定します。  
+オプション引数で、デフォルト値は`"process"`です。  
+指定可能なオプションは`"process"`か`"thread"`かの2つです。  
+`"process"`が設定された場合は、[ProcessPoolExecutor](https://docs.python.org/ja/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor)を使ってプロセスを並列化します。CPUバウンドな処理を行う場合に適しています。詳しくはリンク先のドキュメントを参照してください。  
+`"thread"`が設定された場合は、[ThreadPoolExecutor](https://docs.python.org/ja/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor)を使ってスレッドを並列化します。I/Oバウンドな処理を行う場合に適しています。詳しくはリンク先のドキュメントを参照してください。  
+
+`stdout_file_output`は標準出力の内容をファイルとして保存するかどうかを指定します。  
+オプション引数で、デフォルト値はTrueです。  
+この引数がTrueの場合、[TestCaseResult](#testcaseresult)クラスのメンバ`stdout`をファイルに保存します。  
+
+`stderr_file_output`は標準出力の内容をファイルとして保存するかどうかを指定します。  
+オプション引数で、デフォルト値はTrueです。  
+この引数がTrueの場合、[TestCaseResult](#testcaseresult)クラスのメンバ`stderr`をファイルに保存します。  
+
+引数`log_folder_name`にはログファイルのフォルダ名を指定します。  
+オプション引数で、デフォルト値はNoneです。  
+この引数の値がNoneの場合、フォルダの名前は現在時刻がYYYYMMDDHHMMSSの形式になります。  
 
 ## Classes
 
@@ -138,4 +154,3 @@ class TestCase:
 ### NoTestcaseFileException
 
 [run](#run)関数の第二引数のパスで指定されたディレクトリにファイルが1つも存在しなかったときに使われる例外です。
-s
