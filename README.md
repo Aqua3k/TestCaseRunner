@@ -4,7 +4,7 @@
 
 このライブラリは開発中です。  
 予告なく機能やAPIが変更される可能性があります。  
-本ライブラリのソースコードはバグを含んでいる可能性があります。  
+本ライブラリはバグを含んでいる可能性があります。  
 
 ## 本ライブラリについて  
 
@@ -16,9 +16,17 @@ Atcoderで開催されるAHC(AtCoder Heuristic Contest)の補助ツールとし�
 
 ## Install
 
-```
+```batch
 pip install git+https://github.com/Aqua3k/TestCaseRunner.git
 ```
+
+## ライセンス  
+
+[LICENSE](LICENSE)をご覧ください。  
+
+## 利用した素材など  
+
+[NOTICE](NOTICE.md)をご覧ください。  
 
 ## ドキュメント
 
