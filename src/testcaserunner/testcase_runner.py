@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
+from tqdm import tqdm
 
 class CustomException(Exception):
     """ライブラリ内で使う例外の基底クラス"""
@@ -127,14 +128,16 @@ class _TestCaseRunner:
             executor_class = ThreadPoolExecutor
         else:
             raise ValueError("引数parallel_processing_methodの値が不正です。")
-        with executor_class() as executor:
-            for testcase in test_cases:
-                future = executor.submit(self.run_testcase, testcase)
-                futures.append(future)
 
-        results: List[TestCase] = []
-        for future in futures:
-            results.append(future.result())
+        with tqdm(total=len(test_cases)) as progress:
+            with executor_class() as executor:
+                for testcase in test_cases:
+                    future = executor.submit(self.run_testcase, testcase)
+                    future.add_done_callback(lambda p: progress.update())
+                    futures.append(future)
+            results: List[TestCase] = []
+            for future in futures:
+                results.append(future.result())
         
         self.make_log(results)
     
