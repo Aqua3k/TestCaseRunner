@@ -88,14 +88,11 @@ class _TestCaseRunner:
                  setting: _RunnerSettings,
                  ):
         self.settings = setting
-        self.input_file_path = self.settings.input_file_path
-        self.handler = handler
-        if not self.is_valid_path():
-            raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
+        if not Path(self.settings.input_file_path).is_dir():
+            raise InvalidPathException(f"テストケースファイルへのパス{self.settings.input_file_path}は無効なパスです。")
         self.log_manager = _LogManager(setting)
-    
-    def is_valid_path(self) -> bool:
-        return Path(self.input_file_path).is_dir()
+        self.input_file_path = self.log_manager.input_file_copy_path
+        self.handler = handler
     
     def make_testcases(self, files: List[str]) -> List[TestCase]:
         test_cases = []
@@ -198,6 +195,8 @@ class _LogManager:
         os.mkdir(self.stdout_log_path)
         self.stderr_log_path = os.path.join(self.log_path, self.stderr_dir_path)
         os.mkdir(self.stderr_log_path)
+        self.input_file_copy_path = os.path.join(self.log_dir_path, self.settings.log_folder_name, "in")
+        shutil.copytree(self.settings.input_file_path, self.input_file_copy_path)
 
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
@@ -232,8 +231,9 @@ class _LogManager:
     
     def get_in(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
+        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.log_path)
         data = {
-            "link": self.testcases[row].input_file_path,
+            "link": rel_path,
             "value": "+",
             }
         return template.render(data)
@@ -399,7 +399,6 @@ class _LogManager:
                 warnings.warn(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
                 warnings.warn(f"{file}が見つかりません。コピーは行いません。")
-        shutil.copytree(self.settings.input_file_path, os.path.join(path, "in"))
         shutil.copytree(os.path.join(self.base_dir, self.js_file_path), os.path.join(path, self.js_file_path))
     
     json_file_name = "result.json"
