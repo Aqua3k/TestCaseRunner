@@ -123,21 +123,31 @@ class _TestCaseRunner:
             raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
         test_cases = self.make_testcases(files)
         if self.settings.parallel_processing_method.lower() == "process":
+            parallel = True
             executor_class = ProcessPoolExecutor
         elif self.settings.parallel_processing_method.lower() == "thread":
+            parallel = True
             executor_class = ThreadPoolExecutor
+        elif self.settings.parallel_processing_method.lower() == "single":
+            parallel = False
         else:
             raise ValueError("引数parallel_processing_methodの値が不正です。")
 
-        with tqdm(total=len(test_cases)) as progress:
-            with executor_class() as executor:
-                for testcase in test_cases:
-                    future = executor.submit(self.run_testcase, testcase)
-                    future.add_done_callback(lambda p: progress.update())
-                    futures.append(future)
-            results: List[TestCase] = []
-            for future in futures:
-                results.append(future.result())
+        results: List[TestCase] = []
+        if parallel:
+            with tqdm(total=len(test_cases)) as progress:
+                with executor_class() as executor:
+                    for testcase in test_cases:
+                        future = executor.submit(self.run_testcase, testcase)
+                        future.add_done_callback(lambda p: progress.update())
+                        futures.append(future)
+                
+                for future in futures:
+                    results.append(future.result())
+        else:
+            for testcase in tqdm(test_cases):
+                result = self.run_testcase(testcase)
+                results.append(result)
         
         self.make_log(results)
     
