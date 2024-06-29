@@ -486,7 +486,6 @@ def run(
         stderr_file_output,
         log_folder_name,
     )
-    raise ValueError # エラーになったらどうなるか確認
     runner = _TestCaseRunner(handler, setting)
     runner.run()
 
