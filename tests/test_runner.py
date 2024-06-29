@@ -112,11 +112,6 @@ def test_no_error_no_warning_case11(setup_normally):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
     assert len(warning_info) == 0
 
-def test_no_error_no_warning_case12(setup_normally):
-    with pytest.warns(None) as warning_info:
-        run(handler=error_program, input_file_path="in", parallel_processing_method="single")
-    assert len(warning_info) == 0
-
 # 例外が出る
 def test_with_error_case0(setup_normally):
     with pytest.raises(InvalidPathException):
@@ -144,3 +139,8 @@ def test_with_warning_case1(setup_normally):
     with pytest.warns(None) as warning_info:
         run(handler=no_error_program, input_file_path="in", copy_target_files=["in"])
     assert len(warning_info) == 1
+
+def test_with_warning_case2(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=error_program, input_file_path="in", parallel_processing_method="single")
+    assert len(warning_info) != 0

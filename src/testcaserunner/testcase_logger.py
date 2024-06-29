@@ -51,7 +51,7 @@ class LogManager:
     
     def get_in(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.settings.log_path)
+        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.settings.log_folder_name)
         data = {
             "link": rel_path,
             "value": "+",
@@ -59,7 +59,7 @@ class LogManager:
         return template.render(data)
     def get_stdout(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.settings.log_path)
+        rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.settings.log_folder_name)
         data = {
             "link": rel_path,
             "value": "+",
@@ -73,7 +73,7 @@ class LogManager:
         return template.render(data)
     def get_stderr(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.settings.log_path)
+        rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.settings.log_folder_name)
         data = {
             "link": rel_path,
             "value": "+",
@@ -179,7 +179,7 @@ class LogManager:
             "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
-        html_file_path = os.path.join(self.settings.log_path, self.html_file_name)
+        html_file_path = os.path.join(self.settings.log_folder_name, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
     
@@ -251,7 +251,7 @@ class LogManager:
             "contents": contents,
         }
         self.df = pd.DataFrame(contents)
-        json_file_path = os.path.join(self.settings.log_path, self.json_file_name)
+        json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(json_file, f, indent=2)
 
