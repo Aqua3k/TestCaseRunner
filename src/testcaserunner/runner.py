@@ -51,7 +51,7 @@ class TestCase:
             for line in file:
                 yield line.strip()
 
-class _RunnerSettings:
+class RunnerSettings:
     stdout_dir_path = "stdout"
     stderr_dir_path = "stderr"
     log_dir_path = "log"
@@ -99,10 +99,10 @@ class _RunnerSettings:
             i += 1
         return name
 
-class _TestCaseRunner:
+class TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
-                 setting: _RunnerSettings,
+                 setting: RunnerSettings,
                  ):
         self.settings = setting
         self.input_file_path = self.settings.input_file_copy_path
@@ -184,7 +184,6 @@ class _TestCaseRunner:
 
 # 公開するメンバーを制御する
 __all__ = [
-    "ResultStatus",
     "TestCaseResult",
     "TestCase",
 ]

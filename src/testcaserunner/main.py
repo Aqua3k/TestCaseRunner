@@ -1,8 +1,8 @@
 import datetime
 from typing import List, Union, Callable
 
-from .runner import TestCase, TestCaseResult, _RunnerSettings, _TestCaseRunner
-from .testcase_logger import _LogManager
+from .runner import TestCase, TestCaseResult, RunnerSettings, TestCaseRunner
+from .testcase_logger import LogManager
 
 def run(
         handler: Callable[[TestCase], TestCaseResult],
@@ -32,7 +32,7 @@ def run(
         raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
     if log_folder_name is None:
         log_folder_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
-    setting = _RunnerSettings(
+    setting = RunnerSettings(
         input_file_path,
         repeat_count,
         measure_time,
@@ -42,9 +42,9 @@ def run(
         stderr_file_output,
         log_folder_name,
     )
-    runner = _TestCaseRunner(handler, setting)
+    runner = TestCaseRunner(handler, setting)
     result = runner.run()
-    log_manager = _LogManager(setting)
+    log_manager = LogManager(setting)
     log_manager.make_result_log(result)
     log_manager.finalize()
 

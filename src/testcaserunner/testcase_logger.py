@@ -14,16 +14,16 @@ import seaborn as sns
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
-from .runner import _RunnerSettings, ResultStatus, TestCase, TestCaseResult
+from .runner import RunnerSettings, ResultStatus, TestCase, TestCaseResult
 
-class _LogManager:
+class LogManager:
     @dataclass
     class Column:
         title: str
         getter: Callable[[int], str]
 
     js_file_path = "js"
-    def __init__(self, settings: _RunnerSettings):
+    def __init__(self, settings: RunnerSettings):
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
@@ -267,7 +267,3 @@ class _LogManager:
         hash_obj = hashlib.new(hash_algorithm)
         hash_obj.update(encoded_string)
         return hash_obj.hexdigest()
-
-__all__ = [
-    "_LogManager",
-]
