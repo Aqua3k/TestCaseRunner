@@ -71,16 +71,53 @@ class TestCase:
             for line in file:
                 yield line.strip()
 
-@dataclass
 class _RunnerSettings:
-    input_file_path: str
-    repeat_count: int
-    measure_time: bool
-    copy_target_files: List[str]
-    parallel_processing_method: str
-    stdout_file_output: bool
-    stderr_file_output: bool
-    log_folder_name: str
+    stdout_dir_path = "stdout"
+    stderr_dir_path = "stderr"
+    log_dir_path = "log"
+    def __init__(
+        self,
+        input_file_path: str,
+        repeat_count: int,
+        measure_time: bool,
+        copy_target_files: List[str],
+        parallel_processing_method: str,
+        stdout_file_output: bool,
+        stderr_file_output: bool,
+        log_folder_name: str,
+    ):
+        self.input_file_path: str = input_file_path
+        self.repeat_count: int = repeat_count
+        self.measure_time: bool = measure_time
+        self.copy_target_files: List[str] = copy_target_files
+        self.parallel_processing_method: str = parallel_processing_method
+        self.stdout_file_output: bool = stdout_file_output
+        self.stderr_file_output: bool = stderr_file_output
+        self.log_folder_name: str = log_folder_name
+
+        if not Path(self.input_file_path).is_dir():
+            raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
+
+        if self.log_dir_path not in glob.glob("*"):
+            os.mkdir(self.log_dir_path)
+        self.log_path = self.determine_log_path_name()
+        os.mkdir(self.log_path)
+        self.stdout_log_path = os.path.join(self.log_path, self.stdout_dir_path)
+        os.mkdir(self.stdout_log_path)
+        self.stderr_log_path = os.path.join(self.log_path, self.stderr_dir_path)
+        os.mkdir(self.stderr_log_path)
+        self.input_file_copy_path = os.path.join(self.log_dir_path, self.log_folder_name, "in")
+        shutil.copytree(self.input_file_path, self.input_file_copy_path)
+        self.fig_dir_path = os.path.join(self.log_path, "fig")
+        os.mkdir(self.fig_dir_path)
+
+    def determine_log_path_name(self) -> str:
+        name = os.path.join(self.log_dir_path, self.log_folder_name)
+        i = 1
+        while os.path.exists(name):
+            name = os.path.join(self.log_dir_path, f"{self.log_folder_name}-{i}")
+            i += 1
+        return name
 
 class _TestCaseRunner:
     def __init__(self,
@@ -88,10 +125,7 @@ class _TestCaseRunner:
                  setting: _RunnerSettings,
                  ):
         self.settings = setting
-        if not Path(self.settings.input_file_path).is_dir():
-            raise InvalidPathException(f"テストケースファイルへのパス{self.settings.input_file_path}は無効なパスです。")
-        self.log_manager = _LogManager(setting)
-        self.input_file_path = self.log_manager.input_file_copy_path
+        self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
     
     def make_testcases(self, files: List[str]) -> List[TestCase]:
@@ -104,15 +138,15 @@ class _TestCaseRunner:
                     basename = f"{name}_{rep+1}{extension}"
                 else:
                     basename = os.path.basename(input_file)
-                stdout_file = os.path.join(self.log_manager.stdout_log_path, basename)
-                stderr_file = os.path.join(self.log_manager.stderr_log_path, basename)
+                stdout_file = os.path.join(self.settings.stdout_log_path, basename)
+                stderr_file = os.path.join(self.settings.stderr_log_path, basename)
                 testcase_name = os.path.basename(input_file)
                 testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file, testcase_index)
                 test_cases.append(testcase)
                 testcase_index += 1
         return test_cases
     
-    def run(self) -> None:
+    def run(self) -> List[Tuple[TestCase, TestCaseResult]]:
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
@@ -146,7 +180,7 @@ class _TestCaseRunner:
                 result = self.run_testcase(testcase)
                 results.append(result)
         
-        self.make_log(results)
+        return results
     
     def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
         start_time = time.time()
@@ -167,10 +201,6 @@ class _TestCaseRunner:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return testcase, test_result
-    
-    def make_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
-        self.log_manager.make_result_log(results)
-        self.log_manager.finalize()
 
 class _LogManager:
     @dataclass
@@ -178,26 +208,10 @@ class _LogManager:
         title: str
         getter: Callable[[int], str]
 
-    log_dir_path = "log"
     js_file_path = "js"
-    stdout_dir_path = "stdout"
-    stderr_dir_path = "stderr"
     def __init__(self, settings: _RunnerSettings):
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
-        if self.log_dir_path not in glob.glob("*"):
-            os.mkdir(self.log_dir_path)
-        self.log_path = self.determine_log_path_name()
-        os.mkdir(self.log_path)
-        self.fig_dir_path = os.path.join(self.log_path, "fig")
-        os.mkdir(self.fig_dir_path)
-        self.stdout_log_path = os.path.join(self.log_path, self.stdout_dir_path)
-        os.mkdir(self.stdout_log_path)
-        self.stderr_log_path = os.path.join(self.log_path, self.stderr_dir_path)
-        os.mkdir(self.stderr_log_path)
-        self.input_file_copy_path = os.path.join(self.log_dir_path, self.settings.log_folder_name, "in")
-        shutil.copytree(self.settings.input_file_path, self.input_file_copy_path)
-
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
 
@@ -214,14 +228,6 @@ class _LogManager:
     def get_attribute_priority(self, attribute):
         return self.attributes_display_priority.get(attribute, 0)
 
-    def determine_log_path_name(self) -> str:
-        name = os.path.join(self.log_dir_path, self.settings.log_folder_name)
-        i = 1
-        while os.path.exists(name):
-            name = os.path.join(self.log_dir_path, f"{self.settings.log_folder_name}-{i}")
-            i += 1
-        return name
-
     def sortup_attributes(self) -> List[str]:
         attributes = dict() # setだと順番が保持されないのでdictにする
         for test_result in self.results:
@@ -231,7 +237,7 @@ class _LogManager:
     
     def get_in(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.log_path)
+        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.settings.log_path)
         data = {
             "link": rel_path,
             "value": "+",
@@ -239,7 +245,7 @@ class _LogManager:
         return template.render(data)
     def get_stdout(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.log_path)
+        rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.settings.log_path)
         data = {
             "link": rel_path,
             "value": "+",
@@ -253,7 +259,7 @@ class _LogManager:
         return template.render(data)
     def get_stderr(self, attribute: Any, row: int) -> str:
         template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.log_path)
+        rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.settings.log_path)
         data = {
             "link": rel_path,
             "value": "+",
@@ -328,14 +334,14 @@ class _LogManager:
     def make_figure(self) -> str:
         # ヒストグラムを描画
         self.df.hist()
-        plt.savefig(os.path.join(self.fig_dir_path, self.histgram_fig_name))
+        plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
         plt.close()
 
         # 相関係数のヒートマップ
         corr = self.df.corr(numeric_only=True)
         heatmap = sns.heatmap(corr, annot=True)
         heatmap.set_title('Correlation Coefficient Heatmap')
-        plt.savefig(os.path.join(self.fig_dir_path, self.heatmap_fig_name))
+        plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
         
         ret = []
         template = self.environment.get_template("figure.j2")
@@ -359,7 +365,7 @@ class _LogManager:
             "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
-        html_file_path = os.path.join(self.log_path, self.html_file_name)
+        html_file_path = os.path.join(self.settings.log_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
     
@@ -390,7 +396,7 @@ class _LogManager:
 
     def finalize(self) -> None:
         """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-        path = os.path.join(self.log_dir_path, self.settings.log_folder_name)
+        path = os.path.join(self.settings.log_dir_path, self.settings.log_folder_name)
         for file in self.settings.copy_target_files:
             file_path = Path(file)
             if file_path.is_file():
@@ -431,7 +437,7 @@ class _LogManager:
             "contents": contents,
         }
         self.df = pd.DataFrame(contents)
-        json_file_path = os.path.join(self.log_path, self.json_file_name)
+        json_file_path = os.path.join(self.settings.log_path, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(json_file, f, indent=2)
 
@@ -487,7 +493,10 @@ def run(
         log_folder_name,
     )
     runner = _TestCaseRunner(handler, setting)
-    runner.run()
+    result = runner.run()
+    log_manager = _LogManager(setting)
+    log_manager.make_result_log(result)
+    log_manager.finalize()
 
 # 公開するメンバーを制御する
 __all__ = [
