@@ -37,6 +37,16 @@ def error_program(testcase: TestCase):
     foo = 1/0 # division by zero.
     return TestCaseResult()
 
+def no_error_program_attribute(testcase: TestCase):
+    basename = os.path.basename(testcase)
+    case = os.path.split(basename)[0]
+    attrbute = {}
+    if int(case) % 2 == 0:
+        attrbute["even"] = int(case)
+    else:
+        attrbute["odd"] = int(case)
+    return TestCaseResult(attribute=attrbute)
+
 @pytest.fixture
 def setup_normally():
     """logフォルダを消してno_filesフォルダを作る"""
@@ -110,6 +120,16 @@ def test_no_error_no_warning_case11(setup_normally):
 def test_no_error_no_warning_case11(setup_normally):
     with pytest.warns(None) as warning_info:
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case12(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", repeat_count=2)
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case13(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program_attribute, input_file_path="in")
     assert len(warning_info) == 0
 
 # 例外が出る
