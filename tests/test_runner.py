@@ -5,7 +5,7 @@ import os
 
 import pytest
 
-sys.path.append(r"..\src")
+sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,
