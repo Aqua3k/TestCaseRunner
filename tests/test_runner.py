@@ -68,7 +68,9 @@ def test_no_error_no_warning_case3(setup_normally):
     assert len(warning_info) == 0
 
 def test_no_error_no_warning_case4(setup_normally):
+    # 2回同じフォルダに対して走らせることで、カバレッジを埋める
     with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", log_folder_name="test")
         run(handler=no_error_program, input_file_path="in", log_folder_name="test")
     assert len(warning_info) == 0
 
@@ -108,6 +110,11 @@ def test_no_error_no_warning_case11(setup_normally):
 def test_no_error_no_warning_case11(setup_normally):
     with pytest.warns(None) as warning_info:
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
+    assert len(warning_info) == 0
+
+def test_no_error_no_warning_case12(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=error_program, input_file_path="in", parallel_processing_method="single")
     assert len(warning_info) == 0
 
 # 例外が出る
