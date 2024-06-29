@@ -113,7 +113,7 @@ class TestCaseRunner:
         testcase_index = 0
         for input_file in sorted(files):
             for rep in range(self.settings.repeat_count):
-                if self.settings.repeat_count != 0:
+                if self.settings.repeat_count != 1:
                     name, extension = os.path.splitext(os.path.basename(input_file))
                     basename = f"{name}_{rep+1}{extension}"
                 else:
