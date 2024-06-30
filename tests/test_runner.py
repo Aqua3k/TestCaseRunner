@@ -37,6 +37,16 @@ def error_program(testcase: TestCase):
     foo = 1/0 # division by zero.
     return TestCaseResult()
 
+def no_error_program_attribute(testcase: TestCase):
+    basename = os.path.basename(testcase)
+    case = os.path.split(basename)[0]
+    attrbute = {}
+    if int(case) % 2 == 0:
+        attrbute["even"] = int(case)
+    else:
+        attrbute["odd"] = int(case)
+    return TestCaseResult(attribute=attrbute)
+
 @pytest.fixture
 def setup_normally():
     """logフォルダを消してno_filesフォルダを作る"""
@@ -68,7 +78,9 @@ def test_no_error_no_warning_case3(setup_normally):
     assert len(warning_info) == 0
 
 def test_no_error_no_warning_case4(setup_normally):
+    # 2回同じフォルダに対して走らせることで、カバレッジを埋める
     with pytest.warns(None) as warning_info:
+        run(handler=no_error_program, input_file_path="in", log_folder_name="test")
         run(handler=no_error_program, input_file_path="in", log_folder_name="test")
     assert len(warning_info) == 0
 
@@ -110,6 +122,11 @@ def test_no_error_no_warning_case11(setup_normally):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
     assert len(warning_info) == 0
 
+def test_no_error_no_warning_case13(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=no_error_program_attribute, input_file_path="in")
+    assert len(warning_info) == 0
+
 # 例外が出る
 def test_with_error_case0(setup_normally):
     with pytest.raises(InvalidPathException):
@@ -137,3 +154,8 @@ def test_with_warning_case1(setup_normally):
     with pytest.warns(None) as warning_info:
         run(handler=no_error_program, input_file_path="in", copy_target_files=["in"])
     assert len(warning_info) == 1
+
+def test_with_warning_case2(setup_normally):
+    with pytest.warns(None) as warning_info:
+        run(handler=error_program, input_file_path="in", parallel_processing_method="single")
+    assert len(warning_info) != 0
