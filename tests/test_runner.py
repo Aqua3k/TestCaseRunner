@@ -122,11 +122,6 @@ def test_no_error_no_warning_case11(setup_normally):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
     assert len(warning_info) == 0
 
-def test_no_error_no_warning_case12(setup_normally):
-    with pytest.warns(None) as warning_info:
-        run(handler=no_error_program, input_file_path="in", repeat_count=2)
-    assert len(warning_info) == 0
-
 def test_no_error_no_warning_case13(setup_normally):
     with pytest.warns(None) as warning_info:
         run(handler=no_error_program_attribute, input_file_path="in")

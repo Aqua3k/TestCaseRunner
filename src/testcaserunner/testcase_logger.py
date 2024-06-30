@@ -124,20 +124,6 @@ class LogManager:
             self.results.append(r)
         self.attributes = self.sortup_attributes()
 
-        self.average_score = None
-        if "score" not in self.attributes:
-            return ""
-
-        file_name_list, scores_list = [], []
-        for testcase, result in zip(self.testcases, self.results):
-            file_name_list.append(testcase.testcase_name)
-            s = 0
-            if result.error_status == ResultStatus.AC:
-                if "score" in result.attribute:
-                    s = result.attribute["score"]
-            scores_list.append(s)
-        self.average_score = sum(scores_list)/len(self.testcases)
-
     def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.analyze_result(results)
         self.make_json_file()
@@ -247,7 +233,6 @@ class LogManager:
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
             "has_score": "score" in self.attributes,
-            "average_score": self.average_score,
             "contents": contents,
         }
         self.df = pd.DataFrame(contents)
