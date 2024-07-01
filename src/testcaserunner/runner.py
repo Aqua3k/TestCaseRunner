@@ -90,7 +90,7 @@ class RunnerSettings:
         os.mkdir(self.stdout_log_path)
         self.stderr_log_path = os.path.join(self.log_folder_name, self.stderr_dir_path)
         os.mkdir(self.stderr_log_path)
-        self.input_file_copy_path = os.path.join(self.log_dir_path, self.log_folder_name, "in")
+        self.input_file_copy_path = os.path.join(self.log_folder_name, "in")
         shutil.copytree(self.input_file_path, self.input_file_copy_path)
         self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
         os.mkdir(self.fig_dir_path)
