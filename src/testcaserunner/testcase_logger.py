@@ -158,7 +158,7 @@ class LogManager:
         
         template = self.environment.get_template("main.j2")
         data = {
-            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "date": self.settings.datetime.strftime("%Y/%m/%d %H:%M:%S"),
             "summary": f"<pre>{self.df.describe()}</pre>",
             "script_list": self.make_script_list(),
             "figures": self.make_figure(),
