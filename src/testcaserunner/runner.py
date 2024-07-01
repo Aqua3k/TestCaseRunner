@@ -8,6 +8,7 @@ from enum import IntEnum, auto
 from pathlib import Path
 import warnings
 import time
+import datetime
 
 from tqdm import tqdm
 
@@ -64,7 +65,7 @@ class RunnerSettings:
         parallel_processing_method: str,
         stdout_file_output: bool,
         stderr_file_output: bool,
-        log_folder_name: str,
+        log_folder_name: Union[str, None],
     ):
         self.input_file_path: str = input_file_path
         self.repeat_count: int = repeat_count
@@ -73,7 +74,11 @@ class RunnerSettings:
         self.parallel_processing_method: str = parallel_processing_method
         self.stdout_file_output: bool = stdout_file_output
         self.stderr_file_output: bool = stderr_file_output
-        self.log_folder_name: str = self.determine_log_path_name(log_folder_name)
+        self.datetime = datetime.datetime.now()
+        self.log_folder_name: str = self.get_log_file_path(log_folder_name)
+
+        if repeat_count <= 0:
+            raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
 
         if not Path(self.input_file_path).is_dir():
             raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
@@ -85,12 +90,14 @@ class RunnerSettings:
         os.mkdir(self.stdout_log_path)
         self.stderr_log_path = os.path.join(self.log_folder_name, self.stderr_dir_path)
         os.mkdir(self.stderr_log_path)
-        self.input_file_copy_path = os.path.join(self.log_dir_path, self.log_folder_name, "in")
+        self.input_file_copy_path = os.path.join(self.log_folder_name, "in")
         shutil.copytree(self.input_file_path, self.input_file_copy_path)
         self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
         os.mkdir(self.fig_dir_path)
 
-    def determine_log_path_name(self, log_folder_name) -> str:
+    def get_log_file_path(self, log_folder_name: Union[str, None]) -> str:
+        if log_folder_name is None:
+            log_folder_name = str(self.datetime.strftime('%Y%m%d%H%M%S'))
         name = os.path.join(self.log_dir_path, log_folder_name)
         i = 1
         while os.path.exists(name):

@@ -1,6 +1,5 @@
 import os
 import shutil
-import datetime
 from typing import List, Dict, Any, Tuple, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,19 +27,6 @@ class LogManager:
         self.settings = settings
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
-
-    attributes_display_priority = {
-        "in": -8,
-        "out": -7,
-        "stdout": -6,
-        "testcase": -5,
-        "status": -4,
-        "stderr": -3,
-        "score": -2,
-        "time": -1,
-    }
-    def get_attribute_priority(self, attribute):
-        return self.attributes_display_priority.get(attribute, 0)
 
     def sortup_attributes(self) -> List[str]:
         attributes = dict() # setだと順番が保持されないのでdictにする
@@ -158,7 +144,7 @@ class LogManager:
         
         template = self.environment.get_template("main.j2")
         data = {
-            "date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S"),
+            "date": self.settings.datetime.strftime("%Y/%m/%d %H:%M:%S"),
             "summary": f"<pre>{self.df.describe()}</pre>",
             "script_list": self.make_script_list(),
             "figures": self.make_figure(),
@@ -171,7 +157,6 @@ class LogManager:
     
     def make_table(self) -> Dict[str, str]:
         ret = []
-        self.columns = sorted(self.columns, key=lambda x: self.get_attribute_priority(x.title))
         for row in range(len(self.results)):
             d = {}
             for column in self.columns:
@@ -196,16 +181,18 @@ class LogManager:
 
     def finalize(self) -> None:
         """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-        path = os.path.join(self.settings.log_dir_path, self.settings.log_folder_name)
         for file in self.settings.copy_target_files:
             file_path = Path(file)
             if file_path.is_file():
-                shutil.copy(file, path)
+                shutil.copy(file, self.settings.log_folder_name)
             elif file_path.is_dir():
                 warnings.warn(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
                 warnings.warn(f"{file}が見つかりません。コピーは行いません。")
-        shutil.copytree(os.path.join(self.base_dir, self.js_file_path), os.path.join(path, self.js_file_path))
+        shutil.copytree(
+            os.path.join(self.base_dir, self.js_file_path),
+            os.path.join(self.settings.log_folder_name, self.js_file_path)
+            )
     
     json_file_name = "result.json"
     def make_json_file(self) -> None:
@@ -216,9 +203,9 @@ class LogManager:
             path = testcase.input_file_path
             file_names += file_names
             file_hash += self.calculate_file_hash(path)
-            contents["input_file"].append(testcase.input_file_path)
-            contents["stdout_file"].append(testcase.stdout_file_path)
-            contents["stderr_file"].append(testcase.stderr_file_path)
+            contents["input_file"].append(os.path.basename(testcase.input_file_path))
+            contents["stdout_file"].append(os.path.basename(testcase.stdout_file_path))
+            contents["stderr_file"].append(os.path.basename(testcase.stderr_file_path))
             contents["status"].append(self.status_texts[result.error_status][0])
             for key in self.attributes:
                 value = result.attribute[key] if key in result.attribute else None
@@ -228,11 +215,10 @@ class LogManager:
         file_name_hash = self.calculate_string_hash(file_names)
         
         json_file = {
-            "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+            "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(self.testcases),
             "file_content_hash": file_content_hash,
             "file_name_hash": file_name_hash,
-            "has_score": "score" in self.attributes,
             "contents": contents,
         }
         self.df = pd.DataFrame(contents)
