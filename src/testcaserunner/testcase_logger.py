@@ -28,19 +28,6 @@ class LogManager:
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
 
-    attributes_display_priority = {
-        "in": -8,
-        "out": -7,
-        "stdout": -6,
-        "testcase": -5,
-        "status": -4,
-        "stderr": -3,
-        "score": -2,
-        "time": -1,
-    }
-    def get_attribute_priority(self, attribute):
-        return self.attributes_display_priority.get(attribute, 0)
-
     def sortup_attributes(self) -> List[str]:
         attributes = dict() # setだと順番が保持されないのでdictにする
         for test_result in self.results:
@@ -170,7 +157,6 @@ class LogManager:
     
     def make_table(self) -> Dict[str, str]:
         ret = []
-        self.columns = sorted(self.columns, key=lambda x: self.get_attribute_priority(x.title))
         for row in range(len(self.results)):
             d = {}
             for column in self.columns:
