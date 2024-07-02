@@ -2,6 +2,7 @@ import subprocess
 import sys
 import shutil
 import os
+import logging
 
 import pytest
 
@@ -57,75 +58,75 @@ def setup_normally():
     os.mkdir("no_files")
 
 # 警告も例外も出ない
-def test_no_error_no_warning_case0(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case0(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case1(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case1(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", copy_target_files=["main.py"])
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case2(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case2(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", stdout_file_output=False)
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case3(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case3(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", stderr_file_output=False)
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case4(setup_normally):
+def test_no_error_no_warning_case4(caplog, setup_normally):
     # 2回同じフォルダに対して走らせることで、カバレッジを埋める
-    with pytest.warns(None) as warning_info:
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", log_folder_name="test")
         run(handler=no_error_program, input_file_path="in", log_folder_name="test")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case5(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case5(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", measure_time=False)
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case6(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case6(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="process")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case7(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case7(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="PROCESS")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case8(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case8(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="thread")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case9(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case9(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="THREAD")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case10(setup_normally):
+def test_no_error_no_warning_case10(caplog, setup_normally):
     run(handler=error_program, input_file_path="in")
 
-def test_no_error_no_warning_case11(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case11(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="single")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case11(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case11(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case13(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_no_error_no_warning_case13(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program_attribute, input_file_path="in")
-    assert len(warning_info) == 0
+    assert len(caplog.records) == 0
 
 # 例外が出る
 def test_with_error_case0(setup_normally):
@@ -145,17 +146,24 @@ def test_with_error_case3(setup_normally):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="test")
 
 # 警告が出る
-def test_with_warning_case0(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_with_warning_case0(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", copy_target_files=["not_exist"])
-    assert len(warning_info) == 1
+    assert len(caplog.records) == 1
 
-def test_with_warning_case1(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_with_warning_case1(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", copy_target_files=["in"])
-    assert len(warning_info) == 1
+    assert len(caplog.records) == 1
 
-def test_with_warning_case2(setup_normally):
-    with pytest.warns(None) as warning_info:
+def test_with_warning_case2(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
         run(handler=error_program, input_file_path="in", parallel_processing_method="single")
-    assert len(warning_info) != 0
+    assert len(caplog.records) != 0
+
+# デバッグメッセージのテスト
+def test_with_debugmessage_case0(caplog, setup_normally):
+    # デバッグ起動でデバッグメッセージが出る
+    with caplog.at_level(logging.DEBUG):
+        run(handler=no_error_program, input_file_path="in", _debug=True)
+    assert len(caplog.records) != 0
