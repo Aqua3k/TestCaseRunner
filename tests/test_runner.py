@@ -160,3 +160,10 @@ def test_with_warning_case2(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(handler=error_program, input_file_path="in", parallel_processing_method="single")
     assert len(caplog.records) != 0
+
+# デバッグメッセージのテスト
+def test_with_debugmessage_case0(caplog, setup_normally):
+    # デバッグ起動でデバッグメッセージが出る
+    with caplog.at_level(logging.DEBUG):
+        run(handler=no_error_program, input_file_path="in", _debug=True)
+    assert len(caplog.records) != 0
