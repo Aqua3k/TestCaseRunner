@@ -6,13 +6,13 @@ from typing import List, Dict, Tuple, Union, Callable
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from pathlib import Path
-import warnings
 import time
 import datetime
 
 from tqdm import tqdm
 
 from .exceptions import InvalidPathException, NoTestcaseFileException
+from .logging_config import setup_logger
 
 class ResultStatus(IntEnum):
     """テストケースを実行した結果のステータス定義
@@ -110,6 +110,7 @@ class TestCaseRunner:
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
                  ):
+        self.logger = setup_logger("TestCaseRunner")
         self.settings = setting
         self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
@@ -173,9 +174,8 @@ class TestCaseRunner:
         try:
             test_result: TestCaseResult = self.handler(testcase)
         except Exception as e:
-            msg = f"テストケース{os.path.basename(testcase.input_file_path)}において、\
-                引数で渡された関数の中で例外が発生しました。\n{str(e)}"
-            warnings.warn(msg)
+            self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
+                引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(error_status=ResultStatus.IE, stderr=str(e))
         erapsed_time = time.time() - start_time
         if self.settings.measure_time:

@@ -6,7 +6,6 @@ from pathlib import Path
 import hashlib
 import json
 from collections import defaultdict
-import warnings
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,6 +13,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 
 from .runner import RunnerSettings, ResultStatus, TestCase, TestCaseResult
+from .logging_config import setup_logger
 
 class LogManager:
     @dataclass
@@ -23,6 +23,7 @@ class LogManager:
 
     js_file_path = "js"
     def __init__(self, settings: RunnerSettings):
+        self.logger = setup_logger("LogManager")
         self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
@@ -186,9 +187,9 @@ class LogManager:
             if file_path.is_file():
                 shutil.copy(file, self.settings.log_folder_name)
             elif file_path.is_dir():
-                warnings.warn(f"{file}はディレクトリパスです。コピーは行いません。")
+                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
-                warnings.warn(f"{file}が見つかりません。コピーは行いません。")
+                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
         shutil.copytree(
             os.path.join(self.base_dir, self.js_file_path),
             os.path.join(self.settings.log_folder_name, self.js_file_path)
