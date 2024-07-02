@@ -23,9 +23,9 @@ class LogManager:
 
     js_file_path = "js"
     def __init__(self, settings: RunnerSettings):
-        self.logger = setup_logger("LogManager")
-        self.base_dir = os.path.split(__file__)[0]
         self.settings = settings
+        self.logger = setup_logger("LogManager", self.settings.debug)
+        self.base_dir = os.path.split(__file__)[0]
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
 
@@ -120,6 +120,7 @@ class LogManager:
     heatmap_fig_name = 'heatmap.png'
     def make_figure(self) -> str:
         # ヒストグラムを描画
+        self.logger.debug("function make_figure() started")
         self.df.hist()
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
         plt.close()
@@ -136,10 +137,12 @@ class LogManager:
         ret.append(fig)
         fig = template.render({"link": os.path.join("fig", self.heatmap_fig_name)})
         ret.append(fig)
+        self.logger.debug("function make_figure() finished")
         return "".join(ret)
 
     html_file_name = "result.html"
     def make_html(self) -> None:
+        self.logger.debug("function make_html() started")
         for attribute in self.attributes:
             self.columns.append(self.Column(attribute, self.get_other))
         
@@ -155,7 +158,8 @@ class LogManager:
         html_file_path = os.path.join(self.settings.log_folder_name, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
-    
+        self.logger.debug("function make_html() finished")
+
     def make_table(self) -> Dict[str, str]:
         ret = []
         for row in range(len(self.results)):
@@ -182,6 +186,7 @@ class LogManager:
 
     def finalize(self) -> None:
         """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
+        self.logger.debug("function finalize() started")
         for file in self.settings.copy_target_files:
             file_path = Path(file)
             if file_path.is_file():
@@ -194,9 +199,11 @@ class LogManager:
             os.path.join(self.base_dir, self.js_file_path),
             os.path.join(self.settings.log_folder_name, self.js_file_path)
             )
-    
+        self.logger.debug("function finalize() finished")
+
     json_file_name = "result.json"
     def make_json_file(self) -> None:
+        self.logger.debug("function make_json_file() started")
         file_hash = ""
         file_names = ""
         contents = defaultdict(list)
@@ -226,6 +233,7 @@ class LogManager:
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(json_file, f, indent=2)
+        self.logger.debug("function make_json_file() finished")
 
     def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
         hash_obj = hashlib.new(hash_algorithm)

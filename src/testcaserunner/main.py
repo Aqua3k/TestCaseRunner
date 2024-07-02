@@ -13,6 +13,7 @@ def run(
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
         log_folder_name: Union[str, None] = None,
+        _debug: bool = False,
         ) -> None:
     """ランナーを実行する
 
@@ -36,6 +37,7 @@ def run(
         stdout_file_output,
         stderr_file_output,
         log_folder_name,
+        _debug,
     )
     runner = TestCaseRunner(handler, setting)
     result = runner.run()

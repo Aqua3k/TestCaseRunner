@@ -66,7 +66,9 @@ class RunnerSettings:
         stdout_file_output: bool,
         stderr_file_output: bool,
         log_folder_name: Union[str, None],
+        debug: bool,
     ):
+        self.debug = debug
         self.input_file_path: str = input_file_path
         self.repeat_count: int = repeat_count
         self.measure_time: bool = measure_time
@@ -110,12 +112,13 @@ class TestCaseRunner:
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
                  ):
-        self.logger = setup_logger("TestCaseRunner")
         self.settings = setting
+        self.logger = setup_logger("TestCaseRunner", self.settings.debug)
         self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
     
     def make_testcases(self, files: List[str]) -> List[TestCase]:
+        self.logger.debug("function make_testcases() started")
         test_cases = []
         testcase_index = 0
         for input_file in sorted(files):
@@ -131,9 +134,11 @@ class TestCaseRunner:
                 testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file, testcase_index)
                 test_cases.append(testcase)
                 testcase_index += 1
+        self.logger.debug("function make_testcases() finished")
         return test_cases
     
     def run(self) -> List[Tuple[TestCase, TestCaseResult]]:
+        self.logger.debug("function run() started")
         futures:List[Future] = []
         test_cases: List[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
@@ -151,8 +156,10 @@ class TestCaseRunner:
         else:
             raise ValueError("引数parallel_processing_methodの値が不正です。")
 
+        self.logger.debug("start testcase run process.")
         results: List[TestCase] = []
         if parallel:
+            self.logger.debug("paralle")
             with tqdm(total=len(test_cases)) as progress:
                 with executor_class() as executor:
                     for testcase in test_cases:
@@ -163,10 +170,12 @@ class TestCaseRunner:
                     for future in futures:
                         results.append(future.result())
         else:
+            self.logger.debug("single")
             for testcase in tqdm(test_cases):
                 result = self.run_testcase(testcase)
                 results.append(result)
         
+        self.logger.debug("function run() finished")
         return results
     
     def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
