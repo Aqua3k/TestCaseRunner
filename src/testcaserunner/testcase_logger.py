@@ -22,9 +22,97 @@ class LogManager:
         getter: Callable[[int], str]
 
     js_file_path = "js"
-    def __init__(self, settings: RunnerSettings):
+    def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
         self.logger = setup_logger("LogManager", self.settings.debug)
+        self.results = results
+        self.base_dir = os.path.split(__file__)[0]
+    
+    def make_html(self):
+        self.html_parser = HtmlParser(self.results, self.settings)
+
+    def finalize(self) -> None:
+        """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
+        self.logger.debug("function finalize() started")
+        for file in self.settings.copy_target_files:
+            file_path = Path(file)
+            if file_path.is_file():
+                shutil.copy(file, self.settings.log_folder_name)
+            elif file_path.is_dir():
+                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+            else:
+                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
+        shutil.copytree(
+            os.path.join(self.base_dir, self.js_file_path),
+            os.path.join(self.settings.log_folder_name, self.js_file_path)
+            )
+        self.logger.debug("function finalize() finished")
+
+    json_file_name = "result.json"
+    def make_json_file(self) -> None:
+        #TODO
+        return
+        self.logger.debug("function make_json_file() started")
+        file_hash = ""
+        file_names = ""
+        contents = defaultdict(list)
+        for testcase, result in zip(self.testcases, self.results):
+            path = testcase.input_file_path
+            file_names += file_names
+            file_hash += self.calculate_file_hash(path)
+            contents["input_file"].append(os.path.basename(testcase.input_file_path))
+            contents["stdout_file"].append(os.path.basename(testcase.stdout_file_path))
+            contents["stderr_file"].append(os.path.basename(testcase.stderr_file_path))
+            contents["status"].append(self.status_texts[result.error_status][0])
+            for key in self.attributes:
+                value = result.attribute[key] if key in result.attribute else None
+                contents[key].append(value)
+        
+        file_content_hash = self.calculate_string_hash(file_hash)
+        file_name_hash = self.calculate_string_hash(file_names)
+        
+        json_file = {
+            "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
+            "testcase_num": len(self.testcases),
+            "file_content_hash": file_content_hash,
+            "file_name_hash": file_name_hash,
+            "contents": contents,
+        }
+        self.df = pd.DataFrame(contents)
+        json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
+        with open(json_file_path, 'w') as f:
+            json.dump(json_file, f, indent=2)
+        self.logger.debug("function make_json_file() finished")
+
+    def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
+        hash_obj = hashlib.new(hash_algorithm)
+        with open(file_path, 'rb') as file:
+            while chunk := file.read(4096):
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()
+
+    def calculate_string_hash(self, input_string: str, hash_algorithm: str ='sha256') -> str:
+        encoded_string = input_string.encode('utf-8')
+        hash_obj = hashlib.new(hash_algorithm)
+        hash_obj.update(encoded_string)
+        return hash_obj.hexdigest()
+
+class HtmlParser:
+    """
+    今は results: List[Tuple[TestCase, TestCaseResult]] に対しての処理になっているので
+    汎用的にDataFrame型に対する処理にしたい
+    """
+    @dataclass
+    class Column:
+        title: str
+        getter: Callable[[int], str]
+
+    js_file_path = "js"
+    def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
+        self.settings = settings
+        self.logger = setup_logger("HtmlParser", self.settings.debug)
+        self.analyze_result(results)
+        self.df = self.make_data_frame()
         self.base_dir = os.path.split(__file__)[0]
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
@@ -113,7 +201,6 @@ class LogManager:
 
     def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
         self.analyze_result(results)
-        self.make_json_file()
         self.make_html()
     
     histgram_fig_name = 'histgram.png'
@@ -184,33 +271,10 @@ class LogManager:
         ]
         return ret
 
-    def finalize(self) -> None:
-        """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
-        self.logger.debug("function finalize() started")
-        for file in self.settings.copy_target_files:
-            file_path = Path(file)
-            if file_path.is_file():
-                shutil.copy(file, self.settings.log_folder_name)
-            elif file_path.is_dir():
-                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
-            else:
-                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
-        shutil.copytree(
-            os.path.join(self.base_dir, self.js_file_path),
-            os.path.join(self.settings.log_folder_name, self.js_file_path)
-            )
-        self.logger.debug("function finalize() finished")
-
-    json_file_name = "result.json"
-    def make_json_file(self) -> None:
-        self.logger.debug("function make_json_file() started")
-        file_hash = ""
-        file_names = ""
+    def make_data_frame(self) -> pd.DataFrame:
+        self.logger.debug("function make_data_frame() started")
         contents = defaultdict(list)
         for testcase, result in zip(self.testcases, self.results):
-            path = testcase.input_file_path
-            file_names += file_names
-            file_hash += self.calculate_file_hash(path)
             contents["input_file"].append(os.path.basename(testcase.input_file_path))
             contents["stdout_file"].append(os.path.basename(testcase.stdout_file_path))
             contents["stderr_file"].append(os.path.basename(testcase.stderr_file_path))
@@ -218,32 +282,6 @@ class LogManager:
             for key in self.attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
-        
-        file_content_hash = self.calculate_string_hash(file_hash)
-        file_name_hash = self.calculate_string_hash(file_names)
-        
-        json_file = {
-            "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
-            "testcase_num": len(self.testcases),
-            "file_content_hash": file_content_hash,
-            "file_name_hash": file_name_hash,
-            "contents": contents,
-        }
-        self.df = pd.DataFrame(contents)
-        json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
-        with open(json_file_path, 'w') as f:
-            json.dump(json_file, f, indent=2)
-        self.logger.debug("function make_json_file() finished")
-
-    def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
-        hash_obj = hashlib.new(hash_algorithm)
-        with open(file_path, 'rb') as file:
-            while chunk := file.read(4096):
-                hash_obj.update(chunk)
-        return hash_obj.hexdigest()
-
-    def calculate_string_hash(self, input_string: str, hash_algorithm: str ='sha256') -> str:
-        encoded_string = input_string.encode('utf-8')
-        hash_obj = hashlib.new(hash_algorithm)
-        hash_obj.update(encoded_string)
-        return hash_obj.hexdigest()
+        df = pd.DataFrame(contents)
+        self.logger.debug("function make_data_frame() finished")
+        return df
