@@ -25,16 +25,21 @@ class HtmlColumnType(IntEnum):
 
 class LogManager:
     js_file_path = "js"
+    infile_col = "in"
+    stdout_col = "stdout"
+    stderr_col = "stderr"
+    infilename_col = "testcase"
+    status_col = "status"
     def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
         self.logger = setup_logger("LogManager", self.settings.debug)
         self.results = results
         self.attributes = {
-            "input_file": HtmlColumnType.URL,
-            "stdout_file": HtmlColumnType.URL,
-            "stderr_file": HtmlColumnType.URL,
-            "testcase_name": HtmlColumnType.TEXT,
-            "status": HtmlColumnType.STATUS,
+            self.infile_col: HtmlColumnType.URL,
+            self.stdout_col: HtmlColumnType.URL,
+            self.stderr_col: HtmlColumnType.URL,
+            self.infilename_col: HtmlColumnType.TEXT,
+            self.status_col: HtmlColumnType.STATUS,
         }
         self.make_json_file()
         self.make_figure()
@@ -62,14 +67,6 @@ class LogManager:
         self.logger.debug("function finalize() finished")
 
     json_file_name = "result.json"
-    status_texts = {
-        ResultStatus.AC: ("AC", "lime"),
-        ResultStatus.WA: ("WA", "gold"),
-        ResultStatus.RE: ("RE", "gold"),
-        ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.IE: ("IE", "red"),
-    }
-
     def add_attribute(self, key, type):
         self.attributes[key] = type
 
@@ -110,11 +107,11 @@ class LogManager:
         for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
             file_hashes.append(self.calculate_file_hash(path))
-            contents["input_file"].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
-            contents["stdout_file"].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
-            contents["stderr_file"].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
-            contents["testcase_name"].append(os.path.basename(testcase.input_file_path))
-            contents["status"].append(self.status_texts[result.error_status][0])
+            contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
+            contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
+            contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
+            contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
+            contents[self.status_col].append(result.error_status)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
@@ -181,7 +178,6 @@ class HtmlParser:
     html_file_name = "result.html"
     def make_html(self) -> None:
         self.logger.debug("function make_html() started")
-        
         template = self.environment.get_template("main.j2")
         data = {
             "date": self.metadata["created_date"],
@@ -199,7 +195,7 @@ class HtmlParser:
     def make_table(self) -> Dict[str, str]:
         ret = []
         for row in range(self.metadata["testcase_num"]):
-            d = {}
+            rows = {}
             for column in self.contents.keys():
                 value = self.contents[column][row]
                 match self.metadata["attributes"][column]:
@@ -226,8 +222,8 @@ class HtmlParser:
                             "value": value,
                             }
                         value = template.render(data)
-                d[column] = value
-            ret.append(d)
+                rows[column] = value
+            ret.append(rows)
         return ret
     
     def make_script_list(self) -> List[str]:
