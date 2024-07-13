@@ -1,7 +1,6 @@
 import os
 import shutil
-from typing import List, Dict, Any, Tuple, Callable
-from dataclasses import dataclass
+from typing import List, Dict, Tuple
 from pathlib import Path
 import hashlib
 import json
@@ -25,11 +24,6 @@ class HtmlColumnType(IntEnum):
     USER = auto()
 
 class LogManager:
-    @dataclass
-    class Column:
-        title: str
-        getter: Callable[[int], str]
-
     js_file_path = "js"
     def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
@@ -47,7 +41,7 @@ class LogManager:
         self.base_dir = os.path.split(__file__)[0]
 
     def make_html(self):
-        self.html_parser = HtmlParser(self.results, self.settings)
+        self.html_parser = HtmlParser(self.json_file, self.settings.log_folder_name, self.settings.debug)
         self.html_parser.make_html()
 
     def finalize(self) -> None:
@@ -131,14 +125,14 @@ class LogManager:
             "file_content_hash": file_hashes,
             "attributes": self.attributes,
         }
-        json_file = {
+        self.json_file = {
             "contents": contents,
             "metadata": metadata,
         }
         self.df = pd.DataFrame(contents)
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
-            json.dump(json_file, f, indent=2)
+            json.dump(self.json_file, f, indent=2)
         self.logger.debug("function make_json_file() finished")
 
     def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
@@ -148,68 +142,21 @@ class LogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-    def calculate_string_hash(self, input_string: str, hash_algorithm: str ='sha256') -> str:
-        encoded_string = input_string.encode('utf-8')
-        hash_obj = hashlib.new(hash_algorithm)
-        hash_obj.update(encoded_string)
-        return hash_obj.hexdigest()
-
 class HtmlParser:
-    """
-    今は results: List[Tuple[TestCase, TestCaseResult]] に対しての処理になっているので
-    汎用的にDataFrame型のjsonファイルに対する処理にしたい
-    """
-    @dataclass
-    class Column:
-        title: str
-        getter: Callable[[int], str]
-
-    def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
-        self.settings = settings
-        self.logger = setup_logger("HtmlParser", self.settings.debug)
-        self.analyze_result(results)
-        self.df = self.make_data_frame()
+    def __init__(self, jsonfile: dict, output_path: str, debug: bool):
+        self.debug = debug
+        self.output_path = output_path
+        self.logger = setup_logger("HtmlParser", self.debug)
         self.base_dir = os.path.split(__file__)[0]
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
-
-    def sortup_attributes(self) -> List[str]:
-        attributes = dict() # setだと順番が保持されないのでdictにする
-        for test_result in self.results:
-            for attribute in test_result.attribute.keys():
-                attributes[attribute] = ""
-        return list(attributes.keys())
+        self.parse_data(jsonfile)
     
-    def get_in(self, attribute: Any, row: int) -> str:
-        template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].input_file_path, self.settings.log_folder_name)
-        data = {
-            "link": rel_path,
-            "value": "+",
-            }
-        return template.render(data)
-    def get_stdout(self, attribute: Any, row: int) -> str:
-        template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stdout_file_path, self.settings.log_folder_name)
-        data = {
-            "link": rel_path,
-            "value": "+",
-            }
-        return template.render(data)
-    def get_testcase_name(self, attribute: Any, row: int) -> str:
-        template = self.environment.get_template("cell.j2")
-        data = {
-            "value": self.testcases[row].testcase_name,
-            }
-        return template.render(data)
-    def get_stderr(self, attribute: Any, row: int) -> str:
-        template = self.environment.get_template("cell_with_file_link.j2")
-        rel_path = os.path.relpath(self.testcases[row].stderr_file_path, self.settings.log_folder_name)
-        data = {
-            "link": rel_path,
-            "value": "+",
-            }
-        return template.render(data)
+    def parse_data(self, jsonfile):
+        self.contents: dict = jsonfile["contents"]
+        self.df = pd.DataFrame(self.contents)
+        self.metadata: dict = jsonfile["metadata"]
+
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
         ResultStatus.WA: ("WA", "gold"),
@@ -217,43 +164,6 @@ class HtmlParser:
         ResultStatus.TLE: ("TLE", "gold"),
         ResultStatus.IE: ("IE", "red"),
     }
-    def get_status(self, attribute: Any, row: int) -> str:
-        status = self.results[row].error_status
-        text, color = self.status_texts.get(status, ("IE", "red"))
-        template = self.environment.get_template("cell_with_color.j2")
-        data = {
-            "color": color,
-            "value": text,
-            }
-        return template.render(data)
-    def get_other(self, _: Any, attribute: str, row: int) -> None:
-        attributes = self.results[row].attribute
-        if attribute not in attributes:
-            value = "---"
-        else:
-            value = attributes[attribute]
-            if type(value) is float:
-                value = round(value, 3)
-        template = self.environment.get_template("cell.j2")
-        data = {
-            "value": value,
-            }
-        return template.render(data)
-
-    columns = [
-        Column("in", get_in),
-        Column("out", get_stdout),
-        Column("stdout", get_stderr),
-        Column("testcase", get_testcase_name),
-        Column("status", get_status),
-    ]
-    def analyze_result(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
-        self.testcases: List[TestCase] = []
-        self.results: List[TestCaseResult] = []
-        for t, r in results:
-            self.testcases.append(t)
-            self.results.append(r)
-        self.attributes = self.sortup_attributes()
     
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
@@ -271,29 +181,52 @@ class HtmlParser:
     html_file_name = "result.html"
     def make_html(self) -> None:
         self.logger.debug("function make_html() started")
-        for attribute in self.attributes:
-            self.columns.append(self.Column(attribute, self.get_other))
         
         template = self.environment.get_template("main.j2")
         data = {
-            "date": self.settings.datetime.strftime("%Y/%m/%d %H:%M:%S"),
+            "date": self.metadata["created_date"],
             "summary": f"<pre>{self.df.describe()}</pre>",
             "script_list": self.make_script_list(),
             "figures": self.make_figure(),
             "css_list": self.make_css_list(),
             "table": self.make_table(),
             }
-        html_file_path = os.path.join(self.settings.log_folder_name, self.html_file_name)
+        html_file_path = os.path.join(self.output_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
         self.logger.debug("function make_html() finished")
 
     def make_table(self) -> Dict[str, str]:
         ret = []
-        for row in range(len(self.results)):
+        for row in range(self.metadata["testcase_num"]):
             d = {}
-            for column in self.columns:
-                d[column.title] = column.getter(self, column.title, row)
+            for column in self.contents.keys():
+                value = self.contents[column][row]
+                match self.metadata["attributes"][column]:
+                    case HtmlColumnType.URL:
+                        template = self.environment.get_template("cell_with_file_link.j2")
+                        data = {
+                            "link": value,
+                            "value": "+",
+                            }
+                        value = template.render(data)
+                    case HtmlColumnType.STATUS:
+                        text, color = self.status_texts.get(value, ("IE", "red"))
+                        template = self.environment.get_template("cell_with_color.j2")
+                        data = {
+                            "color": color,
+                            "value": text,
+                            }
+                        value = template.render(data)
+                    case HtmlColumnType.TEXT|HtmlColumnType.USER:
+                        if type(value) is float:
+                            value = round(value, 3)
+                        template = self.environment.get_template("cell.j2")
+                        data = {
+                            "value": value,
+                            }
+                        value = template.render(data)
+                d[column] = value
             ret.append(d)
         return ret
     
@@ -311,18 +244,3 @@ class HtmlParser:
             template.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret
-
-    def make_data_frame(self) -> pd.DataFrame:
-        self.logger.debug("function make_data_frame() started")
-        contents = defaultdict(list)
-        for testcase, result in zip(self.testcases, self.results):
-            contents["input_file"].append(os.path.basename(testcase.input_file_path))
-            contents["stdout_file"].append(os.path.basename(testcase.stdout_file_path))
-            contents["stderr_file"].append(os.path.basename(testcase.stderr_file_path))
-            contents["status"].append(self.status_texts[result.error_status][0])
-            for key in self.attributes:
-                value = result.attribute[key] if key in result.attribute else None
-                contents[key].append(value)
-        df = pd.DataFrame(contents)
-        self.logger.debug("function make_data_frame() finished")
-        return df
