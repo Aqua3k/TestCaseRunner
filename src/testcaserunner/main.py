@@ -41,8 +41,8 @@ def run(
     )
     runner = TestCaseRunner(handler, setting)
     result = runner.run()
-    log_manager = LogManager(setting)
-    log_manager.make_result_log(result)
+    log_manager = LogManager(result, setting)
+    log_manager.make_html()
     log_manager.finalize()
 
 # 公開するメンバーを制御する
