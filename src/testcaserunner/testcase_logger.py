@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import hashlib
 import json
+from enum import IntEnum, auto
 from collections import defaultdict
 
 import matplotlib.pyplot as plt
@@ -14,6 +15,14 @@ from jinja2 import Environment, FileSystemLoader
 
 from .runner import RunnerSettings, ResultStatus, TestCase, TestCaseResult
 from .logging_config import setup_logger
+
+class HtmlColumnType(IntEnum):
+    """HTMLファイルのcolumnの情報
+    """
+    URL = auto()
+    STATUS = auto()
+    TEXT = auto()
+    USER = auto()
 
 class LogManager:
     @dataclass
@@ -26,13 +35,23 @@ class LogManager:
         self.settings = settings
         self.logger = setup_logger("LogManager", self.settings.debug)
         self.results = results
+        self.attributes = {
+            "input_file": HtmlColumnType.URL,
+            "stdout_file": HtmlColumnType.URL,
+            "stderr_file": HtmlColumnType.URL,
+            "testcase_name": HtmlColumnType.TEXT,
+            "status": HtmlColumnType.STATUS,
+        }
+        self.make_json_file()
+        self.make_figure()
         self.base_dir = os.path.split(__file__)[0]
-    
+
     def make_html(self):
         self.html_parser = HtmlParser(self.results, self.settings)
+        self.html_parser.make_html()
 
     def finalize(self) -> None:
-        """html, csv, main, in, outファイルをコピーしてlog以下に保存する"""
+        """ファイルをコピーしてlog以下に保存する"""
         self.logger.debug("function finalize() started")
         for file in self.settings.copy_target_files:
             file_path = Path(file)
@@ -49,34 +68,72 @@ class LogManager:
         self.logger.debug("function finalize() finished")
 
     json_file_name = "result.json"
+    status_texts = {
+        ResultStatus.AC: ("AC", "lime"),
+        ResultStatus.WA: ("WA", "gold"),
+        ResultStatus.RE: ("RE", "gold"),
+        ResultStatus.TLE: ("TLE", "gold"),
+        ResultStatus.IE: ("IE", "red"),
+    }
+
+    def add_attribute(self, key, type):
+        self.attributes[key] = type
+
+    histgram_fig_name = 'histgram.png'
+    heatmap_fig_name = 'heatmap.png'
+    def make_figure(self):
+        # ヒストグラムを描画
+        self.df.hist()
+        plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
+        plt.close()
+
+        # 相関係数のヒートマップ
+        corr = self.df.corr(numeric_only=True)
+        heatmap = sns.heatmap(corr, annot=True)
+        heatmap.set_title('Correlation Coefficient Heatmap')
+        plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
+
     def make_json_file(self) -> None:
-        #TODO
-        return
         self.logger.debug("function make_json_file() started")
-        file_hash = ""
-        file_names = ""
+
+        testcases: List[TestCase] = []
+        results: List[TestCaseResult] = []
+        for t, r in self.results:
+            testcases.append(t)
+            results.append(r)
+
+        attributes = dict() # setだと順番が保持されないのでdictにする
+        for test_result in results:
+            for attribute in test_result.attribute.keys():
+                attributes[attribute] = ""
+        user_attributes = list(attributes.keys())
+
+        for key in user_attributes:
+            self.add_attribute(key, HtmlColumnType.USER)
+
+        file_hashes = []
         contents = defaultdict(list)
-        for testcase, result in zip(self.testcases, self.results):
+        for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
-            file_names += file_names
-            file_hash += self.calculate_file_hash(path)
-            contents["input_file"].append(os.path.basename(testcase.input_file_path))
-            contents["stdout_file"].append(os.path.basename(testcase.stdout_file_path))
-            contents["stderr_file"].append(os.path.basename(testcase.stderr_file_path))
+            file_hashes.append(self.calculate_file_hash(path))
+            contents["input_file"].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
+            contents["stdout_file"].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
+            contents["stderr_file"].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
+            contents["testcase_name"].append(os.path.basename(testcase.input_file_path))
             contents["status"].append(self.status_texts[result.error_status][0])
-            for key in self.attributes:
+            for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
         
-        file_content_hash = self.calculate_string_hash(file_hash)
-        file_name_hash = self.calculate_string_hash(file_names)
-        
-        json_file = {
+        metadata = {
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
-            "testcase_num": len(self.testcases),
-            "file_content_hash": file_content_hash,
-            "file_name_hash": file_name_hash,
+            "testcase_num": len(testcases),
+            "file_content_hash": file_hashes,
+            "attributes": self.attributes,
+        }
+        json_file = {
             "contents": contents,
+            "metadata": metadata,
         }
         self.df = pd.DataFrame(contents)
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
@@ -100,14 +157,13 @@ class LogManager:
 class HtmlParser:
     """
     今は results: List[Tuple[TestCase, TestCaseResult]] に対しての処理になっているので
-    汎用的にDataFrame型に対する処理にしたい
+    汎用的にDataFrame型のjsonファイルに対する処理にしたい
     """
     @dataclass
     class Column:
         title: str
         getter: Callable[[int], str]
 
-    js_file_path = "js"
     def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
         self.logger = setup_logger("HtmlParser", self.settings.debug)
@@ -198,26 +254,11 @@ class HtmlParser:
             self.testcases.append(t)
             self.results.append(r)
         self.attributes = self.sortup_attributes()
-
-    def make_result_log(self, results: List[Tuple[TestCase, TestCaseResult]]) -> None:
-        self.analyze_result(results)
-        self.make_html()
     
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
     def make_figure(self) -> str:
-        # ヒストグラムを描画
         self.logger.debug("function make_figure() started")
-        self.df.hist()
-        plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
-        plt.close()
-
-        # 相関係数のヒートマップ
-        corr = self.df.corr(numeric_only=True)
-        heatmap = sns.heatmap(corr, annot=True)
-        heatmap.set_title('Correlation Coefficient Heatmap')
-        plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
-        
         ret = []
         template = self.environment.get_template("figure.j2")
         fig = template.render({"link": os.path.join("fig", self.histgram_fig_name)})
