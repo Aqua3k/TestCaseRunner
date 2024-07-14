@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
+import numpy as np
 
 from .runner import RunnerSettings, ResultStatus, TestCase, TestCaseResult
 from .logging_config import setup_logger
@@ -21,7 +22,11 @@ class HtmlColumnType(IntEnum):
     URL = auto()
     STATUS = auto()
     TEXT = auto()
-    USER = auto()
+
+class RunnerLog:
+    def __init__(self, contents: dict, metadata: dict):
+        self.df = pd.DataFrame(contents)
+        self.metadata = metadata
 
 class LogManager:
     js_file_path = "js"
@@ -44,9 +49,12 @@ class LogManager:
         self.make_json_file()
         self.make_figure()
         self.base_dir = os.path.split(__file__)[0]
+    
+    def get_log(self) -> RunnerLog:
+        return self.runner_log
 
     def make_html(self):
-        self.html_parser = HtmlParser(self.json_file, self.settings.log_folder_name, self.settings.debug)
+        self.html_parser = HtmlParser(self.runner_log, self.settings.log_folder_name, self.settings.debug)
         self.html_parser.make_html()
 
     def finalize(self) -> None:
@@ -74,12 +82,12 @@ class LogManager:
     heatmap_fig_name = 'heatmap.png'
     def make_figure(self):
         # ヒストグラムを描画
-        self.df.hist()
+        self.runner_log.df.hist()
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
         plt.close()
 
         # 相関係数のヒートマップ
-        corr = self.df.corr(numeric_only=True)
+        corr = self.runner_log.df.corr(numeric_only=True)
         heatmap = sns.heatmap(corr, annot=True)
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
@@ -100,7 +108,7 @@ class LogManager:
         user_attributes = list(attributes.keys())
 
         for key in user_attributes:
-            self.add_attribute(key, HtmlColumnType.USER)
+            self.add_attribute(key, HtmlColumnType.TEXT)
 
         file_hashes = []
         contents = defaultdict(list)
@@ -126,7 +134,7 @@ class LogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.df = pd.DataFrame(contents)
+        self.runner_log = RunnerLog(contents, metadata)
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
@@ -140,19 +148,14 @@ class LogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
-    def __init__(self, jsonfile: dict, output_path: str, debug: bool):
+    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool):
         self.debug = debug
+        self.runner_log = runner_log
         self.output_path = output_path
         self.logger = setup_logger("HtmlParser", self.debug)
         self.base_dir = os.path.split(__file__)[0]
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
-        self.parse_data(jsonfile)
-    
-    def parse_data(self, jsonfile):
-        self.contents: dict = jsonfile["contents"]
-        self.df = pd.DataFrame(self.contents)
-        self.metadata: dict = jsonfile["metadata"]
 
     status_texts = {
         ResultStatus.AC: ("AC", "lime"),
@@ -180,8 +183,8 @@ class HtmlParser:
         self.logger.debug("function make_html() started")
         template = self.environment.get_template("main.j2")
         data = {
-            "date": self.metadata["created_date"],
-            "summary": f"<pre>{self.df.describe()}</pre>",
+            "date": self.runner_log.metadata["created_date"],
+            "summary": f"<pre>{self.runner_log.df.describe()}</pre>",
             "script_list": self.make_script_list(),
             "figures": self.make_figure(),
             "css_list": self.make_css_list(),
@@ -194,11 +197,11 @@ class HtmlParser:
 
     def make_table(self) -> Dict[str, str]:
         ret = []
-        for row in range(self.metadata["testcase_num"]):
+        for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
-            for column in self.contents.keys():
-                value = self.contents[column][row]
-                match self.metadata["attributes"][column]:
+            for column in self.runner_log.df.columns:
+                value = self.runner_log.df.at[row, column]
+                match self.runner_log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
                         template = self.environment.get_template("cell_with_file_link.j2")
                         data = {
@@ -214,8 +217,8 @@ class HtmlParser:
                             "value": text,
                             }
                         value = template.render(data)
-                    case HtmlColumnType.TEXT|HtmlColumnType.USER:
-                        if type(value) is float:
+                    case HtmlColumnType.TEXT:
+                        if type(value) is np.float64 or type(value) is np.float32:
                             value = round(value, 3)
                         template = self.environment.get_template("cell.j2")
                         data = {
