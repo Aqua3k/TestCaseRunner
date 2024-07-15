@@ -28,7 +28,7 @@ class RunnerLog:
         self.df = pd.DataFrame(contents)
         self.metadata = metadata
 
-class LogManager:
+class RunnerLogManager:
     js_file_path = "js"
     infile_col = "in"
     stdout_col = "stdout"
@@ -37,7 +37,7 @@ class LogManager:
     status_col = "status"
     def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
-        self.logger = setup_logger("LogManager", self.settings.debug)
+        self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
         self.attributes = {
             self.infile_col: HtmlColumnType.URL,
