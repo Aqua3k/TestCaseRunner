@@ -137,6 +137,9 @@ class RunnerLogManager:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
         
+        # jsonデータをそろえるため一度DataFrameにしてからjsonに直す
+        contents = json.loads(pd.DataFrame(contents).to_json())
+        
         metadata = {
             "library_name": LIB_NAME,
             "version": importlib.metadata.version(LIB_NAME),
@@ -214,7 +217,7 @@ class HtmlParser:
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
             for column in self.runner_log.df.columns:
-                value = self.runner_log.df.at[row, column]
+                value = self.runner_log.df.at[str(row), column]
                 match self.runner_log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
                         template = self.environment.get_template("cell_with_file_link.j2")
