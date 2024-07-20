@@ -55,9 +55,8 @@ def run_program2(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    result1 = run(run_program1, "in", _debug=True)
-    result2 = run(run_program2, "in", _debug=True)
-    viewer = RunnerLogViewer()
+    result1 = run(run_program1, "in")
+    result2 = run(run_program2, "in")
+    viewer = RunnerLogViewer(_debug=True)
     logs = viewer.get_logs()
-    diff = viewer.test_diff(logs[0], logs[1])
-    print(diff)
+    viewer.test_diff(logs[0], logs[1])

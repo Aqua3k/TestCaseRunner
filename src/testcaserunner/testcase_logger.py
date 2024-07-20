@@ -23,6 +23,7 @@ class HtmlColumnType(IntEnum):
     URL = auto()
     STATUS = auto()
     TEXT = auto()
+    METADATA = auto()
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict):
@@ -37,9 +38,6 @@ class RunnerLog:
     def metadata(self):
         return self._metadata
 
-    def get_dataframe(self):
-        return self._df
-
 LIB_NAME = "testcaserunner"
 class RunnerLogManager:
     js_file_path = "js"
@@ -48,11 +46,13 @@ class RunnerLogManager:
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
+    hash_col = "hash"
     def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
         self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
         self.attributes = {
+            self.hash_col: HtmlColumnType.METADATA,
             self.infile_col: HtmlColumnType.URL,
             self.stdout_col: HtmlColumnType.URL,
             self.stderr_col: HtmlColumnType.URL,
@@ -123,11 +123,11 @@ class RunnerLogManager:
         for key in user_attributes:
             self.add_attribute(key, HtmlColumnType.TEXT)
 
-        file_hashes = []
         contents = defaultdict(list)
         for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
-            file_hashes.append(self.calculate_file_hash(path))
+            hash = self.calculate_file_hash(path)
+            contents[self.hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{hash}")
             contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
@@ -142,7 +142,6 @@ class RunnerLogManager:
             "version": importlib.metadata.version(LIB_NAME),
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
-            "file_content_hash": file_hashes,
             "attributes": self.attributes,
         }
         self.json_file = {
@@ -240,6 +239,10 @@ class HtmlParser:
                             "value": value,
                             }
                         value = template.render(data)
+                    case HtmlColumnType.METADATA:
+                        continue
+                    case _:
+                        assert "error: 不明なHtmlColumnTypeがあります。"
                 rows[column] = value
             ret.append(rows)
         return ret
@@ -260,6 +263,7 @@ class HtmlParser:
         return ret
 
 class RunnerLogViewer:
+    merged_data_suffixes = (".1", ".2")
     def __init__(self, path: str="log", _debug=False):
         self.logger = setup_logger("RunnerLogViewer", _debug)
         self.logs: list[RunnerLog] = []
@@ -269,9 +273,9 @@ class RunnerLogViewer:
             self.load_log(file)
     
     def is_valid(self, data: dict):
-        contents: dict = data.get("contents")
-        metadata: dict = data.get("metadata")
-        if type(contents) is dict or type(metadata) is None:
+        contents: dict|None = data.get("contents")
+        metadata: dict|None = data.get("metadata")
+        if contents is None or metadata is None:
             return False # データが取得できるか？
 
         libname = metadata.get("library_name")
@@ -291,7 +295,7 @@ class RunnerLogViewer:
             self.logger.info(f"{file} のロードでエラーが起きました。")
             return
         
-        if self.is_valid(loaded_data):
+        if not self.is_valid(loaded_data):
             self.logger.info(f"{file} は正しいデータではありませんでした。")
             return
         
@@ -304,6 +308,9 @@ class RunnerLogViewer:
         return self.logs
 
     def test_diff(self, log1: RunnerLog, log2: RunnerLog):
-        merged_df = pd.merge(log1.df, log2.df, on='in')
         # NOTE 要検討
-        return merged_df
+        merged_df = pd.merge(log1.df, log2.df, on="hash", suffixes=self.merged_data_suffixes)
+        jsondata = json.loads(merged_df.to_json())
+        import pprint
+        pprint.pprint(jsondata)
+
