@@ -1,11 +1,12 @@
 import os
 import shutil
-from typing import List, Dict, Tuple
 from pathlib import Path
 import hashlib
 import json
 from enum import IntEnum, auto
 from collections import defaultdict
+import glob
+import importlib.metadata
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,9 +26,21 @@ class HtmlColumnType(IntEnum):
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict):
-        self.df = pd.DataFrame(contents)
-        self.metadata = metadata
+        self._df = pd.DataFrame(contents)
+        self._metadata = metadata
+    
+    @property
+    def df(self):
+        return self._df
 
+    @property
+    def metadata(self):
+        return self._metadata
+
+    def get_dataframe(self):
+        return self._df
+
+LIB_NAME = "testcaserunner"
 class RunnerLogManager:
     js_file_path = "js"
     infile_col = "in"
@@ -35,7 +48,7 @@ class RunnerLogManager:
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
-    def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
         self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
@@ -95,8 +108,8 @@ class RunnerLogManager:
     def make_json_file(self) -> None:
         self.logger.debug("function make_json_file() started")
 
-        testcases: List[TestCase] = []
-        results: List[TestCaseResult] = []
+        testcases: list[TestCase] = []
+        results: list[TestCaseResult] = []
         for t, r in self.results:
             testcases.append(t)
             results.append(r)
@@ -125,6 +138,8 @@ class RunnerLogManager:
                 contents[key].append(value)
         
         metadata = {
+            "library_name": LIB_NAME,
+            "version": importlib.metadata.version(LIB_NAME),
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
             "file_content_hash": file_hashes,
@@ -195,7 +210,7 @@ class HtmlParser:
             f.write(template.render(data))
         self.logger.debug("function make_html() finished")
 
-    def make_table(self) -> Dict[str, str]:
+    def make_table(self) -> dict[str, str]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
@@ -229,17 +244,66 @@ class HtmlParser:
             ret.append(rows)
         return ret
     
-    def make_script_list(self) -> List[str]:
+    def make_script_list(self) -> list[str]:
         template = self.environment.get_template("script.j2")
         ret = [
             template.render({"link": r"js/Table.js"}),
         ]
         return ret
     
-    def make_css_list(self) -> List[str]:
+    def make_css_list(self) -> list[str]:
         template = self.environment.get_template("css.j2")
         ret = [
             template.render({"link": r"js/SortTable.css"}),
             template.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret
+
+class RunnerLogViewer:
+    def __init__(self, path: str="log", _debug=False):
+        self.logger = setup_logger("RunnerLogViewer", _debug)
+        self.logs: list[RunnerLog] = []
+        self.libver = importlib.metadata.version(LIB_NAME)
+        pattern = os.path.join(path, "**", "*.json")
+        for file in glob.glob(pattern, recursive=True):
+            self.load_log(file)
+    
+    def is_valid(self, data: dict):
+        contents: dict = data.get("contents")
+        metadata: dict = data.get("metadata")
+        if type(contents) is dict or type(metadata) is None:
+            return False # データが取得できるか？
+
+        libname = metadata.get("library_name")
+        if libname != LIB_NAME:
+            return False # ライブラリ名が入っていなかったらFalse
+
+        # NOTE バージョンの確認が必要になったらここに確認処理を追加する
+
+        return True
+
+    def load_log(self, file: str):
+        try:
+            with open(file, 'r') as f:
+                loaded_data: dict = json.load(f)
+        except:
+            # ロードできなければ処理しない
+            self.logger.info(f"{file} のロードでエラーが起きました。")
+            return
+        
+        if self.is_valid(loaded_data):
+            self.logger.info(f"{file} は正しいデータではありませんでした。")
+            return
+        
+        contents = loaded_data.get("contents")
+        metadata = loaded_data.get("metadata")
+        self.logs.append(RunnerLog(contents, metadata))
+        self.logger.info(f"{file} を読み込みました。")
+    
+    def get_logs(self):
+        return self.logs
+
+    def test_diff(self, log1: RunnerLog, log2: RunnerLog):
+        merged_df = pd.merge(log1.df, log2.df, on='in')
+        # NOTE 要検討
+        return merged_df
