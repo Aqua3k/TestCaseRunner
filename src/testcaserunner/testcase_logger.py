@@ -65,11 +65,11 @@ class RunnerLogManager:
         self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
         self.attributes = {
+            self.infilename_col: HtmlColumnType.TEXT,
             self.hash_col: HtmlColumnType.METADATA,
             self.infile_col: HtmlColumnType.URL,
             self.stdout_col: HtmlColumnType.URL,
             self.stderr_col: HtmlColumnType.URL,
-            self.infilename_col: HtmlColumnType.TEXT,
             self.status_col: HtmlColumnType.STATUS,
         }
         self.make_json_file()
@@ -140,11 +140,11 @@ class RunnerLogManager:
         for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
             hash = self.calculate_file_hash(path)
+            contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
             contents[self.hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{hash}")
             contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
-            contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
             contents[self.status_col].append(result.error_status)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
