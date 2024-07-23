@@ -8,6 +8,7 @@ from collections import defaultdict
 import glob
 import importlib.metadata
 from typing import Type
+import re
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -223,37 +224,48 @@ class HtmlParser:
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
         self.logger.debug("function make_html() finished")
+    
+    def get_url_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": value,
+            "value": "+",
+            }
+        return template.render(data)
+    
+    def get_status_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        text, color = self.status_texts.get(value, ("IE", "red"))
+        template = self.environment.get_template("cell_with_color.j2")
+        data = {
+            "color": color,
+            "value": text,
+            }
+        return template.render(data)
+    
+    def get_text_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        if type(value) is np.float64 or type(value) is np.float32:
+            value = round(value, 3)
+        template = self.environment.get_template("cell.j2")
+        data = {
+            "value": value,
+            }
+        return template.render(data)
 
     def make_table(self) -> dict[str, str]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
             for column in self.runner_log.df.columns:
-                value = self.runner_log._df_at(column, row)
                 match self.runner_log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
-                        template = self.environment.get_template("cell_with_file_link.j2")
-                        data = {
-                            "link": value,
-                            "value": "+",
-                            }
-                        value = template.render(data)
+                        value = self.get_url_cell(column, row)
                     case HtmlColumnType.STATUS:
-                        text, color = self.status_texts.get(value, ("IE", "red"))
-                        template = self.environment.get_template("cell_with_color.j2")
-                        data = {
-                            "color": color,
-                            "value": text,
-                            }
-                        value = template.render(data)
+                        value = self.get_status_cell(column, row)
                     case HtmlColumnType.TEXT:
-                        if type(value) is np.float64 or type(value) is np.float32:
-                            value = round(value, 3)
-                        template = self.environment.get_template("cell.j2")
-                        data = {
-                            "value": value,
-                            }
-                        value = template.render(data)
+                        value = self.get_text_cell(column, row)
                     case HtmlColumnType.METADATA:
                         continue
                     case _:
@@ -276,6 +288,57 @@ class HtmlParser:
             template.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret
+
+class DiffHtmlParser(HtmlParser):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
+        super().__init__(runner_log, output_path, debug)
+    
+    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    def get_match(self, column):
+        return re.match(self.column_pattern, column)
+
+    def is_diff_column(self, column):
+        return bool(self.get_match(column))
+    
+    extensions = ["1", "2"]
+    def get_diff_data(self, column, row):
+        match = self.get_match(column)
+        if match:
+            original_column = match.group(1)
+            extension = match.group(2)
+            this = self.runner_log._df_at(column, row)
+            idx = self.extensions.index(extension)
+            other_column = f"{original_column}.{self.extensions[idx^1]}"
+            other = self.runner_log._df_at(other_column, row)
+        else:
+            assert 0, "ここにくるはずないんだけど…"
+        return this, other
+
+    def get_color(self, this, other):
+        if type(this) is str or type(other) is str:
+            return "Gold"
+        else:
+            if this < other:
+                return "Cyan"
+            else:
+                return "Hotpink"
+
+    def get_text_cell(self, column, row):
+        # column名を確認して、両方のデータにあるやつなら差分を調べる
+        if self.is_diff_column(column):
+            this, other = self.get_diff_data(column, row)
+            if this != other:
+                if type(this) is np.float64 or type(this) is np.float32:
+                    this = round(this, 3)
+                template = self.environment.get_template("cell_with_color.j2")
+                data = {
+                    "color": self.get_color(this, other),
+                    "value": this,
+                    }
+                return template.render(data)
+
+        # それ以外は普通のデータを返す
+        return super().get_text_cell(column, row)
 
 class RunnerLogViewer:
     merged_data_suffixes = (".1", ".2")
@@ -361,5 +424,5 @@ class RunnerLogViewer:
 
         runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
 
-        parser = HtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
+        parser = DiffHtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
         parser.make_html()
