@@ -7,6 +7,7 @@ from enum import IntEnum, auto
 from collections import defaultdict
 import glob
 import importlib.metadata
+from typing import Type
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -31,12 +32,23 @@ class RunnerLog:
         self._metadata = metadata
     
     @property
-    def df(self):
+    def df(self) -> pd.DataFrame:
         return self._df
 
     @property
     def metadata(self):
         return self._metadata
+    
+    def drop(self, column: str):
+        self._df = self._df.drop(columns=[column], errors='ignore')
+        self._metadata["attributes"].pop(column, None)
+    
+    def _df_at(self, column, row):
+        return self._df.at[str(row), column]
+
+class RunnerLogDiff(RunnerLog):
+    def __init__(self, contents: dict, metadata: dict):
+        super().__init__(contents, metadata)
 
 LIB_NAME = "testcaserunner"
 class RunnerLogManager:
@@ -165,7 +177,7 @@ class RunnerLogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
         self.debug = debug
         self.runner_log = runner_log
         self.output_path = output_path
@@ -217,7 +229,7 @@ class HtmlParser:
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
             for column in self.runner_log.df.columns:
-                value = self.runner_log.df.at[str(row), column]
+                value = self.runner_log._df_at(column, row)
                 match self.runner_log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
                         template = self.environment.get_template("cell_with_file_link.j2")
@@ -310,10 +322,44 @@ class RunnerLogViewer:
     def get_logs(self):
         return self.logs
 
+    default_columns = [
+        "in",
+        "stdout",
+        "stderr",
+        "testcase",
+        "status",
+        "hash",
+    ]
     def test_diff(self, log1: RunnerLog, log2: RunnerLog):
-        # NOTE 要検討
-        merged_df = pd.merge(log1.df, log2.df, on="hash", suffixes=self.merged_data_suffixes)
-        jsondata = json.loads(merged_df.to_json())
-        import pprint
-        pprint.pprint(jsondata)
+        # 不要な列を削除する
+        log2.drop("testcase")
+        
+        # 属性名を置換する
+        attributes1 = log1.metadata["attributes"]
+        att1 = {}
+        for k, v in attributes1.items():
+            if k != "hash" and k != "testcase":
+                att1[f"{k}.1"] = v
+            else:
+                att1[k] = v
+        
+        attributes2 = log2.metadata["attributes"]
+        att2 = {}
+        for k, v in attributes2.items():
+            if k != "hash" and k != "testcase":
+                att1[f"{k}.2"] = v
+            else:
+                att1[k] = v
 
+        # attributeを合成
+        attributes = {**att1, **att2}
+        metadata = log1.metadata
+        metadata["attributes"] = attributes
+
+        # DataFrameをマージ
+        merged_df = pd.merge(log1.df, log2.df, on="hash", suffixes=self.merged_data_suffixes)
+
+        runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
+
+        parser = HtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
+        parser.make_html()
