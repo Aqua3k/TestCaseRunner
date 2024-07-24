@@ -1,11 +1,13 @@
 import os
 import shutil
-from typing import List, Dict, Tuple
 from pathlib import Path
 import hashlib
 import json
 from enum import IntEnum, auto
 from collections import defaultdict
+import glob
+from typing import Type
+import re
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -22,28 +24,51 @@ class HtmlColumnType(IntEnum):
     URL = auto()
     STATUS = auto()
     TEXT = auto()
+    METADATA = auto()
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict):
-        self.df = pd.DataFrame(contents)
-        self.metadata = metadata
+        self._df = pd.DataFrame(contents)
+        self._metadata = metadata
+    
+    @property
+    def df(self) -> pd.DataFrame:
+        return self._df
 
-class LogManager:
+    @property
+    def metadata(self):
+        return self._metadata
+    
+    def drop(self, column: str):
+        self._df = self._df.drop(columns=[column], errors='ignore')
+        self._metadata["attributes"].pop(column, None)
+    
+    def _df_at(self, column, row):
+        return self._df.at[str(row), column]
+
+class RunnerLogDiff(RunnerLog):
+    def __init__(self, contents: dict, metadata: dict):
+        super().__init__(contents, metadata)
+
+LIB_NAME = "testcaserunner"
+class RunnerLogManager:
     js_file_path = "js"
     infile_col = "in"
     stdout_col = "stdout"
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
-    def __init__(self, results: List[Tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
+    hash_col = "hash"
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
         self.settings = settings
-        self.logger = setup_logger("LogManager", self.settings.debug)
+        self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
         self.attributes = {
+            self.infilename_col: HtmlColumnType.TEXT,
+            self.hash_col: HtmlColumnType.METADATA,
             self.infile_col: HtmlColumnType.URL,
             self.stdout_col: HtmlColumnType.URL,
             self.stderr_col: HtmlColumnType.URL,
-            self.infilename_col: HtmlColumnType.TEXT,
             self.status_col: HtmlColumnType.STATUS,
         }
         self.make_json_file()
@@ -95,8 +120,8 @@ class LogManager:
     def make_json_file(self) -> None:
         self.logger.debug("function make_json_file() started")
 
-        testcases: List[TestCase] = []
-        results: List[TestCaseResult] = []
+        testcases: list[TestCase] = []
+        results: list[TestCaseResult] = []
         for t, r in self.results:
             testcases.append(t)
             results.append(r)
@@ -110,24 +135,27 @@ class LogManager:
         for key in user_attributes:
             self.add_attribute(key, HtmlColumnType.TEXT)
 
-        file_hashes = []
         contents = defaultdict(list)
         for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
-            file_hashes.append(self.calculate_file_hash(path))
+            hash = self.calculate_file_hash(path)
+            contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
+            contents[self.hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{hash}")
             contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
-            contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
             contents[self.status_col].append(result.error_status)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
         
+        # jsonデータをそろえるため一度DataFrameにしてからjsonに直す
+        contents = json.loads(pd.DataFrame(contents).to_json())
+        
         metadata = {
+            "library_name": LIB_NAME,
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
-            "file_content_hash": file_hashes,
             "attributes": self.attributes,
         }
         self.json_file = {
@@ -148,7 +176,7 @@ class LogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
         self.debug = debug
         self.runner_log = runner_log
         self.output_path = output_path
@@ -194,52 +222,202 @@ class HtmlParser:
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
         self.logger.debug("function make_html() finished")
+    
+    def get_url_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": value,
+            "value": "+",
+            }
+        return template.render(data)
+    
+    def get_status_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        text, color = self.status_texts.get(value, ("IE", "red"))
+        template = self.environment.get_template("cell_with_color.j2")
+        data = {
+            "color": color,
+            "value": text,
+            }
+        return template.render(data)
+    
+    def get_text_cell(self, column, row):
+        value = self.runner_log._df_at(column, row)
+        if type(value) is np.float64 or type(value) is np.float32:
+            value = round(value, 3)
+        template = self.environment.get_template("cell.j2")
+        data = {
+            "value": value,
+            }
+        return template.render(data)
 
-    def make_table(self) -> Dict[str, str]:
+    def make_table(self) -> dict[str, str]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
             for column in self.runner_log.df.columns:
-                value = self.runner_log.df.at[row, column]
                 match self.runner_log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
-                        template = self.environment.get_template("cell_with_file_link.j2")
-                        data = {
-                            "link": value,
-                            "value": "+",
-                            }
-                        value = template.render(data)
+                        value = self.get_url_cell(column, row)
                     case HtmlColumnType.STATUS:
-                        text, color = self.status_texts.get(value, ("IE", "red"))
-                        template = self.environment.get_template("cell_with_color.j2")
-                        data = {
-                            "color": color,
-                            "value": text,
-                            }
-                        value = template.render(data)
+                        value = self.get_status_cell(column, row)
                     case HtmlColumnType.TEXT:
-                        if type(value) is np.float64 or type(value) is np.float32:
-                            value = round(value, 3)
-                        template = self.environment.get_template("cell.j2")
-                        data = {
-                            "value": value,
-                            }
-                        value = template.render(data)
+                        value = self.get_text_cell(column, row)
+                    case HtmlColumnType.METADATA:
+                        continue
+                    case _:
+                        assert "error: 不明なHtmlColumnTypeがあります。"
                 rows[column] = value
             ret.append(rows)
         return ret
     
-    def make_script_list(self) -> List[str]:
+    def make_script_list(self) -> list[str]:
         template = self.environment.get_template("script.j2")
         ret = [
             template.render({"link": r"js/Table.js"}),
         ]
         return ret
     
-    def make_css_list(self) -> List[str]:
+    def make_css_list(self) -> list[str]:
         template = self.environment.get_template("css.j2")
         ret = [
             template.render({"link": r"js/SortTable.css"}),
             template.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret
+
+class DiffHtmlParser(HtmlParser):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
+        super().__init__(runner_log, output_path, debug)
+    
+    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    def get_match(self, column):
+        return re.match(self.column_pattern, column)
+
+    def is_diff_column(self, column):
+        return bool(self.get_match(column))
+    
+    extensions = ["1", "2"]
+    def get_diff_data(self, column, row):
+        match = self.get_match(column)
+        if match:
+            original_column = match.group(1)
+            extension = match.group(2)
+            this = self.runner_log._df_at(column, row)
+            idx = self.extensions.index(extension)
+            other_column = f"{original_column}.{self.extensions[idx^1]}"
+            other = self.runner_log._df_at(other_column, row)
+        else:
+            assert 0, "ここにくるはずないんだけど…"
+        return this, other
+
+    def get_color(self, this, other):
+        if type(this) is str or type(other) is str:
+            return "Gold"
+        else:
+            if this < other:
+                return "Cyan"
+            else:
+                return "Hotpink"
+
+    def get_text_cell(self, column, row):
+        # column名を確認して、両方のデータにあるやつなら差分を調べる
+        if self.is_diff_column(column):
+            this, other = self.get_diff_data(column, row)
+            if this != other:
+                if type(this) is np.float64 or type(this) is np.float32:
+                    this = round(this, 3)
+                template = self.environment.get_template("cell_with_color.j2")
+                data = {
+                    "color": self.get_color(this, other),
+                    "value": this,
+                    }
+                return template.render(data)
+
+        # それ以外は普通のデータを返す
+        return super().get_text_cell(column, row)
+
+class RunnerLogViewer:
+    merged_data_suffixes = (".1", ".2")
+    def __init__(self, path: str="log", _debug=False):
+        self.logger = setup_logger("RunnerLogViewer", _debug)
+        self.logs: list[RunnerLog] = []
+        pattern = os.path.join(path, "**", "*.json")
+        for file in glob.glob(pattern, recursive=True):
+            self.load_log(file)
+    
+    def is_valid(self, data: dict):
+        contents: dict|None = data.get("contents")
+        metadata: dict|None = data.get("metadata")
+        if contents is None or metadata is None:
+            return False # データが取得できるか？
+
+        libname = metadata.get("library_name")
+        if libname != LIB_NAME:
+            return False # ライブラリ名が入っていなかったらFalse
+
+        return True
+
+    def load_log(self, file: str):
+        try:
+            with open(file, 'r') as f:
+                loaded_data: dict = json.load(f)
+        except:
+            # ロードできなければ処理しない
+            self.logger.info(f"{file} のロードでエラーが起きました。")
+            return
+        
+        if not self.is_valid(loaded_data):
+            self.logger.info(f"{file} は正しいデータではありませんでした。")
+            return
+        
+        contents = loaded_data.get("contents")
+        metadata = loaded_data.get("metadata")
+        self.logs.append(RunnerLog(contents, metadata))
+        self.logger.info(f"{file} を読み込みました。")
+    
+    def get_logs(self):
+        return self.logs
+
+    default_columns = [
+        "in",
+        "stdout",
+        "stderr",
+        "testcase",
+        "status",
+        "hash",
+    ]
+    def test_diff(self, log1: RunnerLog, log2: RunnerLog):
+        # 不要な列を削除する
+        log2.drop("testcase")
+        
+        # 属性名を置換する
+        attributes1 = log1.metadata["attributes"]
+        att1 = {}
+        for k, v in attributes1.items():
+            if k != "hash" and k != "testcase":
+                att1[f"{k}.1"] = v
+            else:
+                att1[k] = v
+        
+        attributes2 = log2.metadata["attributes"]
+        att2 = {}
+        for k, v in attributes2.items():
+            if k != "hash" and k != "testcase":
+                att1[f"{k}.2"] = v
+            else:
+                att1[k] = v
+
+        # attributeを合成
+        attributes = {**att1, **att2}
+        metadata = log1.metadata
+        metadata["attributes"] = attributes
+
+        # DataFrameをマージ
+        merged_df = pd.merge(log1.df, log2.df, on="hash", suffixes=self.merged_data_suffixes)
+
+        runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
+
+        parser = DiffHtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
+        parser.make_html()

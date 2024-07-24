@@ -1,7 +1,7 @@
 from typing import List, Union, Callable
 
 from .runner import TestCase, TestCaseResult, RunnerSettings, TestCaseRunner
-from .testcase_logger import LogManager
+from .testcase_logger import RunnerLogManager, RunnerLog
 
 def run(
         handler: Callable[[TestCase], TestCaseResult],
@@ -14,7 +14,7 @@ def run(
         stderr_file_output: bool = True,
         log_folder_name: Union[str, None] = None,
         _debug: bool = False,
-        ) -> None:
+        ) -> RunnerLog:
     """ランナーを実行する
 
     Args:
@@ -27,6 +27,9 @@ def run(
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
+    
+    returns:
+        RunnerLog: 実行結果
     """
     setting = RunnerSettings(
         input_file_path,
@@ -41,9 +44,10 @@ def run(
     )
     runner = TestCaseRunner(handler, setting)
     result = runner.run()
-    log_manager = LogManager(result, setting)
+    log_manager = RunnerLogManager(result, setting)
     log_manager.make_html()
     log_manager.finalize()
+    return log_manager.get_log()
 
 # 公開するメンバーを制御する
 __all__ = [
