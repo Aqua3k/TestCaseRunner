@@ -218,6 +218,7 @@ class HtmlParser:
             "figures": self.make_figure(),
             "css_list": self.make_css_list(),
             "table": self.make_table(),
+            "table_columns": self.make_table_columns(),
             }
         html_file_path = os.path.join(self.output_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
@@ -286,6 +287,20 @@ class HtmlParser:
             template.render({"link": r"js/checkbox.js"}),
         ]
         return ret
+    
+    def make_table_columns(self) -> dict[str]:
+        table_columns = dict()
+        for column in self.runner_log.df.columns:
+            match self.runner_log.metadata["attributes"][column]:
+                case HtmlColumnType.URL|HtmlColumnType.STATUS:
+                    table_columns[column] = "normal"
+                case HtmlColumnType.TEXT:
+                    table_columns[column] = "sort"
+                case HtmlColumnType.METADATA:
+                    continue
+                case _:
+                    assert "error: 不明なHtmlColumnTypeがあります。"
+        return table_columns
 
     def make_css_list(self) -> list[str]:
         template = self.environment.get_template("css.j2")
