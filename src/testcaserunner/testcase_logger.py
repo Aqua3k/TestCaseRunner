@@ -6,7 +6,6 @@ import json
 from enum import IntEnum, auto
 from collections import defaultdict
 import glob
-import importlib.metadata
 from typing import Type
 import re
 
@@ -155,7 +154,6 @@ class RunnerLogManager:
         
         metadata = {
             "library_name": LIB_NAME,
-            "version": importlib.metadata.version(LIB_NAME),
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
             "attributes": self.attributes,
@@ -345,7 +343,6 @@ class RunnerLogViewer:
     def __init__(self, path: str="log", _debug=False):
         self.logger = setup_logger("RunnerLogViewer", _debug)
         self.logs: list[RunnerLog] = []
-        self.libver = importlib.metadata.version(LIB_NAME)
         pattern = os.path.join(path, "**", "*.json")
         for file in glob.glob(pattern, recursive=True):
             self.load_log(file)
@@ -359,8 +356,6 @@ class RunnerLogViewer:
         libname = metadata.get("library_name")
         if libname != LIB_NAME:
             return False # ライブラリ名が入っていなかったらFalse
-
-        # NOTE バージョンの確認が必要になったらここに確認処理を追加する
 
         return True
 
