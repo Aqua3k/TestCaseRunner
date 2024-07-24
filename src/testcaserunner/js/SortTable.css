@@ -21,4 +21,22 @@
 .tsImg path{
   fill       : #777;
 }
- 
+.hidden {
+  display: none;
+}
+/* チェックボックスとラベルのラッパー */
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px; /* チェックボックスとラベルの間隔 */
+}
+
+/* チェックボックスとラベルの間隔 */
+.checkbox-container input[type="checkbox"] {
+  margin-right: 10px; /* チェックボックスとラベルの間隔 */
+}
+
+/* オプション: ラベルのマージン */
+.checkbox-container label {
+  margin-right: 10px; /* ラベル同士の間隔 */
+}
