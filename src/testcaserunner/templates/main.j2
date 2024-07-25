@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
 </head>
 <body>
-    {% if script_list %}
-        {% for script in script_list %}
+    {% if header_script_list %}
+        {% for script in header_script_list %}
             {{ script }}
         {% endfor %}
     {% endif %}
@@ -33,12 +33,16 @@
     {{ figures }}
 
     <h2>Table</h2>
-
+    <div id="column-controls"></div>
     <table id="sortTable">
         <thead>
             <tr>
-                {% for key in table[0].keys() %}
-                    <th cmanSortBtn>{{ key }}</th>
+                {% for key, value in table_columns.items() %}
+                    {% if value == 'sort' %}
+                        <th cmanSortBtn>{{ key }}</th>
+                    {% else %}
+                        <th>{{ key }}</th>
+                    {% endif %}
                 {% endfor %}
             </tr>
         </thead>
@@ -52,5 +56,10 @@
             {% endfor %}
         </tbody>
     </table>
+    {% if footer_script_list %}
+        {% for script in footer_script_list %}
+            {{ script }}
+        {% endfor %}
+    {% endif %}
 </body>
 </html>
