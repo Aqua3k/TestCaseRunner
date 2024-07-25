@@ -26,17 +26,12 @@
 }
 /* チェックボックスとラベルのラッパー */
 .checkbox-container {
-  display: flex;
+  display: inline-flex; /* 各ラッパーをインラインで横に並べる */
   align-items: center;
-  margin-bottom: 10px; /* チェックボックスとラベルの間隔 */
+  margin-right: 15px; /* ラッパー要素間のスペース */
 }
 
 /* チェックボックスとラベルの間隔 */
 .checkbox-container input[type="checkbox"] {
-  margin-right: 10px; /* チェックボックスとラベルの間隔 */
-}
-
-/* オプション: ラベルのマージン */
-.checkbox-container label {
-  margin-right: 10px; /* ラベル同士の間隔 */
+  margin-right: 5px; /* チェックボックスとラベルの間隔 */
 }
