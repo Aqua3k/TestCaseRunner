@@ -5,7 +5,7 @@ import hashlib
 import json
 from enum import IntEnum, auto
 from collections import defaultdict
-from typing import Type
+from typing import Type, Any
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -42,7 +42,7 @@ class RunnerLog:
         self._df = self._df.drop(columns=[column], errors='ignore')
         self._metadata["attributes"].pop(column, None)
     
-    def _df_at(self, column, row):
+    def _df_at(self, column: str, row: int) -> Any:
         return self._df.at[str(row), column]
 
 LIB_NAME = "testcaserunner"
@@ -112,7 +112,7 @@ class RunnerLogManager:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
 
-    def make_json_file(self) -> None:
+    def make_json_file(self):
         self.logger.debug("function make_json_file() started")
 
         testcases: list[TestCase] = []
@@ -202,7 +202,7 @@ class HtmlParser:
         return "".join(ret)
 
     html_file_name = "result.html"
-    def make_html(self) -> None:
+    def make_html(self):
         self.logger.debug("function make_html() started")
         template = self.environment.get_template("main.j2")
         data = {
@@ -220,7 +220,7 @@ class HtmlParser:
             f.write(template.render(data))
         self.logger.debug("function make_html() finished")
     
-    def get_url_cell(self, column, row):
+    def get_url_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
@@ -229,7 +229,7 @@ class HtmlParser:
             }
         return template.render(data)
     
-    def get_status_cell(self, column, row):
+    def get_status_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         text, color = self.status_texts.get(value, ("IE", "red"))
         template = self.environment.get_template("cell_with_color.j2")
@@ -239,7 +239,7 @@ class HtmlParser:
             }
         return template.render(data)
     
-    def get_text_cell(self, column, row):
+    def get_text_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         if type(value) is np.float64 or type(value) is np.float32:
             value = round(value, 3)

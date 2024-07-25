@@ -1,7 +1,7 @@
 import glob
 import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
-from typing import List, Tuple, Union, Callable
+from typing import Tuple, Union, Callable
 import time
 
 from tqdm import tqdm
@@ -20,7 +20,7 @@ class TestCaseRunner:
         self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
     
-    def make_testcases(self, files: List[str]) -> List[TestCase]:
+    def make_testcases(self, files: list[str]) -> list[TestCase]:
         self.logger.debug("function make_testcases() started")
         test_cases = []
         testcase_index = 0
@@ -40,10 +40,10 @@ class TestCaseRunner:
         self.logger.debug("function make_testcases() finished")
         return test_cases
     
-    def run(self) -> List[Tuple[TestCase, TestCaseResult]]:
+    def run(self) -> list[Tuple[TestCase, TestCaseResult]]:
         self.logger.debug("function run() started")
-        futures:List[Future] = []
-        test_cases: List[TestCase] = []
+        futures:list[Future] = []
+        test_cases: list[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
         if len(files) == 0:
             raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
@@ -60,7 +60,7 @@ class TestCaseRunner:
             raise ValueError("引数parallel_processing_methodの値が不正です。")
 
         self.logger.debug("start testcase run process.")
-        results: List[TestCase] = []
+        results: list[TestCase] = []
         if parallel:
             self.logger.debug("paralle")
             with tqdm(total=len(test_cases)) as progress:
@@ -105,7 +105,7 @@ def run(
         input_file_path: str,
         repeat_count: int = 1,
         measure_time: bool = True,
-        copy_target_files: List[str] = [],
+        copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
@@ -119,7 +119,7 @@ def run(
         input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
         repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
         measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
-        copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
+        copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.

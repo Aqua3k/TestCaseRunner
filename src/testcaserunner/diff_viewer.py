@@ -1,7 +1,7 @@
 import os
 import json
 import glob
-from typing import Type
+from typing import Type, Any, Optional, Match
 import re
 
 import pandas as pd
@@ -19,14 +19,14 @@ class DiffHtmlParser(HtmlParser):
         super().__init__(runner_log, output_path, debug)
     
     column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
-    def get_match(self, column):
+    def get_match(self, column: str) -> Optional[Match]:
         return re.match(self.column_pattern, column)
 
-    def is_diff_column(self, column):
+    def is_diff_column(self, column: str) -> bool:
         return bool(self.get_match(column))
     
     extensions = ["1", "2"]
-    def get_diff_data(self, column, row):
+    def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
         match = self.get_match(column)
         if match:
             original_column = match.group(1)
@@ -39,7 +39,7 @@ class DiffHtmlParser(HtmlParser):
             assert 0, "ここにくるはずないんだけど…"
         return this, other
 
-    def get_color(self, this, other):
+    def get_color(self, this: Any, other: Any) -> str:
         if type(this) is str or type(other) is str:
             return "Gold"
         else:
@@ -48,7 +48,7 @@ class DiffHtmlParser(HtmlParser):
             else:
                 return "Hotpink"
 
-    def get_text_cell(self, column, row):
+    def get_text_cell(self, column: str, row: int) -> str:
         # column名を確認して、両方のデータにあるやつなら差分を調べる
         if self.is_diff_column(column):
             this, other = self.get_diff_data(column, row)
@@ -74,7 +74,7 @@ class RunnerLogViewer:
         for file in glob.glob(pattern, recursive=True):
             self.load_log(file)
     
-    def is_valid(self, data: dict):
+    def is_valid(self, data: dict) -> bool:
         contents: dict|None = data.get("contents")
         metadata: dict|None = data.get("metadata")
         if contents is None or metadata is None:
@@ -104,7 +104,7 @@ class RunnerLogViewer:
         self.logs.append(RunnerLog(contents, metadata))
         self.logger.info(f"{file} を読み込みました。")
     
-    def get_logs(self):
+    def get_logs(self) -> RunnerLog:
         return self.logs
 
     default_columns = [
