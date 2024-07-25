@@ -1,111 +1,14 @@
 import glob
 import os
-import shutil
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
-from typing import List, Dict, Tuple, Union, Callable
-from dataclasses import dataclass, field
-from enum import IntEnum, auto
-from pathlib import Path
+from typing import List, Tuple, Union, Callable
 import time
-import datetime
 
 from tqdm import tqdm
 
-from .exceptions import InvalidPathException, NoTestcaseFileException
+from .runner_defines import RunnerSettings, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException
+from .testcase_logger import RunnerLogManager, RunnerLog
 from .logging_config import setup_logger
-
-class ResultStatus(IntEnum):
-    """テストケースを実行した結果のステータス定義
-
-    結果ファイルに載るだけで特別な処理をするわけではない
-    """
-    AC = auto()             # Accepted
-    WA = auto()             # Wrong Answer
-    RE = auto()             # 実行時エラー
-    TLE = auto()            # 実行時間制限超過
-    IE = auto()             # 内部エラー
-
-@dataclass
-class TestCaseResult:
-    """テストケースの結果をまとめて管理するクラス"""
-    error_status: ResultStatus = ResultStatus.AC # 終了のステータス
-    stdout: str = ""                             # 標準出力(なければ空文字でいい)
-    stderr: str = ""                             # 標準エラー出力(なければ空文字でいい)
-    attribute: Dict[str, Union[int, float]] \
-        = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
-
-@dataclass(frozen=True)
-class TestCase:
-    testcase_name: str
-    input_file_path: str
-    stdout_file_path: str
-    stderr_file_path: str
-    testcase_index: int
-
-    def read_testcase_lines(self):
-        """テストケースファイルの内容を1行ずつ取得するジェネレータ
-
-        Yields:
-            str: ファイルの各行の内容
-        """
-        with open(self.input_file_path, mode="r") as file:
-            for line in file:
-                yield line.strip()
-
-class RunnerSettings:
-    stdout_dir_path = "stdout"
-    stderr_dir_path = "stderr"
-    log_dir_path = "log"
-    def __init__(
-        self,
-        input_file_path: str,
-        repeat_count: int,
-        measure_time: bool,
-        copy_target_files: List[str],
-        parallel_processing_method: str,
-        stdout_file_output: bool,
-        stderr_file_output: bool,
-        log_folder_name: Union[str, None],
-        debug: bool,
-    ):
-        self.debug = debug
-        self.input_file_path: str = input_file_path
-        self.repeat_count: int = repeat_count
-        self.measure_time: bool = measure_time
-        self.copy_target_files: List[str] = copy_target_files
-        self.parallel_processing_method: str = parallel_processing_method
-        self.stdout_file_output: bool = stdout_file_output
-        self.stderr_file_output: bool = stderr_file_output
-        self.datetime = datetime.datetime.now()
-        self.log_folder_name: str = self.get_log_file_path(log_folder_name)
-
-        if repeat_count <= 0:
-            raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
-
-        if not Path(self.input_file_path).is_dir():
-            raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
-
-        if self.log_dir_path not in glob.glob("*"):
-            os.mkdir(self.log_dir_path)
-        os.mkdir(self.log_folder_name)
-        self.stdout_log_path = os.path.join(self.log_folder_name, self.stdout_dir_path)
-        os.mkdir(self.stdout_log_path)
-        self.stderr_log_path = os.path.join(self.log_folder_name, self.stderr_dir_path)
-        os.mkdir(self.stderr_log_path)
-        self.input_file_copy_path = os.path.join(self.log_folder_name, "in")
-        shutil.copytree(self.input_file_path, self.input_file_copy_path)
-        self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
-        os.mkdir(self.fig_dir_path)
-
-    def get_log_file_path(self, log_folder_name: Union[str, None]) -> str:
-        if log_folder_name is None:
-            log_folder_name = str(self.datetime.strftime('%Y%m%d%H%M%S'))
-        name = os.path.join(self.log_dir_path, log_folder_name)
-        i = 1
-        while os.path.exists(name):
-            name = os.path.join(self.log_dir_path, f"{log_folder_name}-{i}")
-            i += 1
-        return name
 
 class TestCaseRunner:
     def __init__(self,
@@ -197,8 +100,53 @@ class TestCaseRunner:
                 f.write(test_result.stderr)
         return testcase, test_result
 
+def run(
+        handler: Callable[[TestCase], TestCaseResult],
+        input_file_path: str,
+        repeat_count: int = 1,
+        measure_time: bool = True,
+        copy_target_files: List[str] = [],
+        parallel_processing_method: str = "process",
+        stdout_file_output: bool = True,
+        stderr_file_output: bool = True,
+        log_folder_name: Union[str, None] = None,
+        _debug: bool = False,
+        ) -> RunnerLog:
+    """ランナーを実行する
+
+    Args:
+        handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
+        input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
+        repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
+        measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
+        copy_target_files (List[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
+        parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
+        stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
+        stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
+        log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
+    
+    returns:
+        RunnerLog: 実行結果
+    """
+    setting = RunnerSettings(
+        input_file_path,
+        repeat_count,
+        measure_time,
+        copy_target_files,
+        parallel_processing_method,
+        stdout_file_output,
+        stderr_file_output,
+        log_folder_name,
+        _debug,
+    )
+    runner = TestCaseRunner(handler, setting)
+    result = runner.run()
+    log_manager = RunnerLogManager(result, setting)
+    log_manager.make_html()
+    log_manager.finalize()
+    return log_manager.get_log()
+
 # 公開するメンバーを制御する
 __all__ = [
-    "TestCaseResult",
-    "TestCase",
+    "run",
 ]
