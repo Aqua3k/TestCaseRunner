@@ -8,20 +8,22 @@ from tqdm import tqdm
 
 from .runner_defines import RunnerSettings, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException
 from .testcase_logger import RunnerLogManager, RunnerLog
-from .logging_config import setup_logger
+from .runner_logger import RunnerLogger
 
 class TestCaseRunner:
+    logger = RunnerLogger("TestCaseRunner")
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
                  ) -> None:
         self.settings = setting
-        self.logger = setup_logger("TestCaseRunner", self.settings.debug)
+        if self.settings.debug:
+            self.logger.enable_debug_mode()
         self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
     
+    @logger.function_tracer
     def make_testcases(self, files: list[str]) -> list[TestCase]:
-        self.logger.debug("function make_testcases() started")
         test_cases = []
         testcase_index = 0
         for input_file in sorted(files):
@@ -37,11 +39,10 @@ class TestCaseRunner:
                 testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file, testcase_index)
                 test_cases.append(testcase)
                 testcase_index += 1
-        self.logger.debug("function make_testcases() finished")
         return test_cases
-    
+
+    @logger.function_tracer
     def run(self) -> list[tuple[TestCase, TestCaseResult]]:
-        self.logger.debug("function run() started")
         futures:list[Future] = []
         test_cases: list[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
@@ -80,7 +81,6 @@ class TestCaseRunner:
                 result = self.run_testcase(testcase)
                 results.append(result)
         
-        self.logger.debug("function run() finished")
         return results
     
     def run_testcase(self, testcase: TestCase) -> tuple[TestCase, TestCaseResult]:

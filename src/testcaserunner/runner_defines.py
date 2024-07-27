@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from dataclasses import dataclass
 
-from .logging_config import setup_logger
+from .runner_logger import RunnerLogger
 
 @dataclass(frozen=True)
 class RunnerMetadata:
@@ -71,6 +71,7 @@ class RunnerSettings:
     stdout_dir_path = "stdout"
     stderr_dir_path = "stderr"
     log_dir_path = "log"
+    logger = RunnerLogger("RunnerSettings")
     def __init__(
         self,
         input_file_path: str,
@@ -93,7 +94,6 @@ class RunnerSettings:
         self.stderr_file_output: bool = stderr_file_output
         self.datetime = datetime.datetime.now()
         self.log_folder_name: str = self.get_log_file_path(log_folder_name)
-        self.logger = setup_logger("RunnerSettings", self.debug)
 
         if repeat_count <= 0:
             raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
@@ -121,6 +121,7 @@ class RunnerSettings:
             else:
                 self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
 
+    @logger.function_tracer
     def get_log_file_path(self, log_folder_name: str | None) -> str:
         if log_folder_name is None:
             log_folder_name = str(self.datetime.strftime('%Y%m%d%H%M%S'))

@@ -13,7 +13,7 @@ import numpy as np
 
 from .runner_defines import RunnerSettings, RunnerMetadata
 from .runner import ResultStatus, TestCase, TestCaseResult
-from .logging_config import setup_logger
+from .runner_logger import RunnerLogger
 
 class HtmlColumnType(IntEnum):
     """HTMLファイルのcolumnの情報
@@ -51,9 +51,12 @@ class RunnerLogManager:
     infilename_col = "testcase"
     status_col = "status"
     hash_col = "hash"
+
+    logger = RunnerLogger("RunnerLogManager")
     def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
         self.settings = settings
-        self.logger = setup_logger("RunnerLogManager", self.settings.debug)
+        if settings.debug:
+            self.logger.enable_debug_mode()
         self.results = results
         self.attributes: dict[str, HtmlColumnType] = {
             self.infilename_col: HtmlColumnType.TEXT,
@@ -67,19 +70,23 @@ class RunnerLogManager:
         self.make_figure()
         self.base_dir = os.path.split(__file__)[0]
     
+    @logger.function_tracer
     def get_log(self) -> RunnerLog:
         return self.runner_log
 
+    @logger.function_tracer
     def make_html(self) -> None:
         self.html_parser = HtmlParser(self.runner_log, self.settings.log_folder_name, self.settings.debug)
         self.html_parser.make_html()
 
     json_file_name = "result.json"
+    @logger.function_tracer
     def add_attribute(self, key: str, type: HtmlColumnType) -> None:
         self.attributes[key] = type
 
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
+    @logger.function_tracer
     def make_figure(self) -> None:
         # ヒストグラムを描画
         self.runner_log.df.hist()
@@ -92,9 +99,8 @@ class RunnerLogManager:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
 
+    @logger.function_tracer
     def make_json_file(self) -> None:
-        self.logger.debug("function make_json_file() started")
-
         testcases: list[TestCase] = []
         results: list[TestCaseResult] = []
         for t, r in self.results:
@@ -141,8 +147,8 @@ class RunnerLogManager:
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
-        self.logger.debug("function make_json_file() finished")
 
+    @logger.function_tracer
     def calculate_file_hash(self, file_path: str) -> str:
         hash_obj = hashlib.new('sha256')
         with open(file_path, 'rb') as file:
@@ -151,11 +157,12 @@ class RunnerLogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
+    logger = RunnerLogger("HtmlParser")
     def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
-        self.debug = debug
+        if debug:
+            self.logger.enable_debug_mode()
         self.runner_log = runner_log
         self.output_path = output_path
-        self.logger = setup_logger("HtmlParser", self.debug)
         self.base_dir = os.path.split(__file__)[0]
         loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
         self.environment = Environment(loader=loader)
@@ -170,20 +177,19 @@ class HtmlParser:
     
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
+    @logger.function_tracer
     def make_figure(self) -> str:
-        self.logger.debug("function make_figure() started")
         ret = []
         template = self.environment.get_template("figure.j2")
         fig = template.render({"link": os.path.join("fig", self.histgram_fig_name)})
         ret.append(fig)
         fig = template.render({"link": os.path.join("fig", self.heatmap_fig_name)})
         ret.append(fig)
-        self.logger.debug("function make_figure() finished")
         return "".join(ret)
 
     html_file_name = "result.html"
+    @logger.function_tracer
     def make_html(self) -> None:
-        self.logger.debug("function make_html() started")
         template = self.environment.get_template("main.j2")
         data = {
             "date": self.runner_log.metadata["created_date"],
@@ -198,8 +204,8 @@ class HtmlParser:
         html_file_path = os.path.join(self.output_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
             f.write(template.render(data))
-        self.logger.debug("function make_html() finished")
-    
+
+    @logger.function_tracer    
     def get_url_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         template = self.environment.get_template("cell_with_file_link.j2")
@@ -209,6 +215,7 @@ class HtmlParser:
             }
         return template.render(data)
     
+    @logger.function_tracer
     def get_status_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         text, color = self.status_texts.get(value, ("IE", "red"))
@@ -219,6 +226,7 @@ class HtmlParser:
             }
         return template.render(data)
     
+    @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
         value = self.runner_log._df_at(column, row)
         if type(value) is np.float64 or type(value) is np.float32:
@@ -229,6 +237,7 @@ class HtmlParser:
             }
         return template.render(data)
 
+    @logger.function_tracer
     def make_table(self) -> list[dict[str, str]]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
@@ -249,11 +258,13 @@ class HtmlParser:
             ret.append(rows)
         return ret
     
+    @logger.function_tracer
     def load_file(self, file: str) -> str:
         with open(file, mode="r", encoding="utf-8") as f:
             text = f.read()
         return text
     
+    @logger.function_tracer
     def make_header_script_list(self) -> list[str]:
         template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], "js/Table.js")
@@ -262,6 +273,7 @@ class HtmlParser:
         ]
         return ret
 
+    @logger.function_tracer
     def make_footer_script_list(self) -> list[str]:
         template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], "js/checkbox.js")
@@ -270,6 +282,7 @@ class HtmlParser:
         ]
         return ret
     
+    @logger.function_tracer
     def make_table_columns(self) -> dict[str, str]:
         table_columns = dict()
         for column in self.runner_log.df.columns:
@@ -284,6 +297,7 @@ class HtmlParser:
                     assert "error: 不明なHtmlColumnTypeがあります。"
         return table_columns
 
+    @logger.function_tracer
     def make_css_list(self) -> list[str]:
         template1 = self.environment.get_template("css_link.j2")
         template2 = self.environment.get_template("css.j2")
