@@ -79,14 +79,6 @@ class RunnerLogManager:
     def finalize(self) -> None:
         """ファイルをコピーしてlog以下に保存する"""
         self.logger.debug("function finalize() started")
-        for file in self.settings.copy_target_files:
-            file_path = Path(file)
-            if file_path.is_file():
-                shutil.copy(file, self.settings.log_folder_name)
-            elif file_path.is_dir():
-                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
-            else:
-                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
         shutil.copytree(
             os.path.join(self.base_dir, self.js_file_path),
             os.path.join(self.settings.log_folder_name, self.js_file_path)

@@ -8,10 +8,12 @@ from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from dataclasses import dataclass
 
+from .logging_config import setup_logger
+
 @dataclass(frozen=True)
 class RunnerMetadata:
-    LIB_NAME = "testcaserunner"
-    LIB_VERSION = "0.2.1"
+    LIB_NAME: str = "testcaserunner"
+    LIB_VERSION: str = "0.2.1"
 
 class CustomException(Exception):
     """ライブラリ内で使う例外の基底クラス"""
@@ -91,6 +93,7 @@ class RunnerSettings:
         self.stderr_file_output: bool = stderr_file_output
         self.datetime = datetime.datetime.now()
         self.log_folder_name: str = self.get_log_file_path(log_folder_name)
+        self.logger = setup_logger("RunnerSettings", self.debug)
 
         if repeat_count <= 0:
             raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
@@ -109,6 +112,14 @@ class RunnerSettings:
         shutil.copytree(self.input_file_path, self.input_file_copy_path)
         self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
         os.mkdir(self.fig_dir_path)
+        for file in self.copy_target_files:
+            file_path = Path(file)
+            if file_path.is_file():
+                shutil.copy(file, self.log_folder_name)
+            elif file_path.is_dir():
+                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+            else:
+                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
 
     def get_log_file_path(self, log_folder_name: str | None) -> str:
         if log_folder_name is None:
