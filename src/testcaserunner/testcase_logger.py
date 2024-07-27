@@ -261,14 +261,14 @@ class HtmlParser:
         return ret
     
     def make_header_script_list(self) -> list[str]:
-        template = self.environment.get_template("script.j2")
+        template = self.environment.get_template("script_link.j2")
         ret = [
             template.render({"link": r"js/Table.js"}),
         ]
         return ret
 
     def make_footer_script_list(self) -> list[str]:
-        template = self.environment.get_template("script.j2")
+        template = self.environment.get_template("script_link.j2")
         ret = [
             template.render({"link": r"js/checkbox.js"}),
         ]
@@ -289,7 +289,7 @@ class HtmlParser:
         return table_columns
 
     def make_css_list(self) -> list[str]:
-        template = self.environment.get_template("css.j2")
+        template = self.environment.get_template("css_link.j2")
         ret = [
             template.render({"link": r"js/SortTable.css"}),
             template.render({"link": r"https://newcss.net/new.min.css"}),
