@@ -1,6 +1,5 @@
 import os
 import shutil
-from pathlib import Path
 import hashlib
 import json
 from enum import IntEnum, auto
@@ -75,15 +74,6 @@ class RunnerLogManager:
     def make_html(self) -> None:
         self.html_parser = HtmlParser(self.runner_log, self.settings.log_folder_name, self.settings.debug)
         self.html_parser.make_html()
-
-    def finalize(self) -> None:
-        """ファイルをコピーしてlog以下に保存する"""
-        self.logger.debug("function finalize() started")
-        shutil.copytree(
-            os.path.join(self.base_dir, self.js_file_path),
-            os.path.join(self.settings.log_folder_name, self.js_file_path)
-            )
-        self.logger.debug("function finalize() finished")
 
     json_file_name = "result.json"
     def add_attribute(self, key, type) -> None:
@@ -260,17 +250,24 @@ class HtmlParser:
             ret.append(rows)
         return ret
     
+    def load_file(self, file: str) -> str:
+        with open(file, mode="r", encoding="utf-8") as f:
+            text = f.read()
+        return text
+    
     def make_header_script_list(self) -> list[str]:
-        template = self.environment.get_template("script_link.j2")
+        template = self.environment.get_template("script.j2")
+        file = os.path.join(os.path.split(__file__)[0], "js/Table.js")
         ret = [
-            template.render({"link": r"js/Table.js"}),
+            template.render({"text": self.load_file(file)}),
         ]
         return ret
 
     def make_footer_script_list(self) -> list[str]:
-        template = self.environment.get_template("script_link.j2")
+        template = self.environment.get_template("script.j2")
+        file = os.path.join(os.path.split(__file__)[0], "js/checkbox.js")
         ret = [
-            template.render({"link": r"js/checkbox.js"}),
+            template.render({"text": self.load_file(file)}),
         ]
         return ret
     
@@ -289,9 +286,11 @@ class HtmlParser:
         return table_columns
 
     def make_css_list(self) -> list[str]:
-        template = self.environment.get_template("css_link.j2")
+        template1 = self.environment.get_template("css_link.j2")
+        template2 = self.environment.get_template("css.j2")
+        file = os.path.join(os.path.split(__file__)[0], "js/SortTable.css")
         ret = [
-            template.render({"link": r"js/SortTable.css"}),
-            template.render({"link": r"https://newcss.net/new.min.css"}),
+            template2.render({"text": self.load_file(file)}),
+            template1.render({"link": r"https://newcss.net/new.min.css"}),
         ]
         return ret

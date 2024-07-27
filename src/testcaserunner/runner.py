@@ -145,7 +145,6 @@ def run(
     result = runner.run()
     log_manager = RunnerLogManager(result, setting)
     log_manager.make_html()
-    log_manager.finalize()
     return log_manager.get_log()
 
 # 公開するメンバーを制御する
