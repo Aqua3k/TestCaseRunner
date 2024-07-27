@@ -11,10 +11,6 @@ from .runner_defines import RunnerMetadata
 from .logging_config import setup_logger
 from .testcase_logger import RunnerLog, HtmlParser
 
-class RunnerLogDiff(RunnerLog):
-    def __init__(self, contents: dict, metadata: dict) -> None:
-        super().__init__(contents, metadata)
-
 class DiffHtmlParser(HtmlParser):
     def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
         super().__init__(runner_log, output_path, debug)
