@@ -26,7 +26,7 @@ class HtmlColumnType(IntEnum):
     METADATA = auto()
 
 class RunnerLog:
-    def __init__(self, contents: dict, metadata: dict):
+    def __init__(self, contents: dict, metadata: dict) -> None:
         self._df = pd.DataFrame(contents)
         self._metadata = metadata
     
@@ -35,10 +35,10 @@ class RunnerLog:
         return self._df
 
     @property
-    def metadata(self):
+    def metadata(self) -> dict:
         return self._metadata
     
-    def drop(self, column: str):
+    def drop(self, column: str) -> None:
         self._df = self._df.drop(columns=[column], errors='ignore')
         self._metadata["attributes"].pop(column, None)
     
@@ -54,7 +54,7 @@ class RunnerLogManager:
     infilename_col = "testcase"
     status_col = "status"
     hash_col = "hash"
-    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings):
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
         self.settings = settings
         self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
@@ -73,7 +73,7 @@ class RunnerLogManager:
     def get_log(self) -> RunnerLog:
         return self.runner_log
 
-    def make_html(self):
+    def make_html(self) -> None:
         self.html_parser = HtmlParser(self.runner_log, self.settings.log_folder_name, self.settings.debug)
         self.html_parser.make_html()
 
@@ -95,12 +95,12 @@ class RunnerLogManager:
         self.logger.debug("function finalize() finished")
 
     json_file_name = "result.json"
-    def add_attribute(self, key, type):
+    def add_attribute(self, key, type) -> None:
         self.attributes[key] = type
 
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
-    def make_figure(self):
+    def make_figure(self) -> None:
         # ヒストグラムを描画
         self.runner_log.df.hist()
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
@@ -112,7 +112,7 @@ class RunnerLogManager:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
 
-    def make_json_file(self):
+    def make_json_file(self) -> None:
         self.logger.debug("function make_json_file() started")
 
         testcases: list[TestCase] = []
@@ -171,7 +171,7 @@ class RunnerLogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
-    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool) -> None:
         self.debug = debug
         self.runner_log = runner_log
         self.output_path = output_path
@@ -202,7 +202,7 @@ class HtmlParser:
         return "".join(ret)
 
     html_file_name = "result.html"
-    def make_html(self):
+    def make_html(self) -> None:
         self.logger.debug("function make_html() started")
         template = self.environment.get_template("main.j2")
         data = {

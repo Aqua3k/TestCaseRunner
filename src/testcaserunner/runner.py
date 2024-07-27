@@ -14,7 +14,7 @@ class TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
-                 ):
+                 ) -> None:
         self.settings = setting
         self.logger = setup_logger("TestCaseRunner", self.settings.debug)
         self.input_file_path = self.settings.input_file_copy_path

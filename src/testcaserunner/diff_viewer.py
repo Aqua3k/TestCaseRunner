@@ -11,11 +11,11 @@ from .logging_config import setup_logger
 from .testcase_logger import RunnerLog, HtmlParser, LIB_NAME
 
 class RunnerLogDiff(RunnerLog):
-    def __init__(self, contents: dict, metadata: dict):
+    def __init__(self, contents: dict, metadata: dict) -> None:
         super().__init__(contents, metadata)
 
 class DiffHtmlParser(HtmlParser):
-    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
+    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool) -> None:
         super().__init__(runner_log, output_path, debug)
     
     column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
@@ -67,7 +67,7 @@ class DiffHtmlParser(HtmlParser):
 
 class RunnerLogViewer:
     merged_data_suffixes = (".1", ".2")
-    def __init__(self, path: str="log", _debug=False):
+    def __init__(self, path: str="log", _debug=False) -> None:
         self.logger = setup_logger("RunnerLogViewer", _debug)
         self.logs: list[RunnerLog] = []
         pattern = os.path.join(path, "**", "*.json")
@@ -86,7 +86,7 @@ class RunnerLogViewer:
 
         return True
 
-    def load_log(self, file: str):
+    def load_log(self, file: str) -> None:
         try:
             with open(file, 'r') as f:
                 loaded_data: dict = json.load(f)
@@ -115,7 +115,7 @@ class RunnerLogViewer:
         "status",
         "hash",
     ]
-    def test_diff(self, log1: RunnerLog, log2: RunnerLog):
+    def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
         log2.drop("testcase")
         
