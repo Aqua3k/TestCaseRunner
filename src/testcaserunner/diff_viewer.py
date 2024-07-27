@@ -7,25 +7,26 @@ import re
 import pandas as pd
 import numpy as np
 
-from .logging_config import setup_logger
-from .testcase_logger import RunnerLog, HtmlParser, LIB_NAME
-
-class RunnerLogDiff(RunnerLog):
-    def __init__(self, contents: dict, metadata: dict) -> None:
-        super().__init__(contents, metadata)
+from .runner_defines import RunnerMetadata
+from .runner_logger import RunnerLogger
+from .testcase_logger import RunnerLog, HtmlParser
 
 class DiffHtmlParser(HtmlParser):
+    logger = RunnerLogger("DiffHtmlParser")
     def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
         super().__init__(runner_log, output_path, debug)
     
     column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    @logger.function_tracer
     def get_match(self, column: str) -> Optional[Match]:
         return re.match(self.column_pattern, column)
 
+    @logger.function_tracer
     def is_diff_column(self, column: str) -> bool:
         return bool(self.get_match(column))
     
     extensions = ["1", "2"]
+    @logger.function_tracer
     def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
         match = self.get_match(column)
         if match:
@@ -39,6 +40,7 @@ class DiffHtmlParser(HtmlParser):
             assert 0, "ここにくるはずないんだけど…"
         return this, other
 
+    @logger.function_tracer
     def get_color(self, this: Any, other: Any) -> str:
         if type(this) is str or type(other) is str:
             return "Gold"
@@ -48,6 +50,7 @@ class DiffHtmlParser(HtmlParser):
             else:
                 return "Hotpink"
 
+    @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
         # column名を確認して、両方のデータにあるやつなら差分を調べる
         if self.is_diff_column(column):
@@ -66,14 +69,17 @@ class DiffHtmlParser(HtmlParser):
         return super().get_text_cell(column, row)
 
 class RunnerLogViewer:
+    logger = RunnerLogger("RunnerLogViewer")
     merged_data_suffixes = (".1", ".2")
     def __init__(self, path: str="log", _debug=False) -> None:
-        self.logger = setup_logger("RunnerLogViewer", _debug)
+        if _debug:
+            self.logger.enable_debug_mode()
         self.logs: list[RunnerLog] = []
         pattern = os.path.join(path, "**", "*.json")
         for file in glob.glob(pattern, recursive=True):
             self.load_log(file)
     
+    @logger.function_tracer
     def is_valid(self, data: dict) -> bool:
         contents: dict|None = data.get("contents")
         metadata: dict|None = data.get("metadata")
@@ -81,11 +87,12 @@ class RunnerLogViewer:
             return False # データが取得できるか？
 
         libname = metadata.get("library_name")
-        if libname != LIB_NAME:
+        if libname != RunnerMetadata.LIB_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True
 
+    @logger.function_tracer
     def load_log(self, file: str) -> None:
         try:
             with open(file, 'r') as f:
@@ -109,17 +116,11 @@ class RunnerLogViewer:
         self.logs.append(RunnerLog(contents, metadata))
         self.logger.info(f"{file} を読み込みました。")
     
+    @logger.function_tracer
     def get_logs(self) -> list[RunnerLog]:
         return self.logs
 
-    default_columns = [
-        "in",
-        "stdout",
-        "stderr",
-        "testcase",
-        "status",
-        "hash",
-    ]
+    @logger.function_tracer
     def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
         log2.drop("testcase")

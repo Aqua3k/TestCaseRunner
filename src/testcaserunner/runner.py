@@ -1,27 +1,29 @@
 import glob
 import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
-from typing import Union, Callable
+from typing import Callable
 import time
 
 from tqdm import tqdm
 
 from .runner_defines import RunnerSettings, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException
 from .testcase_logger import RunnerLogManager, RunnerLog
-from .logging_config import setup_logger
+from .runner_logger import RunnerLogger
 
 class TestCaseRunner:
+    logger = RunnerLogger("TestCaseRunner")
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
                  ) -> None:
         self.settings = setting
-        self.logger = setup_logger("TestCaseRunner", self.settings.debug)
+        if self.settings.debug:
+            self.logger.enable_debug_mode()
         self.input_file_path = self.settings.input_file_copy_path
         self.handler = handler
     
+    @logger.function_tracer
     def make_testcases(self, files: list[str]) -> list[TestCase]:
-        self.logger.debug("function make_testcases() started")
         test_cases = []
         testcase_index = 0
         for input_file in sorted(files):
@@ -37,11 +39,10 @@ class TestCaseRunner:
                 testcase = TestCase(testcase_name, input_file, stdout_file, stderr_file, testcase_index)
                 test_cases.append(testcase)
                 testcase_index += 1
-        self.logger.debug("function make_testcases() finished")
         return test_cases
-    
+
+    @logger.function_tracer
     def run(self) -> list[tuple[TestCase, TestCaseResult]]:
-        self.logger.debug("function run() started")
         futures:list[Future] = []
         test_cases: list[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
@@ -80,7 +81,6 @@ class TestCaseRunner:
                 result = self.run_testcase(testcase)
                 results.append(result)
         
-        self.logger.debug("function run() finished")
         return results
     
     def run_testcase(self, testcase: TestCase) -> tuple[TestCase, TestCaseResult]:
@@ -111,7 +111,7 @@ def run(
         parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
-        log_folder_name: Union[str, None] = None,
+        log_folder_name: str | None = None,
         _debug: bool = False,
         ) -> RunnerLog:
     """ランナーを実行する
@@ -125,7 +125,7 @@ def run(
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
-        log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
+        log_folder_name (str | None, optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     
     returns:
         RunnerLog: 実行結果
@@ -145,7 +145,6 @@ def run(
     result = runner.run()
     log_manager = RunnerLogManager(result, setting)
     log_manager.make_html()
-    log_manager.finalize()
     return log_manager.get_log()
 
 # 公開するメンバーを制御する

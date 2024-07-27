@@ -1,11 +1,19 @@
 import shutil
 from pathlib import Path
 import datetime
-from typing import Union, Iterator
+from typing import Iterator
 import os
 import glob
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
+from dataclasses import dataclass
+
+from .runner_logger import RunnerLogger
+
+@dataclass(frozen=True)
+class RunnerMetadata:
+    LIB_NAME: str = "testcaserunner"
+    LIB_VERSION: str = "0.2.1"
 
 class CustomException(Exception):
     """ライブラリ内で使う例外の基底クラス"""
@@ -38,7 +46,7 @@ class TestCaseResult:
     error_status: ResultStatus = ResultStatus.AC # 終了のステータス
     stdout: str = ""                             # 標準出力(なければ空文字でいい)
     stderr: str = ""                             # 標準エラー出力(なければ空文字でいい)
-    attribute: dict[str, Union[int, float]] \
+    attribute: dict[str, int | float] \
         = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
 
 @dataclass(frozen=True)
@@ -63,6 +71,7 @@ class RunnerSettings:
     stdout_dir_path = "stdout"
     stderr_dir_path = "stderr"
     log_dir_path = "log"
+    logger = RunnerLogger("RunnerSettings")
     def __init__(
         self,
         input_file_path: str,
@@ -72,7 +81,7 @@ class RunnerSettings:
         parallel_processing_method: str,
         stdout_file_output: bool,
         stderr_file_output: bool,
-        log_folder_name: Union[str, None],
+        log_folder_name: str | None,
         debug: bool,
     ) -> None:
         self.debug = debug
@@ -103,8 +112,17 @@ class RunnerSettings:
         shutil.copytree(self.input_file_path, self.input_file_copy_path)
         self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
         os.mkdir(self.fig_dir_path)
+        for file in self.copy_target_files:
+            file_path = Path(file)
+            if file_path.is_file():
+                shutil.copy(file, self.log_folder_name)
+            elif file_path.is_dir():
+                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+            else:
+                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
 
-    def get_log_file_path(self, log_folder_name: Union[str, None]) -> str:
+    @logger.function_tracer
+    def get_log_file_path(self, log_folder_name: str | None) -> str:
         if log_folder_name is None:
             log_folder_name = str(self.datetime.strftime('%Y%m%d%H%M%S'))
         name = os.path.join(self.log_dir_path, log_folder_name)
