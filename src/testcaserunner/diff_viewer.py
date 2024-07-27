@@ -109,14 +109,6 @@ class RunnerLogViewer:
     def get_logs(self) -> list[RunnerLog]:
         return self.logs
 
-    default_columns = [
-        "in",
-        "stdout",
-        "stderr",
-        "testcase",
-        "status",
-        "hash",
-    ]
     def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
         log2.drop("testcase")
