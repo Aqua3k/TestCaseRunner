@@ -5,7 +5,7 @@ import hashlib
 import json
 from enum import IntEnum, auto
 from collections import defaultdict
-from typing import Type, Any
+from typing import Any
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -130,7 +130,7 @@ class RunnerLogManager:
         for key in user_attributes:
             self.add_attribute(key, HtmlColumnType.TEXT)
 
-        contents = defaultdict(list)
+        contents: defaultdict[str, list[Any]] = defaultdict(list)
         for testcase, result in zip(testcases, results):
             path = testcase.input_file_path
             hash = self.calculate_file_hash(path)
@@ -171,7 +171,7 @@ class RunnerLogManager:
         return hash_obj.hexdigest()
 
 class HtmlParser:
-    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool) -> None:
+    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
         self.debug = debug
         self.runner_log = runner_log
         self.output_path = output_path
@@ -249,7 +249,7 @@ class HtmlParser:
             }
         return template.render(data)
 
-    def make_table(self) -> dict[str, str]:
+    def make_table(self) -> list[dict[str, str]]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
@@ -283,7 +283,7 @@ class HtmlParser:
         ]
         return ret
     
-    def make_table_columns(self) -> dict[str]:
+    def make_table_columns(self) -> dict[str, str]:
         table_columns = dict()
         for column in self.runner_log.df.columns:
             match self.runner_log.metadata["attributes"][column]:
