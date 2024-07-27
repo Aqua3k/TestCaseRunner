@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 import datetime
-from typing import Union
+from typing import Union, Iterator
 import os
 import glob
 from dataclasses import dataclass, field
@@ -13,12 +13,12 @@ class CustomException(Exception):
 
 class InvalidPathException(CustomException):
     """与えられたパスが正しくない場合の例外"""
-    def __init__(self, message):
+    def __init__(self, message) -> None:
         super().__init__(message)
 
 class NoTestcaseFileException(CustomException):
     """テストケースファイルが1つもない場合の例外"""
-    def __init__(self, message):
+    def __init__(self, message) -> None:
         super().__init__(message)
 
 class ResultStatus(IntEnum):
@@ -49,7 +49,7 @@ class TestCase:
     stderr_file_path: str
     testcase_index: int
 
-    def read_testcase_lines(self):
+    def read_testcase_lines(self) -> Iterator[str]:
         """テストケースファイルの内容を1行ずつ取得するジェネレータ
 
         Yields:
@@ -74,7 +74,7 @@ class RunnerSettings:
         stderr_file_output: bool,
         log_folder_name: Union[str, None],
         debug: bool,
-    ):
+    ) -> None:
         self.debug = debug
         self.input_file_path: str = input_file_path
         self.repeat_count: int = repeat_count

@@ -1,7 +1,7 @@
 import glob
 import os
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
-from typing import Tuple, Union, Callable
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
+from typing import Union, Callable
 import time
 
 from tqdm import tqdm
@@ -14,7 +14,7 @@ class TestCaseRunner:
     def __init__(self,
                  handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
-                 ):
+                 ) -> None:
         self.settings = setting
         self.logger = setup_logger("TestCaseRunner", self.settings.debug)
         self.input_file_path = self.settings.input_file_copy_path
@@ -40,7 +40,7 @@ class TestCaseRunner:
         self.logger.debug("function make_testcases() finished")
         return test_cases
     
-    def run(self) -> list[Tuple[TestCase, TestCaseResult]]:
+    def run(self) -> list[tuple[TestCase, TestCaseResult]]:
         self.logger.debug("function run() started")
         futures:list[Future] = []
         test_cases: list[TestCase] = []
@@ -48,6 +48,7 @@ class TestCaseRunner:
         if len(files) == 0:
             raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
         test_cases = self.make_testcases(files)
+        executor_class: type[Executor] | None = None
         if self.settings.parallel_processing_method.lower() == "process":
             parallel = True
             executor_class = ProcessPoolExecutor
@@ -60,9 +61,10 @@ class TestCaseRunner:
             raise ValueError("引数parallel_processing_methodの値が不正です。")
 
         self.logger.debug("start testcase run process.")
-        results: list[TestCase] = []
+        results: list[tuple[TestCase, TestCaseResult]] = []
         if parallel:
             self.logger.debug("paralle")
+            assert executor_class is not None, "変数executor_classがNoneだよ"
             with tqdm(total=len(test_cases)) as progress:
                 with executor_class() as executor:
                     for testcase in test_cases:
@@ -81,7 +83,7 @@ class TestCaseRunner:
         self.logger.debug("function run() finished")
         return results
     
-    def run_testcase(self, testcase: TestCase) -> Tuple[TestCase, TestCaseResult]:
+    def run_testcase(self, testcase: TestCase) -> tuple[TestCase, TestCaseResult]:
         start_time = time.time()
         try:
             test_result: TestCaseResult = self.handler(testcase)

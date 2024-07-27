@@ -1,7 +1,7 @@
 import os
 import json
 import glob
-from typing import Type, Any, Optional, Match
+from typing import Any, Optional, Match
 import re
 
 import pandas as pd
@@ -11,11 +11,11 @@ from .logging_config import setup_logger
 from .testcase_logger import RunnerLog, HtmlParser, LIB_NAME
 
 class RunnerLogDiff(RunnerLog):
-    def __init__(self, contents: dict, metadata: dict):
+    def __init__(self, contents: dict, metadata: dict) -> None:
         super().__init__(contents, metadata)
 
 class DiffHtmlParser(HtmlParser):
-    def __init__(self, runner_log: Type[RunnerLog], output_path: str, debug: bool):
+    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
         super().__init__(runner_log, output_path, debug)
     
     column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
@@ -67,7 +67,7 @@ class DiffHtmlParser(HtmlParser):
 
 class RunnerLogViewer:
     merged_data_suffixes = (".1", ".2")
-    def __init__(self, path: str="log", _debug=False):
+    def __init__(self, path: str="log", _debug=False) -> None:
         self.logger = setup_logger("RunnerLogViewer", _debug)
         self.logs: list[RunnerLog] = []
         pattern = os.path.join(path, "**", "*.json")
@@ -86,7 +86,7 @@ class RunnerLogViewer:
 
         return True
 
-    def load_log(self, file: str):
+    def load_log(self, file: str) -> None:
         try:
             with open(file, 'r') as f:
                 loaded_data: dict = json.load(f)
@@ -101,10 +101,15 @@ class RunnerLogViewer:
         
         contents = loaded_data.get("contents")
         metadata = loaded_data.get("metadata")
+        assert contents is not None, "contentsがNoneだよ"
+        assert type(contents) is dict, "contentsがdict型ではないよ"
+        assert metadata is not None, "metadataがNoneだよ"
+        assert type(metadata) is dict, "metadataがNonedict型ではないよ"
+
         self.logs.append(RunnerLog(contents, metadata))
         self.logger.info(f"{file} を読み込みました。")
     
-    def get_logs(self) -> RunnerLog:
+    def get_logs(self) -> list[RunnerLog]:
         return self.logs
 
     default_columns = [
@@ -115,13 +120,13 @@ class RunnerLogViewer:
         "status",
         "hash",
     ]
-    def test_diff(self, log1: RunnerLog, log2: RunnerLog):
+    def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
         log2.drop("testcase")
         
         # 属性名を置換する
         attributes1 = log1.metadata["attributes"]
-        att1 = {}
+        att1: dict[Any, Any] = {}
         for k, v in attributes1.items():
             if k != "hash" and k != "testcase":
                 att1[f"{k}.1"] = v
@@ -129,7 +134,7 @@ class RunnerLogViewer:
                 att1[k] = v
         
         attributes2 = log2.metadata["attributes"]
-        att2 = {}
+        att2: dict[Any, Any] = {}
         for k, v in attributes2.items():
             if k != "hash" and k != "testcase":
                 att1[f"{k}.2"] = v
