@@ -1,7 +1,7 @@
 import glob
 import os
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
-from typing import Union, Callable
+from typing import Callable
 import time
 
 from tqdm import tqdm
@@ -111,7 +111,7 @@ def run(
         parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
-        log_folder_name: Union[str, None] = None,
+        log_folder_name: str | None = None,
         _debug: bool = False,
         ) -> RunnerLog:
     """ランナーを実行する
@@ -125,7 +125,7 @@ def run(
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
-        log_folder_name (Union[str, None], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
+        log_folder_name (str | None, optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     
     returns:
         RunnerLog: 実行結果

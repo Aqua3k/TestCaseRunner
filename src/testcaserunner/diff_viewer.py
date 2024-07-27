@@ -7,8 +7,9 @@ import re
 import pandas as pd
 import numpy as np
 
+from .runner_defines import RunnerMetadata
 from .logging_config import setup_logger
-from .testcase_logger import RunnerLog, HtmlParser, LIB_NAME
+from .testcase_logger import RunnerLog, HtmlParser
 
 class RunnerLogDiff(RunnerLog):
     def __init__(self, contents: dict, metadata: dict) -> None:
@@ -81,7 +82,7 @@ class RunnerLogViewer:
             return False # データが取得できるか？
 
         libname = metadata.get("library_name")
-        if libname != LIB_NAME:
+        if libname != RunnerMetadata.LIB_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True

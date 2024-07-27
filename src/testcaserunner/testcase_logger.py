@@ -13,7 +13,7 @@ import pandas as pd
 from jinja2 import Environment, FileSystemLoader
 import numpy as np
 
-from .runner_defines import RunnerSettings
+from .runner_defines import RunnerSettings, RunnerMetadata
 from .runner import ResultStatus, TestCase, TestCaseResult
 from .logging_config import setup_logger
 
@@ -45,7 +45,6 @@ class RunnerLog:
     def _df_at(self, column: str, row: int) -> Any:
         return self._df.at[str(row), column]
 
-LIB_NAME = "testcaserunner"
 class RunnerLogManager:
     js_file_path = "js"
     infile_col = "in"
@@ -148,7 +147,7 @@ class RunnerLogManager:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": LIB_NAME,
+            "library_name": RunnerMetadata.LIB_NAME,
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
             "attributes": self.attributes,
@@ -163,8 +162,8 @@ class RunnerLogManager:
             json.dump(self.json_file, f, indent=2)
         self.logger.debug("function make_json_file() finished")
 
-    def calculate_file_hash(self, file_path: str, hash_algorithm: str ='sha256') -> str:
-        hash_obj = hashlib.new(hash_algorithm)
+    def calculate_file_hash(self, file_path: str) -> str:
+        hash_obj = hashlib.new('sha256')
         with open(file_path, 'rb') as file:
             while chunk := file.read(4096):
                 hash_obj.update(chunk)
