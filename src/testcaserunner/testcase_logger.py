@@ -1,5 +1,4 @@
 import os
-import shutil
 import hashlib
 import json
 from enum import IntEnum, auto
@@ -56,7 +55,7 @@ class RunnerLogManager:
         self.settings = settings
         self.logger = setup_logger("RunnerLogManager", self.settings.debug)
         self.results = results
-        self.attributes = {
+        self.attributes: dict[str, HtmlColumnType] = {
             self.infilename_col: HtmlColumnType.TEXT,
             self.hash_col: HtmlColumnType.METADATA,
             self.infile_col: HtmlColumnType.URL,
@@ -76,7 +75,7 @@ class RunnerLogManager:
         self.html_parser.make_html()
 
     json_file_name = "result.json"
-    def add_attribute(self, key, type) -> None:
+    def add_attribute(self, key: str, type: HtmlColumnType) -> None:
         self.attributes[key] = type
 
     histgram_fig_name = 'histgram.png'
