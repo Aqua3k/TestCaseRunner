@@ -143,7 +143,7 @@ class RunnerLogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log = RunnerLog(contents, metadata)
+        self.runner_log: RunnerLog = RunnerLog(contents, metadata)
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
