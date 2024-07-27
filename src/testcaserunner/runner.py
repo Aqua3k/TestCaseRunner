@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, 
 from typing import Union, Callable
 import time
 
-from tqdm import tqdm # type: ignore
+from tqdm import tqdm
 
 from .runner_defines import RunnerSettings, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException
 from .testcase_logger import RunnerLogManager, RunnerLog
