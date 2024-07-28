@@ -19,7 +19,7 @@ def run_program(testcase: TestCase):
     Returns:
         TestCaseResult: テストケースの結果
     
-    TestCaseResultのattributesメンバにDict[str, Union[int, float]]で値を書いておくと
+    TestCaseResultのattributesメンバにDict[str, int | float]で値を書いておくと
     結果として出力されるHTMLファイルに結果が載る
     
     keyとして`score`があると、スコアの平均/最大値/最小値がHTMLファイルに載る
@@ -42,4 +42,4 @@ def run_program(testcase: TestCase):
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 
 if __name__ == "__main__":
-    run(run_program, "in")
+    run(run_program, "in", _debug=True)

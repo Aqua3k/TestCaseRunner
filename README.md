@@ -30,5 +30,5 @@ pip install git+https://github.com/Aqua3k/TestCaseRunner.git
 
 ## ドキュメント
 
-[API_REFERENCE](API_REFERENCE.md)をご覧ください。  
+[REFERENCE](REFERENCE.md)をご覧ください。  
 
