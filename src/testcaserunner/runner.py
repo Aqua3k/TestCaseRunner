@@ -113,7 +113,7 @@ def run(
         stderr_file_output: bool = True,
         log_folder_name: str | None = None,
         _debug: bool = False,
-        ) -> RunnerLog:
+        ) -> None:
     """ランナーを実行する
 
     Args:
@@ -126,9 +126,6 @@ def run(
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
         log_folder_name (str | None, optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
-    
-    returns:
-        RunnerLog: 実行結果
     """
     setting = RunnerSettings(
         input_file_path,
@@ -145,7 +142,6 @@ def run(
     result = runner.run()
     log_manager = RunnerLogManager(result, setting)
     log_manager.make_html()
-    return log_manager.get_log()
 
 # 公開するメンバーを制御する
 __all__ = [
