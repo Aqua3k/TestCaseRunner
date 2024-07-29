@@ -7,8 +7,9 @@ import time
 from tqdm import tqdm
 
 from .runner_defines import RunnerSettings, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException
-from .testcase_logger import RunnerLogManager, RunnerLog
+from .testcase_logger import RunnerLogManager
 from .runner_logger import RunnerLogger
+from .html_parser import HtmlParser
 
 class TestCaseRunner:
     logger = RunnerLogger("TestCaseRunner")
@@ -141,7 +142,8 @@ def run(
     runner = TestCaseRunner(handler, setting)
     result = runner.run()
     log_manager = RunnerLogManager(result, setting)
-    log_manager.make_html()
+    html_parser = HtmlParser(log_manager.get_log(), setting.log_folder_name, setting.debug)
+    html_parser.make_html()
 
 # 公開するメンバーを制御する
 __all__ = [

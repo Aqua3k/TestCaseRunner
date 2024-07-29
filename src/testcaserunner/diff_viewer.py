@@ -10,7 +10,8 @@ from jsonschema import validate, ValidationError
 
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
-from .testcase_logger import RunnerLog, HtmlParser, RunnerLogManager
+from .testcase_logger import RunnerLog, RunnerLogManager
+from .html_parser import HtmlParser
 
 class DiffHtmlParser(HtmlParser):
     logger = RunnerLogger("DiffHtmlParser")
