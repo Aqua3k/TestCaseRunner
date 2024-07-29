@@ -198,19 +198,37 @@ class HtmlParser:
         ret.append(fig)
         return "".join(ret)
 
+    @logger.function_tracer
+    def make_summary(self) -> str:
+        template = self.environment.get_template("summary.j2")
+        data = {
+            "date" : self.runner_log.metadata["created_date"],
+            "summary": f"<pre>{self.runner_log.df.describe()}</pre>",
+        }
+        return template.render(data)
+
+    @logger.function_tracer
+    def make_table(self) -> str:
+        template = self.environment.get_template("table.j2")
+        data = {
+            "table": self.make_table_contents(),
+            "table_columns": self.make_table_columns(),
+        }
+        return template.render(data)
+
     html_file_name = "result.html"
     @logger.function_tracer
     def make_html(self) -> None:
         template = self.environment.get_template("main.j2")
         data = {
-            "date": self.runner_log.metadata["created_date"],
-            "summary": f"<pre>{self.runner_log.df.describe()}</pre>",
-            "header_script_list": self.make_header_script_list(),
-            "footer_script_list": self.make_footer_script_list(),
-            "figures": self.make_figure(),
-            "css_list": self.make_css_list(),
-            "table": self.make_table(),
-            "table_columns": self.make_table_columns(),
+            "sections": [
+                *self.make_header_script_list(),
+                *self.make_css_list(),
+                self.make_summary(),
+                self.make_figure(),
+                self.make_table(),
+                *self.make_footer_script_list(),
+            ]
             }
         html_file_path = os.path.join(self.output_path, self.html_file_name)
         with open(html_file_path, mode="w") as f:
@@ -249,7 +267,7 @@ class HtmlParser:
         return template.render(data)
 
     @logger.function_tracer
-    def make_table(self) -> list[dict[str, str]]:
+    def make_table_contents(self) -> list[dict[str, str]]:
         ret = []
         for row in range(self.runner_log.metadata["testcase_num"]):
             rows = {}
