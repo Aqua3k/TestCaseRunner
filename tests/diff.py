@@ -51,6 +51,7 @@ def run_program2(testcase: TestCase):
         "score": score,
         "n": n,
         "m": m,
+        "nm": n + m,
     }
     return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
 

@@ -203,6 +203,8 @@ class RunnerLog:
         self._metadata["attributes"].pop(column, None)
     
     def _df_at(self, column: str, row: int) -> Any:
+        if column not in self._df.columns:
+            return None # 列がないならNoneを返す
         return self._df.at[str(row), column]
 
 class RunnerLogManager:

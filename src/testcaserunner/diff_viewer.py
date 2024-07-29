@@ -68,7 +68,7 @@ class DiffHtmlTableSection(HtmlTableSection):
         
         template = self.environment.get_template("cell_with_file_link_and_color.j2")
         data = {
-            "link": self.log._df_at(column, row),
+            "link": self.get_data(column, row),
             "value": "+",
             "color": "Gold",
         }
@@ -99,10 +99,10 @@ class DiffHtmlTableSection(HtmlTableSection):
         if match:
             original_column = match.group(1)
             extension = match.group(2)
-            this = self.log._df_at(column, row)
+            this = self.get_data(column, row)
             idx = self.extensions.index(extension)
             other_column = f"{original_column}.{self.extensions[idx^1]}"
-            other = self.log._df_at(other_column, row)
+            other = self.get_data(other_column, row)
         else:
             assert 0, "ここにくるはずないんだけど…"
         return this, other

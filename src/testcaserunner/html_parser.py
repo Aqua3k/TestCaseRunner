@@ -2,6 +2,7 @@ import os
 
 from jinja2 import Environment, FileSystemLoader
 import numpy as np
+from typing import Any
 
 from .runner import ResultStatus, RunnerLog, HtmlColumnType
 from .runner_logger import RunnerLogger
@@ -21,6 +22,13 @@ class HtmlSection:
         with open(file, mode="r", encoding="utf-8") as f:
             text = f.read()
         return text
+
+    def get_data(self, column: str, row: int) -> Any:
+        # 欠損値の場合は空文字にする
+        ret = self.log._df_at(column, row)
+        if ret is None:
+            ret = ""
+        return ret
 
 class HtmlFigureSection(HtmlSection):
     logger = RunnerLogger("HtmlFigureSection")
@@ -71,7 +79,7 @@ class HtmlTableSection(HtmlSection):
         ret = []
         for row in range(self.log.metadata["testcase_num"]):
             rows = {}
-            for column in self.log.df.columns:
+            for column in self.log.metadata["attributes"].keys():
                 match self.log.metadata["attributes"][column]:
                     case HtmlColumnType.URL:
                         value = self.get_url_cell(column, row)
@@ -90,7 +98,7 @@ class HtmlTableSection(HtmlSection):
     @logger.function_tracer
     def make_table_columns(self) -> dict[str, str]:
         table_columns = dict()
-        for column in self.log.df.columns:
+        for column in self.log.metadata["attributes"].keys():
             match self.log.metadata["attributes"][column]:
                 case HtmlColumnType.URL|HtmlColumnType.STATUS:
                     table_columns[column] = "normal"
@@ -104,7 +112,7 @@ class HtmlTableSection(HtmlSection):
 
     @logger.function_tracer
     def get_url_cell(self, column: str, row: int) -> str:
-        value = self.log._df_at(column, row)
+        value = self.get_data(column, row)
         template = self.environment.get_template("cell_with_file_link.j2")
         data = {
             "link": value,
@@ -121,7 +129,7 @@ class HtmlTableSection(HtmlSection):
     }
     @logger.function_tracer
     def get_status_cell(self, column: str, row: int) -> str:
-        value = self.log._df_at(column, row)
+        value = self.get_data(column, row)
         text, color = self.status_texts.get(value, ("IE", "red"))
         template = self.environment.get_template("cell_with_color.j2")
         data = {
@@ -132,7 +140,7 @@ class HtmlTableSection(HtmlSection):
     
     @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
-        value = self.log._df_at(column, row)
+        value = self.get_data(column, row)
         if type(value) is np.float64 or type(value) is np.float32:
             value = round(value, 3)
         template = self.environment.get_template("cell.j2")
