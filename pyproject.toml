@@ -8,6 +8,7 @@ dependencies = [
     "pandas==2.1.4",
     "seaborn==0.13.1",
     "tqdm==4.66.2",
+    "jsonschema==4.23.0",
 ]
 
 [tool.setuptools.packages.find]
