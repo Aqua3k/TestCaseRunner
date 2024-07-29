@@ -3,6 +3,7 @@ import json
 import glob
 from typing import Any, Optional, Match
 import re
+from jinja2 import Environment
 
 import pandas as pd
 import numpy as np
@@ -11,46 +12,17 @@ from jsonschema import validate, ValidationError
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
 from .runner import RunnerLog, RunnerLogManager
-from .html_parser import HtmlParser
+from .html_parser import (HtmlParser,
+                          HtmlTableSection,
+                          HtmlHeaderScriptSection,
+                          HtmlCssSection,
+                          HtmlTableSection,
+                          HtmlFooterScriptSection,)
 
-class DiffHtmlParser(HtmlParser):
-    logger = RunnerLogger("DiffHtmlParser")
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
-        super().__init__(runner_log, output_path, debug)
-    
-    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
-    @logger.function_tracer
-    def get_match(self, column: str) -> Optional[Match]:
-        return re.match(self.column_pattern, column)
-
-    @logger.function_tracer
-    def is_diff_column(self, column: str) -> bool:
-        return bool(self.get_match(column))
-    
-    extensions = ["1", "2"]
-    @logger.function_tracer
-    def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
-        match = self.get_match(column)
-        if match:
-            original_column = match.group(1)
-            extension = match.group(2)
-            this = self.runner_log._df_at(column, row)
-            idx = self.extensions.index(extension)
-            other_column = f"{original_column}.{self.extensions[idx^1]}"
-            other = self.runner_log._df_at(other_column, row)
-        else:
-            assert 0, "ここにくるはずないんだけど…"
-        return this, other
-
-    @logger.function_tracer
-    def get_color(self, this: Any, other: Any) -> str:
-        if type(this) is str or type(other) is str:
-            return "Gold"
-        else:
-            if this < other:
-                return "Cyan"
-            else:
-                return "Hotpink"
+class DiffHtmlTableSection(HtmlTableSection):
+    logger = RunnerLogger("DiffHtmlTableSection")
+    def __init__(self, environment: Environment, log: RunnerLog):
+        super().__init__(environment, log)
 
     @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
@@ -69,6 +41,51 @@ class DiffHtmlParser(HtmlParser):
 
         # それ以外は普通のデータを返す
         return super().get_text_cell(column, row)
+
+    @logger.function_tracer
+    def get_color(self, this: Any, other: Any) -> str:
+        if type(this) is str or type(other) is str:
+            return "Gold"
+        else:
+            if this < other:
+                return "Cyan"
+            else:
+                return "Hotpink"
+
+    @logger.function_tracer
+    def is_diff_column(self, column: str) -> bool:
+        return bool(self.get_match(column))
+
+    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    @logger.function_tracer
+    def get_match(self, column: str) -> Optional[Match]:
+        return re.match(self.column_pattern, column)
+
+    extensions = ["1", "2"]
+    @logger.function_tracer
+    def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
+        match = self.get_match(column)
+        if match:
+            original_column = match.group(1)
+            extension = match.group(2)
+            this = self.log._df_at(column, row)
+            idx = self.extensions.index(extension)
+            other_column = f"{original_column}.{self.extensions[idx^1]}"
+            other = self.log._df_at(other_column, row)
+        else:
+            assert 0, "ここにくるはずないんだけど…"
+        return this, other
+
+class DiffHtmlParser(HtmlParser):
+    logger = RunnerLogger("DiffHtmlParser")
+    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
+        super().__init__(runner_log, output_path, debug)
+        self.sections = [
+            HtmlHeaderScriptSection,
+            HtmlCssSection,
+            DiffHtmlTableSection,
+            HtmlFooterScriptSection,
+        ]
 
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
@@ -90,9 +107,10 @@ class RunnerLogViewer:
             validate(instance=data, schema=schema)
         except ValidationError as e:
             self.logger.info("json schema validation error.")
-            return
+            return False
 
         metadata: dict|None = data.get("metadata")
+        assert metadata is not None, "metadataがNoneだよ"
         libname = metadata.get("library_name")
         if libname != RunnerMetadata.LIB_NAME:
             return False # ライブラリ名が入っていなかったらFalse
