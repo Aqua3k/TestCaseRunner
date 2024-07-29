@@ -12,7 +12,7 @@
           },
           "additionalProperties": false
         },
-        "hash": {
+        "input_hash": {
           "type": "object",
           "patternProperties": {
             "^\\d+$": { "type": "string" }
@@ -48,7 +48,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["testcase", "hash", "in", "stdout", "stderr", "status"],
+      "required": ["testcase", "input_hash", "in", "stdout", "stderr", "status"],
       "additionalProperties": true
     },
     "metadata": {
@@ -61,13 +61,13 @@
           "type": "object",
           "properties": {
             "testcase": { "type": "integer" },
-            "hash": { "type": "integer" },
+            "input_hash": { "type": "integer" },
             "in": { "type": "integer" },
             "stdout": { "type": "integer" },
             "stderr": { "type": "integer" },
             "status": { "type": "integer" }
           },
-          "required": ["testcase", "hash", "in", "stdout", "stderr", "status"],
+          "required": ["testcase", "input_hash", "in", "stdout", "stderr", "status"],
           "additionalProperties": true
         }
       },

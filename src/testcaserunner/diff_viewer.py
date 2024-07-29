@@ -10,7 +10,7 @@ from jsonschema import validate, ValidationError
 
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
-from .testcase_logger import RunnerLog, HtmlParser
+from .testcase_logger import RunnerLog, HtmlParser, RunnerLogManager
 
 class DiffHtmlParser(HtmlParser):
     logger = RunnerLogger("DiffHtmlParser")
@@ -129,13 +129,13 @@ class RunnerLogViewer:
     @logger.function_tracer
     def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
-        log2.drop("testcase")
+        log2.drop(RunnerLogManager.infilename_col)
         
         # 属性名を置換する
         attributes1 = log1.metadata["attributes"]
         att1: dict[Any, Any] = {}
         for k, v in attributes1.items():
-            if k != "hash" and k != "testcase":
+            if k != RunnerLogManager.input_hash_col and k != RunnerLogManager.infilename_col:
                 att1[f"{k}.1"] = v
             else:
                 att1[k] = v
@@ -143,7 +143,7 @@ class RunnerLogViewer:
         attributes2 = log2.metadata["attributes"]
         att2: dict[Any, Any] = {}
         for k, v in attributes2.items():
-            if k != "hash" and k != "testcase":
+            if k != RunnerLogManager.input_hash_col and k != RunnerLogManager.infilename_col:
                 att1[f"{k}.2"] = v
             else:
                 att1[k] = v
@@ -154,7 +154,7 @@ class RunnerLogViewer:
         metadata["attributes"] = attributes
 
         # DataFrameをマージ
-        merged_df = pd.merge(log1.df, log2.df, on="hash", suffixes=self.merged_data_suffixes)
+        merged_df = pd.merge(log1.df, log2.df, on=RunnerLogManager.input_hash_col, suffixes=self.merged_data_suffixes)
 
         runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
 

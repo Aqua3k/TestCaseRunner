@@ -50,7 +50,9 @@ class RunnerLogManager:
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
-    hash_col = "hash"
+    input_hash_col = "input_hash"
+    stdout_hash_col = "stdout_hash"
+    stderr_hash_col = "stderr_hash"
 
     logger = RunnerLogger("RunnerLogManager")
     def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
@@ -60,7 +62,9 @@ class RunnerLogManager:
         self.results = results
         self.attributes: dict[str, HtmlColumnType] = {
             self.infilename_col: HtmlColumnType.TEXT,
-            self.hash_col: HtmlColumnType.METADATA,
+            self.input_hash_col: HtmlColumnType.METADATA,
+            self.stdout_hash_col: HtmlColumnType.METADATA,
+            self.stderr_hash_col: HtmlColumnType.METADATA,
             self.infile_col: HtmlColumnType.URL,
             self.stdout_col: HtmlColumnType.URL,
             self.stderr_col: HtmlColumnType.URL,
@@ -118,10 +122,10 @@ class RunnerLogManager:
 
         contents: defaultdict[str, list[Any]] = defaultdict(list)
         for testcase, result in zip(testcases, results):
-            path = testcase.input_file_path
-            hash = self.calculate_file_hash(path)
             contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
-            contents[self.hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{hash}")
+            contents[self.input_hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{self.get_file_hash(testcase.input_file_path)}")
+            contents[self.stdout_hash_col].append(f"{self.get_file_hash(testcase.stdout_file_path)}")
+            contents[self.stderr_hash_col].append(f"{self.get_file_hash(testcase.stderr_file_path)}")
             contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
@@ -147,6 +151,13 @@ class RunnerLogManager:
         json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
+    
+    @logger.function_tracer
+    def get_file_hash(self, path: str) -> str:
+        if os.path.exists(path):
+            return self.calculate_file_hash(path)
+        else:
+            return "" #ファイルが開けないときは空文字にしておく
 
     @logger.function_tracer
     def calculate_file_hash(self, file_path: str) -> str:
