@@ -6,6 +6,7 @@ import re
 
 import pandas as pd
 import numpy as np
+from jsonschema import validate, ValidationError
 
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
@@ -81,11 +82,16 @@ class RunnerLogViewer:
     
     @logger.function_tracer
     def is_valid(self, data: dict) -> bool:
-        contents: dict|None = data.get("contents")
-        metadata: dict|None = data.get("metadata")
-        if contents is None or metadata is None:
-            return False # データが取得できるか？
+        try:
+            schema_path = os.path.join(os.path.split(__file__)[0], "schemas", "result_schema.json")
+            with open(schema_path, 'r') as f:
+                schema: dict = json.load(f)
+            validate(instance=data, schema=schema)
+        except ValidationError as e:
+            self.logger.info("json schema validation error.")
+            return
 
+        metadata: dict|None = data.get("metadata")
         libname = metadata.get("library_name")
         if libname != RunnerMetadata.LIB_NAME:
             return False # ライブラリ名が入っていなかったらFalse
@@ -101,7 +107,7 @@ class RunnerLogViewer:
             # ロードできなければ処理しない
             self.logger.info(f"{file} のロードでエラーが起きました。")
             return
-        
+
         if not self.is_valid(loaded_data):
             self.logger.info(f"{file} は正しいデータではありませんでした。")
             return
