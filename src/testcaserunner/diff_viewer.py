@@ -21,6 +21,7 @@ from .html_parser import (HtmlParser,
 
 class DiffHtmlTableSection(HtmlTableSection):
     logger = RunnerLogger("DiffHtmlTableSection")
+    extensions = ["1", "2"]
     def __init__(self, environment: Environment, log: RunnerLog):
         super().__init__(environment, log)
 
@@ -41,6 +42,37 @@ class DiffHtmlTableSection(HtmlTableSection):
 
         # それ以外は普通のデータを返す
         return super().get_text_cell(column, row)
+    
+    @logger.function_tracer
+    def get_url_cell(self, column: str, row: int) -> str:
+        match = self.get_match(column)
+        if match:
+            original_column = match.group(1)
+            extension = match.group(2)
+        else:
+            assert 0, "ここにくるはずないんだけど"
+        
+        match original_column:
+            case RunnerLogManager.infile_col:
+                return super().get_url_cell(column, row)
+            case RunnerLogManager.stdout_col:
+                col = RunnerLogManager.stdout_hash_col
+            case RunnerLogManager.stderr_col:
+                col = RunnerLogManager.stdout_hash_col
+            case _:
+                assert 0, "ここにくるはずないんだけど"
+        col = f"{col}.{extension}"
+        this, other = self.get_diff_data(col, row)
+        if this == other:
+            return super().get_url_cell(column, row)
+        
+        template = self.environment.get_template("cell_with_file_link_and_color.j2")
+        data = {
+            "link": self.log._df_at(column, row),
+            "value": "+",
+            "color": "Gold",
+        }
+        return template.render(data)
 
     @logger.function_tracer
     def get_color(self, this: Any, other: Any) -> str:
@@ -56,12 +88,11 @@ class DiffHtmlTableSection(HtmlTableSection):
     def is_diff_column(self, column: str) -> bool:
         return bool(self.get_match(column))
 
-    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    column_pattern = r'^([a-zA-Z0-9_]+)\.([12])$'
     @logger.function_tracer
     def get_match(self, column: str) -> Optional[Match]:
         return re.match(self.column_pattern, column)
 
-    extensions = ["1", "2"]
     @logger.function_tracer
     def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
         match = self.get_match(column)
