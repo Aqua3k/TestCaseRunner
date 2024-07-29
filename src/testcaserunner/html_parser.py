@@ -3,9 +3,8 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import numpy as np
 
-from .runner import ResultStatus
+from .runner import ResultStatus, RunnerLog, HtmlColumnType
 from .runner_logger import RunnerLogger
-from .testcase_logger import RunnerLog, HtmlColumnType
 
 class HtmlSection:
     logger = RunnerLogger("HtmlSection")
