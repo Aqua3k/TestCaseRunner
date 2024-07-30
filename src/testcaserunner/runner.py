@@ -203,6 +203,8 @@ class RunnerLog:
         self._metadata["attributes"].pop(column, None)
     
     def _df_at(self, column: str, row: int) -> Any:
+        if column not in self._df.columns:
+            return None # 列がないならNoneを返す
         return self._df.at[str(row), column]
 
 class RunnerLogManager:
@@ -324,7 +326,7 @@ class RunnerLogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-from .html_parser import HtmlParser # 循環import対策
+from .html_builder import make_html  # 循環import対策
 
 def run(
         handler: Callable[[TestCase], TestCaseResult],
@@ -365,8 +367,8 @@ def run(
     runner = TestCaseRunner(handler, setting)
     result = runner.run()
     log_manager = RunnerLogManager(result, setting)
-    html_parser = HtmlParser(log_manager.get_log(), setting.log_folder_name, setting.debug)
-    html_parser.make_html()
+    file = os.path.join(setting.log_folder_name, "result.html")
+    make_html(file, log_manager.get_log(), setting.debug)
 
 # 公開するメンバーを制御する
 __all__ = [

@@ -3,7 +3,6 @@ import json
 import glob
 from typing import Any, Optional, Match
 import re
-from jinja2 import Environment
 
 import pandas as pd
 import numpy as np
@@ -12,17 +11,13 @@ from jsonschema import validate, ValidationError
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
 from .runner import RunnerLog, RunnerLogManager
-from .html_parser import (HtmlParser,
-                          HtmlTableSection,
-                          HtmlHeaderScriptSection,
-                          HtmlCssSection,
-                          HtmlTableSection,
-                          HtmlFooterScriptSection,)
+from .html_builder import ResultHtmlBuilder, HtmlBuilder
 
-class DiffHtmlTableSection(HtmlTableSection):
+class DiffHtmlBuilder(ResultHtmlBuilder):
     logger = RunnerLogger("DiffHtmlTableSection")
-    def __init__(self, environment: Environment, log: RunnerLog):
-        super().__init__(environment, log)
+    extensions = ["1", "2"]
+    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool):
+        super().__init__(output_html_path, log, debug)
 
     @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
@@ -41,6 +36,37 @@ class DiffHtmlTableSection(HtmlTableSection):
 
         # それ以外は普通のデータを返す
         return super().get_text_cell(column, row)
+    
+    @logger.function_tracer
+    def get_url_cell(self, column: str, row: int) -> str:
+        match = self.get_match(column)
+        if match:
+            original_column = match.group(1)
+            extension = match.group(2)
+        else:
+            assert 0, "ここにくるはずないんだけど"
+        
+        match original_column:
+            case RunnerLogManager.infile_col:
+                return super().get_url_cell(column, row)
+            case RunnerLogManager.stdout_col:
+                col = RunnerLogManager.stdout_hash_col
+            case RunnerLogManager.stderr_col:
+                col = RunnerLogManager.stdout_hash_col
+            case _:
+                assert 0, "ここにくるはずないんだけど"
+        col = f"{col}.{extension}"
+        this, other = self.get_diff_data(col, row)
+        if this == other:
+            return super().get_url_cell(column, row)
+        
+        template = self.environment.get_template("cell_with_file_link_and_color.j2")
+        data = {
+            "link": self.get_data(column, row),
+            "value": "+",
+            "color": "Gold",
+        }
+        return template.render(data)
 
     @logger.function_tracer
     def get_color(self, this: Any, other: Any) -> str:
@@ -56,36 +82,44 @@ class DiffHtmlTableSection(HtmlTableSection):
     def is_diff_column(self, column: str) -> bool:
         return bool(self.get_match(column))
 
-    column_pattern = r'^([a-zA-Z0-9]+)\.([12])$'
+    column_pattern = r'^([a-zA-Z0-9_]+)\.([12])$'
     @logger.function_tracer
     def get_match(self, column: str) -> Optional[Match]:
         return re.match(self.column_pattern, column)
 
-    extensions = ["1", "2"]
     @logger.function_tracer
     def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
         match = self.get_match(column)
         if match:
             original_column = match.group(1)
             extension = match.group(2)
-            this = self.log._df_at(column, row)
+            this = self.get_data(column, row)
             idx = self.extensions.index(extension)
             other_column = f"{original_column}.{self.extensions[idx^1]}"
-            other = self.log._df_at(other_column, row)
+            other = self.get_data(other_column, row)
         else:
             assert 0, "ここにくるはずないんだけど…"
         return this, other
 
-class DiffHtmlParser(HtmlParser):
-    logger = RunnerLogger("DiffHtmlParser")
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
-        super().__init__(runner_log, output_path, debug)
-        self.sections = [
-            HtmlHeaderScriptSection,
-            HtmlCssSection,
-            DiffHtmlTableSection,
-            HtmlFooterScriptSection,
-        ]
+class DiffDirector:
+    def __init__(self, builder: HtmlBuilder):
+        self.__builder = builder
+
+    def construct(self):
+        self.__builder.add_summary()
+        self.__builder.add_figure('histgram.png')
+        self.__builder.add_figure('heatmap.png')
+        self.__builder.add_table()
+        self.__builder.add_script("js/Table.js")
+        self.__builder.add_script("js/checkbox.js")
+        self.__builder.add_css("js/SortTable.css")
+        self.__builder.add_css_link(r"https://newcss.net/new.min.css")
+        self.__builder.write()
+
+def make_html(path: str, log: RunnerLog, debug: bool) -> None:
+    builder = DiffHtmlBuilder(path, log, debug)
+    director = DiffDirector(builder)
+    director.construct()
 
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
@@ -176,6 +210,4 @@ class RunnerLogViewer:
         merged_df = pd.merge(log1.df, log2.df, on=RunnerLogManager.input_hash_col, suffixes=self.merged_data_suffixes)
 
         runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
-
-        parser = DiffHtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
-        parser.make_html()
+        make_html("result.html", runner_log, True)
