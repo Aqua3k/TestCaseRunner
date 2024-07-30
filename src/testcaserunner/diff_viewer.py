@@ -3,7 +3,6 @@ import json
 import glob
 from typing import Any, Optional, Match
 import re
-from jinja2 import Environment
 
 import pandas as pd
 import numpy as np
@@ -12,18 +11,13 @@ from jsonschema import validate, ValidationError
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
 from .runner import RunnerLog, RunnerLogManager
-from .html_parser import (HtmlParser,
-                          HtmlTableSection,
-                          HtmlHeaderScriptSection,
-                          HtmlCssSection,
-                          HtmlTableSection,
-                          HtmlFooterScriptSection,)
+from .html_builder import ResultHtmlBuilder, HtmlBuilder
 
-class DiffHtmlTableSection(HtmlTableSection):
+class DiffHtmlBuilder(ResultHtmlBuilder):
     logger = RunnerLogger("DiffHtmlTableSection")
     extensions = ["1", "2"]
-    def __init__(self, environment: Environment, log: RunnerLog):
-        super().__init__(environment, log)
+    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool):
+        super().__init__(output_html_path, log, debug)
 
     @logger.function_tracer
     def get_text_cell(self, column: str, row: int) -> str:
@@ -107,16 +101,25 @@ class DiffHtmlTableSection(HtmlTableSection):
             assert 0, "ここにくるはずないんだけど…"
         return this, other
 
-class DiffHtmlParser(HtmlParser):
-    logger = RunnerLogger("DiffHtmlParser")
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
-        super().__init__(runner_log, output_path, debug)
-        self.sections = [
-            HtmlHeaderScriptSection,
-            HtmlCssSection,
-            DiffHtmlTableSection,
-            HtmlFooterScriptSection,
-        ]
+class DiffDirector:
+    def __init__(self, builder: HtmlBuilder):
+        self.__builder = builder
+
+    def construct(self):
+        self.__builder.add_summary()
+        self.__builder.add_figure('histgram.png')
+        self.__builder.add_figure('heatmap.png')
+        self.__builder.add_table()
+        self.__builder.add_script("js/Table.js")
+        self.__builder.add_script("js/checkbox.js")
+        self.__builder.add_css("js/SortTable.css")
+        self.__builder.add_css_link(r"https://newcss.net/new.min.css")
+        self.__builder.write()
+
+def make_html(path: str, log: RunnerLog, debug: bool) -> None:
+    builder = DiffHtmlBuilder(path, log, debug)
+    director = DiffDirector(builder)
+    director.construct()
 
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
@@ -207,6 +210,4 @@ class RunnerLogViewer:
         merged_df = pd.merge(log1.df, log2.df, on=RunnerLogManager.input_hash_col, suffixes=self.merged_data_suffixes)
 
         runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
-
-        parser = DiffHtmlParser(runner_log, ".", False) # TODO 要調整 リンクが切れたりする
-        parser.make_html()
+        make_html("result.html", runner_log, True)
