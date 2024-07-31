@@ -4,9 +4,18 @@ from jinja2 import Environment, FileSystemLoader
 import numpy as np
 from typing import Any
 from abc import ABC, abstractmethod
+from enum import IntEnum, auto
 
-from .runner import ResultStatus, RunnerLog, HtmlColumnType
+from .runner import ResultStatus, RunnerLog
 from .runner_logger import RunnerLogger
+
+class HtmlColumnType(IntEnum):
+    """HTMLファイルのcolumnの情報
+    """
+    URL = auto()
+    STATUS = auto()
+    TEXT = auto()
+    METADATA = auto()
 
 class HtmlBuilder(ABC):
     @abstractmethod

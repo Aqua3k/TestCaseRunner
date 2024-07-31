@@ -5,7 +5,6 @@ from typing import Callable
 import time
 import hashlib
 import json
-from enum import IntEnum, auto
 from collections import defaultdict
 from typing import Any
 import shutil
@@ -177,14 +176,6 @@ class TestCaseRunner:
                 f.write(test_result.stderr)
         return testcase, test_result
 
-class HtmlColumnType(IntEnum):
-    """HTMLファイルのcolumnの情報
-    """
-    URL = auto()
-    STATUS = auto()
-    TEXT = auto()
-    METADATA = auto()
-
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict) -> None:
         self._df = pd.DataFrame(contents)
@@ -206,6 +197,8 @@ class RunnerLog:
         if column not in self._df.columns:
             return None # 列がないならNoneを返す
         return self._df.at[str(row), column]
+
+from .html_builder import HtmlColumnType
 
 class RunnerLogManager:
     js_file_path = "js"
