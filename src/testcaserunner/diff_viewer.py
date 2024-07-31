@@ -106,9 +106,9 @@ class DiffDirector:
         self.__builder = builder
 
     def construct(self):
+        self.__builder.add_heading("Summary")
         self.__builder.add_summary()
-        self.__builder.add_figure('histgram.png')
-        self.__builder.add_figure('heatmap.png')
+        self.__builder.add_heading("Table")
         self.__builder.add_table()
         self.__builder.add_script("js/Table.js")
         self.__builder.add_script("js/checkbox.js")

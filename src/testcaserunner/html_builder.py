@@ -3,29 +3,40 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import numpy as np
 from typing import Any
+from abc import ABC, abstractmethod
 
 from .runner import ResultStatus, RunnerLog, HtmlColumnType
 from .runner_logger import RunnerLogger
 
-class HtmlBuilder:
+class HtmlBuilder(ABC):
+    @abstractmethod
+    def add_heading(self, text: str) -> None:
+        pass
+    @abstractmethod
     def add_figure(self, figure_path: str) -> None:
         pass
+    @abstractmethod
     def add_summary(self) -> None:
         pass
+    @abstractmethod
     def add_table(self) -> None:
         pass
+    @abstractmethod
     def add_script(self, script_path: str) -> None:
         pass
+    @abstractmethod
     def add_css(self, css_path: str) -> None:
         pass
+    @abstractmethod
     def add_css_link(self, css_path: str) -> None:
         pass
+    @abstractmethod
     def write(self) -> None:
         pass
 
 class ResultHtmlBuilder(HtmlBuilder):
     logger = RunnerLogger("ResultHtmlBuilder")
-    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool):
+    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool) -> None:
         if debug:
             self.logger.enable_debug_mode()
         loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
@@ -33,6 +44,11 @@ class ResultHtmlBuilder(HtmlBuilder):
         self.log = log
         self.output_html_path = output_html_path
         self.contents: list[str] = []
+
+    @logger.function_tracer
+    def add_heading(self, text: str) -> None:
+        template = self.environment.get_template("heading.j2")
+        self.contents.append(template.render({"text": text}))
 
     @logger.function_tracer
     def add_figure(self, figure_path: str) -> None:
@@ -171,13 +187,16 @@ class ResultHtmlBuilder(HtmlBuilder):
         return template.render(data)
 
 class Director:
-    def __init__(self, builder: HtmlBuilder):
+    def __init__(self, builder: HtmlBuilder) -> None:
         self.__builder = builder
 
     def construct(self):
+        self.__builder.add_heading("Summary")
         self.__builder.add_summary()
-        self.__builder.add_figure('histgram.png')
-        self.__builder.add_figure('heatmap.png')
+        self.__builder.add_heading("Figures")
+        self.__builder.add_figure("histgram.png")
+        self.__builder.add_figure("heatmap.png")
+        self.__builder.add_heading("Table")
         self.__builder.add_table()
         self.__builder.add_script("js/Table.js")
         self.__builder.add_script("js/checkbox.js")
