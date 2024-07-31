@@ -3,29 +3,55 @@ import os
 from jinja2 import Environment, FileSystemLoader
 import numpy as np
 from typing import Any
+from abc import ABC, abstractmethod
+from enum import Enum, auto
+from dataclasses import dataclass
 
-from .runner import ResultStatus, RunnerLog, HtmlColumnType
+from .runner import ResultStatus, RunnerLog
 from .runner_logger import RunnerLogger
 
-class HtmlBuilder:
+class HtmlColumnType(Enum):
+    """HTMLファイルのcolumnの情報
+    """
+    URL = auto()
+    STATUS = auto()
+    TEXT = auto()
+    METADATA = auto()
+
+@dataclass
+class Column:
+    title: str
+    type: HtmlColumnType
+
+class HtmlBuilder(ABC):
+    @abstractmethod
+    def add_heading(self, text: str) -> None:
+        pass
+    @abstractmethod
     def add_figure(self, figure_path: str) -> None:
         pass
+    @abstractmethod
     def add_summary(self) -> None:
         pass
+    @abstractmethod
     def add_table(self) -> None:
         pass
+    @abstractmethod
     def add_script(self, script_path: str) -> None:
         pass
+    @abstractmethod
     def add_css(self, css_path: str) -> None:
         pass
+    @abstractmethod
     def add_css_link(self, css_path: str) -> None:
         pass
+    @abstractmethod
     def write(self) -> None:
         pass
 
 class ResultHtmlBuilder(HtmlBuilder):
     logger = RunnerLogger("ResultHtmlBuilder")
-    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool):
+    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool) -> None:
         if debug:
             self.logger.enable_debug_mode()
         loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
@@ -33,6 +59,12 @@ class ResultHtmlBuilder(HtmlBuilder):
         self.log = log
         self.output_html_path = output_html_path
         self.contents: list[str] = []
+        self.columns = self.construct_table_columns()
+
+    @logger.function_tracer
+    def add_heading(self, text: str) -> None:
+        template = self.environment.get_template("heading.j2")
+        self.contents.append(template.render({"text": text}))
 
     @logger.function_tracer
     def add_figure(self, figure_path: str) -> None:
@@ -80,6 +112,22 @@ class ResultHtmlBuilder(HtmlBuilder):
         data = {"sections": self.contents}
         with open(self.output_html_path, mode="w") as f:
             f.write(template.render(data))
+    
+    @logger.function_tracer
+    def construct_table_columns(self) -> list[Column]:
+        columns = [
+            Column("testcase", HtmlColumnType.TEXT),
+            Column("in", HtmlColumnType.URL),
+            Column("stdout", HtmlColumnType.URL),
+            Column("stderr", HtmlColumnType.URL),
+            Column("status", HtmlColumnType.STATUS),
+            Column("input_hash", HtmlColumnType.METADATA),
+            Column("stdout_hash", HtmlColumnType.METADATA),
+            Column("stderr_hash", HtmlColumnType.METADATA),
+        ]
+        for attribute in self.log.metadata["attributes"]:
+            columns.append(Column(attribute, HtmlColumnType.TEXT))
+        return columns
 
     @logger.function_tracer
     def load_file(self, file: str) -> str:
@@ -100,31 +148,31 @@ class ResultHtmlBuilder(HtmlBuilder):
         ret = []
         for row in range(self.log.metadata["testcase_num"]):
             rows = {}
-            for column in self.log.metadata["attributes"].keys():
-                match self.log.metadata["attributes"][column]:
+            for column in self.columns:
+                match column.type:
                     case HtmlColumnType.URL:
-                        value = self.get_url_cell(column, row)
+                        value = self.get_url_cell(column.title, row)
                     case HtmlColumnType.STATUS:
-                        value = self.get_status_cell(column, row)
+                        value = self.get_status_cell(column.title, row)
                     case HtmlColumnType.TEXT:
-                        value = self.get_text_cell(column, row)
+                        value = self.get_text_cell(column.title, row)
                     case HtmlColumnType.METADATA:
                         continue
                     case _:
                         assert "error: 不明なHtmlColumnTypeがあります。"
-                rows[column] = value
+                rows[column.title] = value
             ret.append(rows)
         return ret
 
     @logger.function_tracer
     def make_table_columns(self) -> dict[str, str]:
         table_columns = dict()
-        for column in self.log.metadata["attributes"].keys():
-            match self.log.metadata["attributes"][column]:
+        for column in self.columns:
+            match column.type:
                 case HtmlColumnType.URL|HtmlColumnType.STATUS:
-                    table_columns[column] = "normal"
+                    table_columns[column.title] = "normal"
                 case HtmlColumnType.TEXT:
-                    table_columns[column] = "sort"
+                    table_columns[column.title] = "sort"
                 case HtmlColumnType.METADATA:
                     continue
                 case _:
@@ -171,13 +219,16 @@ class ResultHtmlBuilder(HtmlBuilder):
         return template.render(data)
 
 class Director:
-    def __init__(self, builder: HtmlBuilder):
+    def __init__(self, builder: HtmlBuilder) -> None:
         self.__builder = builder
 
     def construct(self):
+        self.__builder.add_heading("Summary")
         self.__builder.add_summary()
-        self.__builder.add_figure('histgram.png')
-        self.__builder.add_figure('heatmap.png')
+        self.__builder.add_heading("Figures")
+        self.__builder.add_figure("histgram.png")
+        self.__builder.add_figure("heatmap.png")
+        self.__builder.add_heading("Table")
         self.__builder.add_table()
         self.__builder.add_script("js/Table.js")
         self.__builder.add_script("js/checkbox.js")

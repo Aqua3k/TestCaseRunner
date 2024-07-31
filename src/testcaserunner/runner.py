@@ -5,7 +5,6 @@ from typing import Callable
 import time
 import hashlib
 import json
-from enum import IntEnum, auto
 from collections import defaultdict
 from typing import Any
 import shutil
@@ -177,14 +176,6 @@ class TestCaseRunner:
                 f.write(test_result.stderr)
         return testcase, test_result
 
-class HtmlColumnType(IntEnum):
-    """HTMLファイルのcolumnの情報
-    """
-    URL = auto()
-    STATUS = auto()
-    TEXT = auto()
-    METADATA = auto()
-
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict) -> None:
         self._df = pd.DataFrame(contents)
@@ -224,16 +215,6 @@ class RunnerLogManager:
         if settings.debug:
             self.logger.enable_debug_mode()
         self.results = results
-        self.attributes: dict[str, HtmlColumnType] = {
-            self.infilename_col: HtmlColumnType.TEXT,
-            self.input_hash_col: HtmlColumnType.METADATA,
-            self.stdout_hash_col: HtmlColumnType.METADATA,
-            self.stderr_hash_col: HtmlColumnType.METADATA,
-            self.infile_col: HtmlColumnType.URL,
-            self.stdout_col: HtmlColumnType.URL,
-            self.stderr_col: HtmlColumnType.URL,
-            self.status_col: HtmlColumnType.STATUS,
-        }
         self.make_json_file()
         self.make_figure()
         self.base_dir = os.path.split(__file__)[0]
@@ -241,11 +222,6 @@ class RunnerLogManager:
     @logger.function_tracer
     def get_log(self) -> RunnerLog:
         return self.runner_log
-
-    json_file_name = "result.json"
-    @logger.function_tracer
-    def add_attribute(self, key: str, type: HtmlColumnType) -> None:
-        self.attributes[key] = type
 
     histgram_fig_name = 'histgram.png'
     heatmap_fig_name = 'heatmap.png'
@@ -276,9 +252,6 @@ class RunnerLogManager:
                 attributes[attribute] = ""
         user_attributes = list(attributes.keys())
 
-        for key in user_attributes:
-            self.add_attribute(key, HtmlColumnType.TEXT)
-
         contents: defaultdict[str, list[Any]] = defaultdict(list)
         for testcase, result in zip(testcases, results):
             contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
@@ -300,14 +273,14 @@ class RunnerLogManager:
             "library_name": RunnerMetadata.LIB_NAME,
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
             "testcase_num": len(testcases),
-            "attributes": self.attributes,
+            "attributes": user_attributes,
         }
         self.json_file = {
             "contents": contents,
             "metadata": metadata,
         }
         self.runner_log: RunnerLog = RunnerLog(contents, metadata)
-        json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
+        json_file_path = os.path.join(self.settings.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
     
