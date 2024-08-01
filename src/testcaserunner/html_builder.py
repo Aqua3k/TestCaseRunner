@@ -146,7 +146,7 @@ class ResultHtmlBuilder(HtmlBuilder):
     @logger.function_tracer
     def make_table_contents(self) -> list[dict[str, str]]:
         ret = []
-        for row in range(self.log.metadata["testcase_num"]):
+        for row in range(len(self.log.df)):
             rows = {}
             for column in self.columns:
                 match column.type:

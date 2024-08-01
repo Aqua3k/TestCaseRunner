@@ -250,7 +250,6 @@ class RunnerLogManager:
         metadata = {
             "library_name": RunnerMetadata.LIB_NAME,
             "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
-            "testcase_num": len(testcases),
             "attributes": user_attributes,
         }
         self.json_file = {
