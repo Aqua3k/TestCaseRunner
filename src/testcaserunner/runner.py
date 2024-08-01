@@ -46,32 +46,10 @@ class RunnerSettings:
         self.stderr_file_output: bool = stderr_file_output
         self.datetime = datetime.datetime.now()
         self.log_folder_name: str = self.get_log_file_path(log_folder_name)
-
-        if repeat_count <= 0:
-            raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
-
-        if not Path(self.input_file_path).is_dir():
-            raise InvalidPathException(f"テストケースファイルへのパス{self.input_file_path}は無効なパスです。")
-
-        if self.log_dir_path not in glob.glob("*"):
-            os.mkdir(self.log_dir_path)
-        os.mkdir(self.log_folder_name)
         self.stdout_log_path = os.path.join(self.log_folder_name, self.stdout_dir_path)
-        os.mkdir(self.stdout_log_path)
         self.stderr_log_path = os.path.join(self.log_folder_name, self.stderr_dir_path)
-        os.mkdir(self.stderr_log_path)
         self.input_file_copy_path = os.path.join(self.log_folder_name, "in")
-        shutil.copytree(self.input_file_path, self.input_file_copy_path)
         self.fig_dir_path = os.path.join(self.log_folder_name, "fig")
-        os.mkdir(self.fig_dir_path)
-        for file in self.copy_target_files:
-            file_path = Path(file)
-            if file_path.is_file():
-                shutil.copy(file, self.log_folder_name)
-            elif file_path.is_dir():
-                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
-            else:
-                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
 
     @logger.function_tracer
     def get_log_file_path(self, log_folder_name: str | None) -> str:
@@ -116,12 +94,10 @@ class TestCaseRunner:
         return test_cases
 
     @logger.function_tracer
-    def run(self) -> list[tuple[TestCase, TestCaseResult]]:
+    def start(self) -> list[tuple[TestCase, TestCaseResult]]:
         futures:list[Future] = []
         test_cases: list[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
-        if len(files) == 0:
-            raise NoTestcaseFileException(f"{self.input_file_path}ディレクトリにファイルが1つもありません。")
         test_cases = self.make_testcases(files)
         executor_class: type[Executor] | None = None
         if self.settings.parallel_processing_method.lower() == "process":
@@ -215,9 +191,11 @@ class RunnerLogManager:
         if settings.debug:
             self.logger.enable_debug_mode()
         self.results = results
+    
+    @logger.function_tracer
+    def make_log(self) -> None:
         self.make_json_file()
         self.make_figure()
-        self.base_dir = os.path.split(__file__)[0]
     
     @logger.function_tracer
     def get_log(self) -> RunnerLog:
@@ -299,6 +277,52 @@ class RunnerLogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
+class Initializer:
+    def make_folder(self, path: str):
+        os.makedirs(path, exist_ok=True)
+    def copy_folder(self, src: str, dst: str):
+        shutil.copytree(src, dst)
+    def copy_file(self, src: str, dst: str):
+        shutil.copy(src, dst)
+
+def initialize(settings: RunnerSettings):
+    initializer = Initializer()
+    initializer.make_folder(settings.log_dir_path)
+    initializer.make_folder(settings.log_folder_name)
+    initializer.make_folder(settings.stdout_log_path)
+    initializer.make_folder(settings.stderr_log_path)
+    initializer.make_folder(settings.stdout_log_path)
+    initializer.make_folder(settings.fig_dir_path)
+    initializer.copy_folder(settings.input_file_path, settings.input_file_copy_path)
+    
+    for file in settings.copy_target_files:
+        file_path = Path(file)
+        if file_path.is_file():
+            initializer.copy_file(file, settings.log_folder_name)
+
+def validate(settings: RunnerSettings) -> None:
+    if settings.repeat_count <= 0 or type(settings.repeat_count) is not int:
+        raise ValueError("引数repeat_countの値は1以上の整数である必要があります。")
+    if not Path(settings.input_file_path).is_dir():
+        raise InvalidPathException(f"テストケースファイルへのパス{settings.input_file_path}は無効なパスです。")
+
+    for file in settings.copy_target_files:
+        file_path = Path(file)
+        if file_path.is_file():
+            continue
+        elif file_path.is_dir():
+            settings.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+        else:
+            settings.logger.warning(f"{file}が見つかりません。コピーは行いません。")
+
+    if len(glob.glob(os.path.join(settings.input_file_path, "*"))) == 0:
+        raise NoTestcaseFileException(f"{settings.input_file_path}ディレクトリにファイルが1つもありません。")
+
+def make_log(result: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> RunnerLog:
+    log_manager = RunnerLogManager(result, settings)
+    log_manager.make_log()
+    return log_manager.get_log()
+
 from .html_builder import make_html  # 循環import対策
 
 def run(
@@ -337,11 +361,13 @@ def run(
         log_folder_name,
         _debug,
     )
+    validate(setting)
+    initialize(setting)
     runner = TestCaseRunner(handler, setting)
-    result = runner.run()
-    log_manager = RunnerLogManager(result, setting)
+    result = runner.start()
+    log = make_log(result, setting)
     file = os.path.join(setting.log_folder_name, "result.html")
-    make_html(file, log_manager.get_log(), setting.debug)
+    make_html(file, log, setting.debug)
 
 # 公開するメンバーを制御する
 __all__ = [
