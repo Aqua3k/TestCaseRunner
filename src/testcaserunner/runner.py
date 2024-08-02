@@ -153,9 +153,10 @@ class TestCaseRunner:
         return testcase, test_result
 
 class RunnerLog:
-    def __init__(self, contents: dict, metadata: dict) -> None:
+    def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
         self._df = pd.DataFrame(contents)
         self._metadata = metadata
+        self.base_dir = base_dir
     
     @property
     def df(self) -> pd.DataFrame:
@@ -256,7 +257,7 @@ class RunnerLogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log: RunnerLog = RunnerLog(contents, metadata)
+        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.settings.log_folder_name)[1])
         json_file_path = os.path.join(self.settings.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
