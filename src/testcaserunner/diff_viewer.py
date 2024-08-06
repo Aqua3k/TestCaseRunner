@@ -1,114 +1,313 @@
 import os
 import json
 import glob
-from typing import Any, Optional, Match
-import re
+from typing import Any, Optional
+from copy import deepcopy
+from dataclasses import dataclass, field
 
+from jinja2 import Environment, FileSystemLoader
 import pandas as pd
 import numpy as np
 from jsonschema import validate, ValidationError
 
 from .runner_defines import RunnerMetadata
 from .runner_logger import RunnerLogger
-from .runner import RunnerLog, RunnerLogManager
-from .html_builder import ResultHtmlBuilder, HtmlBuilder
+from .runner import RunnerLog, RunnerLogManager, ResultStatus
+from .html_builder import ResultHtmlBuilder, HtmlBuilder, Column, HtmlColumnType
 
-class DiffHtmlBuilder(ResultHtmlBuilder):
-    logger = RunnerLogger("DiffHtmlTableSection")
-    extensions = ["1", "2"]
-    def __init__(self, output_html_path: str, log: RunnerLog, debug: bool):
-        super().__init__(output_html_path, log, debug)
+@dataclass
+class DiffColumn(Column):
+    has_sub_category: bool
+    sub_category_num: int
+    has_sort_button: bool
+    use_hash: bool = False
+    hash_column: str = ""
+    sub_categories: list[str] = field(default_factory=list)
+
+class DiffHtmlBuilder(HtmlBuilder):
+    logger = RunnerLogger("DiffHtmlBuilder")
+    #TODO repeat_countを考慮しないとうまくいかなそう…
+    def __init__(self, output_html_path: str, logs: list[RunnerLog], debug: bool) -> None:
+        loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
+        self.environment = Environment(loader=loader)
+        self.output_html_path = output_html_path
+        self.logs = logs
+        self.renamed_logs = deepcopy(self.logs)
+        if debug:
+            self.logger.enable_debug_mode()
+        self.columns = self.construct_table_columns()
+        self.merged_df = self.merge_data_frames()
+        self.contents: list[str] = []
+        self.title = ""
+    
+    def get_data(self, column: str, row: int, sub_category_index: int):
+        # 欠損値の場合は空文字にする
+        col = (column, sub_category_index)
+        if col not in self.merged_df.columns:
+            return "" # 列がないならNoneを返す
+        ret = self.merged_df.at[row, col]
+        if ret is None:
+            ret = ""
+        if type(ret) is np.float64 or type(ret) is np.float32:
+            ret = round(ret, 3)
+        return ret
+        
+    def construct_table_columns(self):
+        columns = [
+            DiffColumn("testcase", HtmlColumnType.TEXT, False, len(self.logs), True),
+            DiffColumn("in", HtmlColumnType.URL, False, len(self.logs), False),
+            DiffColumn("stdout", HtmlColumnType.URL, True, len(self.logs), False, True, "stdout_hash"),
+            DiffColumn("stderr", HtmlColumnType.URL, True, len(self.logs), False, True, "stderr_hash"),
+            DiffColumn("status", HtmlColumnType.STATUS, True, len(self.logs), False),
+        ]
+        attributes = {}
+        for log in self.logs:
+            for attribute in log.metadata["attributes"]:
+                attributes[attribute] = ""
+        for attribute in attributes.keys():
+            columns.append(DiffColumn(attribute, HtmlColumnType.TEXT, True, len(self.logs), True))
+        
+        for column in columns:
+            for i in range(len(self.logs)):
+                if column.has_sub_category:
+                    column.sub_categories.append(f"{column.title}.{i+1}")
+        return columns
+    
+    def merge_data_frames(self):
+        attributes = {}
+        for i, log in enumerate(self.renamed_logs):
+            rename_list = {}
+            for column in log.df.columns:
+                attributes[column] = ""
+                if column != "input_hash":
+                    rename_list[column] = (column, i)
+            log._df = log.df.rename(columns=rename_list)
+
+        # DataFrameをマージ
+        merged_df = self.renamed_logs[0].df
+        for log in self.renamed_logs[1:]:
+            merged_df = pd.merge(merged_df, log.df, on=RunnerLogManager.input_hash_col)
+        return merged_df
+
+    def set_title(self, title: str) -> None:
+        self.title = title
 
     @logger.function_tracer
-    def get_text_cell(self, column: str, row: int) -> str:
-        # column名を確認して、両方のデータにあるやつなら差分を調べる
-        if self.is_diff_column(column):
-            this, other = self.get_diff_data(column, row)
-            if this != other:
-                if type(this) is np.float64 or type(this) is np.float32:
-                    this = round(this, 3)
-                template = self.environment.get_template("cell_with_color.j2")
-                data = {
-                    "color": self.get_color(this, other),
-                    "value": this,
-                    }
-                return template.render(data)
+    def add_heading(self, text: str) -> None:
+        template = self.environment.get_template("heading.j2")
+        self.contents.append(template.render({"text": text}))
 
-        # それ以外は普通のデータを返す
-        return super().get_text_cell(column, row)
+    def add_figure(self, figure_path: str) -> None:
+        pass
+
+    def add_summary(self) -> None:
+        pass
+
+    def add_table(self) -> None:
+        template = self.environment.get_template("diff_table.j2")
+        data = {
+            "columns": self.columns,
+            "table": self.make_table_contents(),
+        }
+        self.contents.append(template.render(data))
+
+    @logger.function_tracer
+    def make_table_contents(self) -> list[list[str]]:
+        def make_cell_tata(column: DiffColumn, row: int, sub_category_index: int) -> str:
+            match column.type:
+                case HtmlColumnType.URL:
+                    return self.get_url_cell(column, row, sub_category_index)
+                case HtmlColumnType.STATUS:
+                    return self.get_status_cell(column, row, sub_category_index)
+                case HtmlColumnType.TEXT:
+                    return self.get_text_cell(column, row, sub_category_index)
+                case _:
+                    raise ValueError("error: 不明なHtmlColumnTypeがあります。")
+
+        table = []
+        for row in range(len(self.merged_df)):
+            rows = []
+            for column in self.columns:
+                if column.has_sub_category:
+                    for sub_category_index in range(len(column.sub_categories)):
+                        ret = make_cell_tata(column, row, sub_category_index)
+                        rows.append(ret)
+                else:
+                    ret = make_cell_tata(column, row, 0)
+                    rows.append(ret)
+
+            table.append(rows)
+        return table
+    
+    status_texts = {
+        ResultStatus.AC: ("AC", "lime"),
+        ResultStatus.WA: ("WA", "gold"),
+        ResultStatus.RE: ("RE", "gold"),
+        ResultStatus.TLE: ("TLE", "gold"),
+        ResultStatus.IE: ("IE", "red"),
+    }
+    @logger.function_tracer
+    def get_status_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
+        value = self.get_data(column.title, row, sub_category_index)
+        text, color = self.status_texts.get(value, ("IE", "red"))
+        template = self.environment.get_template("cell_with_color.j2")
+        data = {
+            "color": color,
+            "value": text,
+            }
+        return template.render(data)
+
+    @logger.function_tracer
+    def add_script(self, script_path: str) -> None:
+        template = self.environment.get_template("script.j2")
+        file = os.path.join(os.path.split(__file__)[0], script_path)
+        self.contents.append(template.render({"text": self.load_file(file)}))
+
+    @logger.function_tracer
+    def add_css(self, css_path: str) -> None:
+        template = self.environment.get_template("css.j2")
+        file = os.path.join(os.path.split(__file__)[0], css_path)
+        self.contents.append(template.render({"text": self.load_file(file)}))
+
+    @logger.function_tracer
+    def add_css_link(self, css_path: str) -> None:
+        template = self.environment.get_template("css_link.j2")
+        self.contents.append(template.render({"link": css_path}))
     
     @logger.function_tracer
-    def get_url_cell(self, column: str, row: int) -> str:
-        match = self.get_match(column)
-        if match:
-            original_column = match.group(1)
-            extension = match.group(2)
-        else:
-            assert 0, "ここにくるはずないんだけど"
-        
-        match original_column:
-            case RunnerLogManager.infile_col:
-                return super().get_url_cell(column, row)
-            case RunnerLogManager.stdout_col:
-                col = RunnerLogManager.stdout_hash_col
-            case RunnerLogManager.stderr_col:
-                col = RunnerLogManager.stdout_hash_col
-            case _:
-                assert 0, "ここにくるはずないんだけど"
-        col = f"{col}.{extension}"
-        this, other = self.get_diff_data(col, row)
-        if this == other:
-            return super().get_url_cell(column, row)
+    def write(self) -> None:
+        template = self.environment.get_template("main.j2")
+        data = {
+            "title": self.title,
+            "sections": self.contents,
+        }
+        with open(self.output_html_path, mode="w") as f:
+            f.write(template.render(data))
+
+    @logger.function_tracer
+    def load_file(self, file: str) -> str:
+        with open(file, mode="r", encoding="utf-8") as f:
+            text = f.read()
+        return text
+
+    def get_text_cell_normal(self, value: Any):
+        template = self.environment.get_template("cell.j2")
+        return template.render({"value": value})
+
+    @logger.function_tracer
+    def get_text_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
+        this, others = self.get_cell_data(column, row, sub_category_index)
+        if len( set([this]) | (set(others)) ) == 1:
+            return self.get_text_cell_normal(this)
+
+        template = self.environment.get_template("cell_with_color.j2")
+        data = {
+            "color": self.get_color(this, others),
+            "value": this,
+            }
+        return template.render(data)
+
+    def get_url_cell_normal(self, value: Any) -> str:
+        template = self.environment.get_template("cell_with_file_link.j2")
+        data = {
+            "link": value,
+            "value": "+",
+            }
+        return template.render(data)
+
+    @logger.function_tracer
+    def get_url_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
+        if not column.hash_column:
+            return self.get_url_cell_normal(self.get_data(column.title, row, sub_category_index))
+
+        this, others = self.get_cell_hash_data(column, row, sub_category_index)
+        if len( set([this]) | (set(others)) ) == 1:
+            return self.get_url_cell_normal(self.get_data(column.title, row, sub_category_index))
         
         template = self.environment.get_template("cell_with_file_link_and_color.j2")
         data = {
-            "link": self.get_data(column, row),
+            "link": self.get_data(column.title, row, sub_category_index),
             "value": "+",
             "color": "Gold",
         }
         return template.render(data)
 
-    @logger.function_tracer
-    def get_color(self, this: Any, other: Any) -> str:
-        if type(this) is str or type(other) is str:
-            return "Gold"
-        else:
-            if this < other:
-                return "Cyan"
+    def get_cell_data(self, column: DiffColumn, row: int, sub_category_index: int):
+        if not column.has_sub_category:
+            return self.get_data(column.title, row, sub_category_index), []
+
+        this = None
+        others = []
+        for i in range(len(self.renamed_logs)):
+            if i == sub_category_index:
+                this = self.get_data(column.title, row, sub_category_index)
             else:
+                others.append(self.get_data(column.title, row, i))
+
+        assert this is not None
+        assert len(others) == len(self.renamed_logs) - 1
+
+        return this, others
+
+    def get_cell_hash_data(self, column: DiffColumn, row: int, sub_category_index: int):
+        this = None
+        others = []
+        for i in range(len(self.renamed_logs)):
+            if i == sub_category_index:
+                this = self.get_data(column.hash_column, row, sub_category_index)
+            else:
+                others.append(self.get_data(column.hash_column, row, sub_category_index))
+
+        assert this is not None
+        assert len(others) == len(self.renamed_logs) - 1
+
+        return this, others
+
+    @logger.function_tracer
+    def get_color(self, this: Any, others: list[Any]) -> str:
+        # NOTE: 暫定で最小値と最大値だけを見る
+        try:
+            if this <= min(others):
+                return "Cyan"
+            elif max(others) <= this:
                 return "Hotpink"
+            else:
+                return "Gold"
+        except:
+            pass
+        return "Gold"
 
     @logger.function_tracer
-    def is_diff_column(self, column: str) -> bool:
-        return bool(self.get_match(column))
+    def add_other_file_summary(self, index: int) -> None:
+        template = self.environment.get_template("summary.j2")
+        data = {
+            "date" : self.logs[index].metadata["created_date"],
+            "summary": f"<pre>{self.logs[index].df.describe()}</pre>",
+        }
+        self.contents.append(template.render(data))
 
-    column_pattern = r'^([a-zA-Z0-9_]+)\.([12])$'
     @logger.function_tracer
-    def get_match(self, column: str) -> Optional[Match]:
-        return re.match(self.column_pattern, column)
-
-    @logger.function_tracer
-    def get_diff_data(self, column: str, row: int) -> tuple[Any, Any]:
-        match = self.get_match(column)
-        if match:
-            original_column = match.group(1)
-            extension = match.group(2)
-            this = self.get_data(column, row)
-            idx = self.extensions.index(extension)
-            other_column = f"{original_column}.{self.extensions[idx^1]}"
-            other = self.get_data(other_column, row)
-        else:
-            assert 0, "ここにくるはずないんだけど…"
-        return this, other
+    def add_link(self, index: int) -> None:
+        template = self.environment.get_template("link.j2")
+        data = {
+            "link" : os.path.join("..", self.logs[index].base_dir, "result.html"),
+            "text": "view details",
+        }
+        self.contents.append(template.render(data))
 
 class DiffDirector:
-    def __init__(self, builder: HtmlBuilder):
+    def __init__(self, builder: DiffHtmlBuilder):
         self.__builder = builder
 
     def construct(self):
-        self.__builder.add_heading("Summary")
-        self.__builder.add_summary()
-        self.__builder.add_heading("Table")
+        self.__builder.set_title("Compare Result")
+        self.__builder.add_heading("Summary 1")
+        self.__builder.add_link(0)
+        self.__builder.add_other_file_summary(0)
+        self.__builder.add_heading("Summary 2")
+        self.__builder.add_link(1)
+        self.__builder.add_other_file_summary(1)
+        self.__builder.add_heading("Compare Table")
         self.__builder.add_table()
         self.__builder.add_script("js/Table.js")
         self.__builder.add_script("js/checkbox.js")
@@ -116,14 +315,8 @@ class DiffDirector:
         self.__builder.add_css_link(r"https://newcss.net/new.min.css")
         self.__builder.write()
 
-def make_html(path: str, log: RunnerLog, debug: bool) -> None:
-    builder = DiffHtmlBuilder(path, log, debug)
-    director = DiffDirector(builder)
-    director.construct()
-
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
-    merged_data_suffixes = (".1", ".2")
     def __init__(self, path: str="log", _debug=False) -> None:
         if _debug:
             self.logger.enable_debug_mode()
@@ -138,7 +331,7 @@ class RunnerLogViewer:
             schema_path = os.path.join(os.path.split(__file__)[0], "schemas", "result_schema.json")
             with open(schema_path, 'r') as f:
                 schema: dict = json.load(f)
-            validate(instance=data, schema=schema)
+            #validate(instance=data, schema=schema)
         except ValidationError as e:
             self.logger.info("json schema validation error.")
             return False
@@ -172,7 +365,8 @@ class RunnerLogViewer:
         assert metadata is not None, "metadataがNoneだよ"
         assert type(metadata) is dict, "metadataがNonedict型ではないよ"
 
-        self.logs.append(RunnerLog(contents, metadata))
+        folder = os.path.split(file)[0]
+        self.logs.append(RunnerLog(contents, metadata, os.path.split(folder)[1]))
         self.logger.info(f"{file} を読み込みました。")
     
     @logger.function_tracer
@@ -180,34 +374,8 @@ class RunnerLogViewer:
         return self.logs
 
     @logger.function_tracer
-    def test_diff(self, log1: RunnerLog, log2: RunnerLog) -> None:
+    def compare(self, log1: RunnerLog, log2: RunnerLog) -> None:
         # 不要な列を削除する
-        log2.drop(RunnerLogManager.infilename_col)
-        
-        # 属性名を置換する
-        attributes1 = log1.metadata["attributes"]
-        att1: dict[Any, Any] = {}
-        for k, v in attributes1.items():
-            if k != RunnerLogManager.input_hash_col and k != RunnerLogManager.infilename_col:
-                att1[f"{k}.1"] = v
-            else:
-                att1[k] = v
-        
-        attributes2 = log2.metadata["attributes"]
-        att2: dict[Any, Any] = {}
-        for k, v in attributes2.items():
-            if k != RunnerLogManager.input_hash_col and k != RunnerLogManager.infilename_col:
-                att1[f"{k}.2"] = v
-            else:
-                att1[k] = v
-
-        # attributeを合成
-        attributes = {**att1, **att2}
-        metadata = log1.metadata
-        metadata["attributes"] = attributes
-
-        # DataFrameをマージ
-        merged_df = pd.merge(log1.df, log2.df, on=RunnerLogManager.input_hash_col, suffixes=self.merged_data_suffixes)
-
-        runner_log = RunnerLog(json.loads(merged_df.to_json()), metadata)
-        make_html("result.html", runner_log, True)
+        builder = DiffHtmlBuilder("result.html", [log1, log2], False)
+        director = DiffDirector(builder)
+        director.construct()

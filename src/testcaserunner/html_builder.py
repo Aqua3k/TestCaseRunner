@@ -25,6 +25,9 @@ class Column:
 
 class HtmlBuilder(ABC):
     @abstractmethod
+    def set_title(self, title: str) -> None:
+        pass
+    @abstractmethod
     def add_heading(self, text: str) -> None:
         pass
     @abstractmethod
@@ -60,6 +63,10 @@ class ResultHtmlBuilder(HtmlBuilder):
         self.output_html_path = output_html_path
         self.contents: list[str] = []
         self.columns = self.construct_table_columns()
+        self.title = ""
+
+    def set_title(self, title: str) -> None:
+        self.title = title
 
     @logger.function_tracer
     def add_heading(self, text: str) -> None:
@@ -109,7 +116,10 @@ class ResultHtmlBuilder(HtmlBuilder):
     @logger.function_tracer
     def write(self) -> None:
         template = self.environment.get_template("main.j2")
-        data = {"sections": self.contents}
+        data = {
+            "title": self.title,
+            "sections": self.contents,
+        }
         with open(self.output_html_path, mode="w") as f:
             f.write(template.render(data))
     
@@ -146,7 +156,7 @@ class ResultHtmlBuilder(HtmlBuilder):
     @logger.function_tracer
     def make_table_contents(self) -> list[dict[str, str]]:
         ret = []
-        for row in range(self.log.metadata["testcase_num"]):
+        for row in range(len(self.log.df)):
             rows = {}
             for column in self.columns:
                 match column.type:
@@ -223,6 +233,7 @@ class Director:
         self.__builder = builder
 
     def construct(self):
+        self.__builder.set_title("Runner Result")
         self.__builder.add_heading("Summary")
         self.__builder.add_summary()
         self.__builder.add_heading("Figures")

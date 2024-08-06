@@ -58,7 +58,6 @@ def run_program2(testcase: TestCase):
 if __name__ == "__main__":
     run(run_program1, "in")
     run(run_program2, "in")
-    viewer = RunnerLogViewer(_debug=True)
+    viewer = RunnerLogViewer()
     logs = viewer.get_logs()
-    viewer.test_diff(logs[-1], logs[-2])
-    print(len(logs))
+    viewer.compare(logs[-1], logs[-2])

@@ -1,0 +1,30 @@
+<div id="column-controls"></div>
+<table id="sortTable">
+    <thead>
+        <tr>
+            {% for column in columns %}
+                {% if column.has_sub_category %}
+                    <th data-toggle="true" colspan="{{ column.sub_category_num }}">{{ column.title }}</th>
+                {% else %}
+                    <th data-toggle="true" rowspan="2">{{ column.title }}</th>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        <tr>
+            {% for column in columns %}
+                {% for ctg_name in column.sub_categories %}
+                    <th>{{ ctg_name }}</th>
+                {% endfor %}
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in table %}
+        <tr>
+            {% for value in row %}
+                {{ value }}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
