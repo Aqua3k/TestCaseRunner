@@ -113,7 +113,7 @@ class DiffHtmlBuilder(HtmlBuilder):
 
     @logger.function_tracer
     def make_table_contents(self) -> list[list[str]]:
-        def make_cell_tata(column: DiffColumn, row, sub_category_index) -> str | None:
+        def make_cell_tata(column: DiffColumn, row: int, sub_category_index: int) -> str:
             match column.type:
                 case HtmlColumnType.URL:
                     return self.get_url_cell(column, row, sub_category_index)
@@ -122,7 +122,7 @@ class DiffHtmlBuilder(HtmlBuilder):
                 case HtmlColumnType.TEXT:
                     return self.get_text_cell(column, row, sub_category_index)
                 case _:
-                    assert "error: 不明なHtmlColumnTypeがあります。"
+                    raise ValueError("error: 不明なHtmlColumnTypeがあります。")
 
         table = []
         for row in range(len(self.merged_df)):
@@ -314,11 +314,6 @@ class DiffDirector:
         self.__builder.add_css("js/SortTable.css")
         self.__builder.add_css_link(r"https://newcss.net/new.min.css")
         self.__builder.write()
-
-def make_html(path: str, log: RunnerLog, debug: bool) -> None:
-    builder = DiffHtmlBuilder(path, log, debug)
-    director = DiffDirector(builder)
-    director.construct()
 
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
