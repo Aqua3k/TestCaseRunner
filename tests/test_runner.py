@@ -118,7 +118,7 @@ def test_no_error_no_warning_case11(caplog, setup_normally):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="single")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case11(caplog, setup_normally):
+def test_no_error_no_warning_case12(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
     assert len(caplog.records) == 0

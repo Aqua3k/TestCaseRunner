@@ -62,6 +62,117 @@ class RunnerSettings:
             i += 1
         return name
 
+class Runner:
+    NOT_START = 0
+    STARTED = 1
+    SUBMITTED = 2
+    FINISHED = 3
+    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+        pass
+    def get_result(self):
+        pass
+    def __enter__(self):
+        pass
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+    def cancel(self):
+        pass
+
+class ProcessRunner(Runner):
+    def __init__(self, total: int):
+        self._total = total
+        self._status = self.NOT_START
+
+    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+        if self._status != self.STARTED:
+            raise ValueError("使い方間違ってるよ")
+        self._futures:list[Future] = []
+        for testcase in test_cases:
+            future = self._executor.submit(testcase_handler, testcase)
+            future.add_done_callback(lambda p: self._progress.update())
+            self._futures.append(future)
+        self._status = self.SUBMITTED
+    
+    def get_result(self):
+        result: list[TestCaseResult] = []
+        if self._status != self.SUBMITTED:
+            raise ValueError("使い方間違ってるよ")
+        for future in self._futures:
+            result.append(future.result())
+        return result
+
+    def __enter__(self):
+        self._status = self.STARTED
+        self._progress = tqdm(total=self._total)
+        self._executor = ProcessPoolExecutor()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._progress.close()
+        self._executor.shutdown()
+
+class ThreadRunner(Runner):
+    def __init__(self, total: int):
+        self._total = total
+        self._status = self.NOT_START
+
+    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+        if self._status != self.STARTED:
+            raise ValueError("使い方間違ってるよ")
+        self._futures:list[Future] = []
+        for testcase in test_cases:
+            future = self._executor.submit(testcase_handler, testcase)
+            future.add_done_callback(lambda p: self._progress.update())
+            self._futures.append(future)
+        self._status = self.SUBMITTED
+    
+    def get_result(self):
+        result: list[TestCaseResult] = []
+        if self._status != self.SUBMITTED:
+            raise ValueError("使い方間違ってるよ")
+        for future in self._futures:
+            result.append(future.result())
+        return result
+
+    def __enter__(self):
+        self._status = self.STARTED
+        self._progress = tqdm(self._total)
+        self._executor = ThreadPoolExecutor()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._progress.close()
+        self._executor.shutdown()
+
+class SingleRunner(Runner):
+    def __init__(self, total: int):
+        self._total = total
+        self._status = self.NOT_START
+
+    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+        if self._status != self.STARTED:
+            raise ValueError("使い方間違ってるよ")
+        self._handler = testcase_handler
+        self._testcases = test_cases
+        self._status = self.SUBMITTED
+    
+    def get_result(self):
+        result: list[TestCaseResult] = []
+        if self._status != self.SUBMITTED:
+            raise ValueError("使い方間違ってるよ")
+        for testcase in self._testcases:
+            result.append(self._handler(testcase))
+            self._progress.update()
+        return result
+
+    def __enter__(self):
+        self._status = self.STARTED
+        self._progress = tqdm(total=self._total)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._progress.close()
+
 class TestCaseRunner:
     logger = RunnerLogger("TestCaseRunner")
     def __init__(self,
@@ -95,41 +206,26 @@ class TestCaseRunner:
 
     @logger.function_tracer
     def start(self) -> list[tuple[TestCase, TestCaseResult]]:
-        futures:list[Future] = []
         test_cases: list[TestCase] = []
         files = glob.glob(os.path.join(self.input_file_path, "*"))
         test_cases = self.make_testcases(files)
-        executor_class: type[Executor] | None = None
-        if self.settings.parallel_processing_method.lower() == "process":
-            parallel = True
-            executor_class = ProcessPoolExecutor
-        elif self.settings.parallel_processing_method.lower() == "thread":
-            parallel = True
-            executor_class = ThreadPoolExecutor
-        elif self.settings.parallel_processing_method.lower() == "single":
-            parallel = False
-        else:
-            raise ValueError("引数parallel_processing_methodの値が不正です。")
+        runner: type[Runner]|None = None
+        match self.settings.parallel_processing_method.lower():
+            case "process":
+                runner = ProcessRunner
+            case "thread":
+                runner = ThreadRunner
+            case "single":
+                runner = SingleRunner
+            case _:
+                raise ValueError("引数parallel_processing_methodの値が不正です。")
 
         self.logger.debug("start testcase run process.")
         results: list[tuple[TestCase, TestCaseResult]] = []
-        if parallel:
-            self.logger.debug("paralle")
-            assert executor_class is not None, "変数executor_classがNoneだよ"
-            with tqdm(total=len(test_cases)) as progress:
-                with executor_class() as executor:
-                    for testcase in test_cases:
-                        future = executor.submit(self.run_testcase, testcase)
-                        future.add_done_callback(lambda p: progress.update())
-                        futures.append(future)
-                
-                    for future in futures:
-                        results.append(future.result())
-        else:
-            self.logger.debug("single")
-            for testcase in tqdm(test_cases):
-                result = self.run_testcase(testcase)
-                results.append(result)
+        assert runner is not None, "変数executor_classがNoneだよ"
+        with runner(len(test_cases)) as processor:
+            processor.submit(self.run_testcase, test_cases)
+            results = processor.get_result()
         
         return results
     
