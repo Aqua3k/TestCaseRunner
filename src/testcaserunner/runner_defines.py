@@ -31,6 +31,7 @@ class ResultStatus(IntEnum):
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
     IE = auto()             # 内部エラー
+    CAN = auto()            # キャンセルされた
 
 @dataclass
 class TestCaseResult:
