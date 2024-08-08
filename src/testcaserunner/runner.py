@@ -1,6 +1,6 @@
 import glob
 import os
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, wait
 from typing import Callable
 import time
 import hashlib
@@ -21,7 +21,7 @@ from .runner_defines import RunnerMetadata, TestCase, TestCaseResult, ResultStat
 from .runner_logger import RunnerLogger
 
 TestCaseHandler = Callable[[TestCase], TestCaseResult]
-RunnerResult = tuple[TestCase, Optional[TestCaseResult]]
+RunnerResult = tuple[TestCase, TestCaseResult]
 
 class RunnerSettings:
     stdout_dir_path = "stdout"
@@ -67,6 +67,7 @@ class RunnerSettings:
         return name
 
 class Runner(ABC):
+    logger = RunnerLogger("Runner")
     NOT_START = 0
     STARTED = 1
     SUBMITTED = 2
@@ -79,7 +80,7 @@ class Runner(ABC):
         pass
 
     @abstractmethod
-    def get_results(self) -> list[Optional[TestCaseResult]]:
+    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
         pass
 
     @abstractmethod
@@ -90,6 +91,9 @@ class Runner(ABC):
     def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
                  exc_tb: Optional[BaseException]):
         pass
+
+    def notify_catch_keyboard_interrupt(self):
+        self.logger.warning("実行をキャンセルします。")
 
 class ProcessRunner(Runner):
     def __init__(self, total: int):
@@ -106,13 +110,21 @@ class ProcessRunner(Runner):
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def get_results(self) -> list[Optional[TestCaseResult]]:
-        result: list[Optional[TestCaseResult]] = []
+    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
+        results: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
+        try:
+            wait(self._futures)
+        except KeyboardInterrupt:
+            self.notify_catch_keyboard_interrupt()
         for future in self._futures:
-            result.append(future.result())
-        return result
+            if future.done():
+                result = future.result()
+            else:
+                result = None
+            results.append(result)
+        return results
 
     def __enter__(self) -> Self:
         self._status = self.STARTED
@@ -140,13 +152,21 @@ class ThreadRunner(Runner):
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def get_results(self) -> list[Optional[TestCaseResult]]:
-        result: list[Optional[TestCaseResult]] = []
+    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
+        results: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
+        try:
+            wait(self._futures)
+        except KeyboardInterrupt:
+            self.notify_catch_keyboard_interrupt()
         for future in self._futures:
-            result.append(future.result())
-        return result
+            if future.done():
+                result = future.result()
+            else:
+                result = None
+            results.append(result)
+        return results
 
     def __enter__(self) -> Self:
         self._status = self.STARTED
@@ -171,14 +191,19 @@ class SingleRunner(Runner):
         self._testcases = test_cases
         self._status = self.SUBMITTED
     
-    def get_results(self) -> list[Optional[TestCaseResult]]:
-        result: list[Optional[TestCaseResult]] = []
+    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
+        results: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
-        for testcase in self._testcases:
-            result.append(self._handler(testcase))
-            self._progress.update()
-        return result
+        try:
+            for testcase in self._testcases:
+                results.append(self._handler(testcase))
+                self._progress.update()
+        except KeyboardInterrupt:
+            self.notify_catch_keyboard_interrupt()
+            while len(results) < len(self._testcases):
+                results.append(None)
+        return results
 
     def __enter__(self) -> Self:
         self._status = self.STARTED
@@ -240,10 +265,16 @@ class TestCaseRunner:
         self.logger.debug("start testcase run process.")
         with runner(len(test_cases)) as processor:
             processor.submit(self.run_testcase, test_cases)
-            results: list[Optional[TestCaseResult]] = processor.get_results()
+            results: list[Optional[TestCaseResult]] = processor.wait_and_get_results()
+        
+        parsed_results: list[TestCaseResult] = []
+        for result in results:
+            if result is None:
+                result = TestCaseResult(ResultStatus.CAN)
+            parsed_results.append(result)
         
         assert len(test_cases) == len(results)
-        return list(zip(test_cases, results))
+        return list(zip(test_cases, parsed_results))
     
     def run_testcase(self, testcase: TestCase) -> TestCaseResult:
         start_time = time.time()
