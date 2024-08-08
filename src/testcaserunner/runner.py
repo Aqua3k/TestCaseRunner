@@ -1,15 +1,16 @@
 import glob
 import os
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future
 from typing import Callable
 import time
 import hashlib
 import json
 from collections import defaultdict
-from typing import Any
+from typing import Any, Self, Optional
 import shutil
 from pathlib import Path
 import datetime
+from abc import ABC, abstractmethod
 
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -18,6 +19,9 @@ import pandas as pd
 
 from .runner_defines import RunnerMetadata, TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException, InvalidPathException
 from .runner_logger import RunnerLogger
+
+TestCaseHandler = Callable[[TestCase], TestCaseResult]
+RunnerResult = tuple[TestCase, Optional[TestCaseResult]]
 
 class RunnerSettings:
     stdout_dir_path = "stdout"
@@ -62,20 +66,29 @@ class RunnerSettings:
             i += 1
         return name
 
-class Runner:
+class Runner(ABC):
     NOT_START = 0
     STARTED = 1
     SUBMITTED = 2
     FINISHED = 3
-    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+    def __init__(self, total: int):
         pass
-    def get_result(self):
+
+    @abstractmethod
+    def submit(self, testcase_handler: TestCaseHandler, test_cases: list[TestCase]) -> None:
         pass
-    def __enter__(self):
+
+    @abstractmethod
+    def get_results(self) -> list[Optional[TestCaseResult]]:
         pass
-    def __exit__(self, exc_type, exc_val, exc_tb):
+
+    @abstractmethod
+    def __enter__(self) -> Self:
         pass
-    def cancel(self):
+
+    @abstractmethod
+    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[BaseException]):
         pass
 
 class ProcessRunner(Runner):
@@ -83,7 +96,7 @@ class ProcessRunner(Runner):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+    def submit(self, testcase_handler: TestCaseHandler, test_cases: list[TestCase]):
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._futures:list[Future] = []
@@ -93,21 +106,22 @@ class ProcessRunner(Runner):
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def get_result(self):
-        result: list[TestCaseResult] = []
+    def get_results(self) -> list[Optional[TestCaseResult]]:
+        result: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         for future in self._futures:
             result.append(future.result())
         return result
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._status = self.STARTED
         self._progress = tqdm(total=self._total)
         self._executor = ProcessPoolExecutor()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[BaseException]) -> None:
         self._progress.close()
         self._executor.shutdown()
 
@@ -116,7 +130,7 @@ class ThreadRunner(Runner):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+    def submit(self, testcase_handler: TestCaseHandler, test_cases: list[TestCase]) -> None:
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._futures:list[Future] = []
@@ -126,21 +140,22 @@ class ThreadRunner(Runner):
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def get_result(self):
-        result: list[TestCaseResult] = []
+    def get_results(self) -> list[Optional[TestCaseResult]]:
+        result: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         for future in self._futures:
             result.append(future.result())
         return result
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._status = self.STARTED
-        self._progress = tqdm(self._total)
+        self._progress = tqdm(total=self._total)
         self._executor = ThreadPoolExecutor()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[BaseException]) -> None:
         self._progress.close()
         self._executor.shutdown()
 
@@ -149,15 +164,15 @@ class SingleRunner(Runner):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: Callable[[TestCase], tuple[TestCase, TestCaseResult]], test_cases: list[TestCase]):
+    def submit(self, testcase_handler: TestCaseHandler, test_cases: list[TestCase]) -> None:
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._handler = testcase_handler
         self._testcases = test_cases
         self._status = self.SUBMITTED
     
-    def get_result(self):
-        result: list[TestCaseResult] = []
+    def get_results(self) -> list[Optional[TestCaseResult]]:
+        result: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         for testcase in self._testcases:
@@ -165,18 +180,19 @@ class SingleRunner(Runner):
             self._progress.update()
         return result
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         self._status = self.STARTED
         self._progress = tqdm(total=self._total)
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
+                 exc_tb: Optional[BaseException]) -> None:
         self._progress.close()
 
 class TestCaseRunner:
     logger = RunnerLogger("TestCaseRunner")
     def __init__(self,
-                 handler: Callable[[TestCase], TestCaseResult],
+                 handler: TestCaseHandler,
                  setting: RunnerSettings,
                  ) -> None:
         self.settings = setting
@@ -186,7 +202,8 @@ class TestCaseRunner:
         self.handler = handler
     
     @logger.function_tracer
-    def make_testcases(self, files: list[str]) -> list[TestCase]:
+    def make_testcases(self) -> list[TestCase]:
+        files = glob.glob(os.path.join(self.input_file_path, "*"))
         test_cases = []
         testcase_index = 0
         for input_file in sorted(files):
@@ -203,33 +220,32 @@ class TestCaseRunner:
                 test_cases.append(testcase)
                 testcase_index += 1
         return test_cases
-
-    @logger.function_tracer
-    def start(self) -> list[tuple[TestCase, TestCaseResult]]:
-        test_cases: list[TestCase] = []
-        files = glob.glob(os.path.join(self.input_file_path, "*"))
-        test_cases = self.make_testcases(files)
-        runner: type[Runner]|None = None
-        match self.settings.parallel_processing_method.lower():
+    
+    def get_runner(self, method: str) -> type[Runner]:
+        match method.lower():
             case "process":
-                runner = ProcessRunner
+                return ProcessRunner
             case "thread":
-                runner = ThreadRunner
+                return ThreadRunner
             case "single":
-                runner = SingleRunner
+                return SingleRunner
             case _:
                 raise ValueError("引数parallel_processing_methodの値が不正です。")
 
+    @logger.function_tracer
+    def start(self) -> list[RunnerResult]:
+        test_cases: list[TestCase] = self.make_testcases()
+        runner = self.get_runner(self.settings.parallel_processing_method)
+
         self.logger.debug("start testcase run process.")
-        results: list[tuple[TestCase, TestCaseResult]] = []
-        assert runner is not None, "変数executor_classがNoneだよ"
         with runner(len(test_cases)) as processor:
             processor.submit(self.run_testcase, test_cases)
-            results = processor.get_result()
+            results: list[Optional[TestCaseResult]] = processor.get_results()
         
-        return results
+        assert len(test_cases) == len(results)
+        return list(zip(test_cases, results))
     
-    def run_testcase(self, testcase: TestCase) -> tuple[TestCase, TestCaseResult]:
+    def run_testcase(self, testcase: TestCase) -> TestCaseResult:
         start_time = time.time()
         try:
             test_result: TestCaseResult = self.handler(testcase)
@@ -246,7 +262,7 @@ class TestCaseRunner:
         if self.settings.stderr_file_output:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
-        return testcase, test_result
+        return test_result
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
@@ -283,7 +299,7 @@ class RunnerLogManager:
     stderr_hash_col = "stderr_hash"
 
     logger = RunnerLogger("RunnerLogManager")
-    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
+    def __init__(self, results: list[RunnerResult], settings: RunnerSettings) -> None:
         self.settings = settings
         if settings.debug:
             self.logger.enable_debug_mode()
@@ -414,7 +430,7 @@ def validate(settings: RunnerSettings) -> None:
     if len(glob.glob(os.path.join(settings.input_file_path, "*"))) == 0:
         raise NoTestcaseFileException(f"{settings.input_file_path}ディレクトリにファイルが1つもありません。")
 
-def make_log(result: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> RunnerLog:
+def make_log(result: list[RunnerResult], settings: RunnerSettings) -> RunnerLog:
     log_manager = RunnerLogManager(result, settings)
     log_manager.make_log()
     return log_manager.get_log()
