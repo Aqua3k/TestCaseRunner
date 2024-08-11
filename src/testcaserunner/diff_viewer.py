@@ -1,19 +1,19 @@
 import os
 import json
 import glob
-from typing import Any, Optional
+from typing import Any
 from copy import deepcopy
 from dataclasses import dataclass, field
 
 from jinja2 import Environment, FileSystemLoader
 import pandas as pd
 import numpy as np
-from jsonschema import validate, ValidationError
+from jsonschema import ValidationError
 
-from .runner_defines import RunnerMetadata
-from .runner_logger import RunnerLogger
-from .runner import RunnerLog, RunnerLogManager, ResultStatus
-from .html_builder import ResultHtmlBuilder, HtmlBuilder, Column, HtmlColumnType
+from .runner_defines import RunnerMetadata, ResultStatus
+from .logger import RunnerLogger
+from .testcase_logger import RunnerLog, RunnerLogManager
+from .html_builder import HtmlBuilder, Column, HtmlColumnType
 
 @dataclass
 class DiffColumn(Column):
