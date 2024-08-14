@@ -1,7 +1,10 @@
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, wait
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, wait, Executor
 from typing import Callable
 from typing import Self, Optional
 from abc import ABC, abstractmethod
+import signal
+import types
+from typing import Any
 
 from tqdm import tqdm
 
@@ -35,12 +38,16 @@ class TestcaseExecutor(ABC): # pragma: no cover
         pass
 
     def notify_catch_keyboard_interrupt(self):
-        self.logger.warning("実行をキャンセルします。")
+        self.logger.warning("ランナーの実行をキャンセルします。")
 
-class ProcessTestcaseExecutor(TestcaseExecutor):
+class PoolTestcaseExecutor(TestcaseExecutor):
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
+        self._interrupted = False
+    
+    def get_executor(self) -> Executor:
+        return Executor()
 
     def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]):
         if self._status != self.STARTED:
@@ -56,70 +63,41 @@ class ProcessTestcaseExecutor(TestcaseExecutor):
         results: list[Optional[TestCaseResult]] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
-        try:
-            wait(self._futures)
-        except KeyboardInterrupt:
-            self.notify_catch_keyboard_interrupt()
         for future in self._futures:
-            if future.done():
-                result = future.result()
-            else:
+            while not future.done():
+                if self._interrupted:
+                    break
+            if self._interrupted:
                 result = None
+            else:
+                result = future.result()
             results.append(result)
         return results
 
     def __enter__(self) -> Self:
         self._status = self.STARTED
         self._progress = tqdm(total=self._total)
-        self._executor = ProcessPoolExecutor()
+        self._executor = self.get_executor()
+        signal.signal(signal.SIGINT, self.signal_handler)
         return self
 
     def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
                  exc_tb: Optional[BaseException]) -> None:
         self._progress.close()
         self._executor.shutdown()
-
-class ThreadTestcaseExecutor(TestcaseExecutor):
-    def __init__(self, total: int):
-        self._total = total
-        self._status = self.NOT_START
-
-    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
-        if self._status != self.STARTED:
-            raise ValueError("使い方間違ってるよ")
-        self._futures:list[Future] = []
-        for testcase in test_cases:
-            future = self._executor.submit(testcase_handler, testcase)
-            future.add_done_callback(lambda p: self._progress.update())
-            self._futures.append(future)
-        self._status = self.SUBMITTED
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
     
-    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
-        results: list[Optional[TestCaseResult]] = []
-        if self._status != self.SUBMITTED:
-            raise ValueError("使い方間違ってるよ")
-        try:
-            wait(self._futures)
-        except KeyboardInterrupt:
-            self.notify_catch_keyboard_interrupt()
-        for future in self._futures:
-            if future.done():
-                result = future.result()
-            else:
-                result = None
-            results.append(result)
-        return results
+    def signal_handler(self, signum: int, frame: None | types.FrameType) -> Any:
+        self._interrupted = True
+        self.notify_catch_keyboard_interrupt()
 
-    def __enter__(self) -> Self:
-        self._status = self.STARTED
-        self._progress = tqdm(total=self._total)
-        self._executor = ThreadPoolExecutor()
-        return self
+class ProcessTestcaseExecutor(PoolTestcaseExecutor):
+    def get_executor(self) -> Executor:
+        return ProcessPoolExecutor()
 
-    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
-                 exc_tb: Optional[BaseException]) -> None:
-        self._progress.close()
-        self._executor.shutdown()
+class ThreadTestcaseExecutor(PoolTestcaseExecutor):
+    def get_executor(self) -> Executor:
+        return ThreadPoolExecutor()
 
 class SingleTestcaseExecutor(TestcaseExecutor):
     def __init__(self, total: int):
