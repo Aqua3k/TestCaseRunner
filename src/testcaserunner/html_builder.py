@@ -206,6 +206,7 @@ class ResultHtmlBuilder(HtmlBuilder):
         ResultStatus.RE: ("RE", "gold"),
         ResultStatus.TLE: ("TLE", "gold"),
         ResultStatus.IE: ("IE", "red"),
+        ResultStatus.CAN: ("---", "gray"),
     }
     @logger.function_tracer
     def get_status_cell(self, column: str, row: int) -> str:
