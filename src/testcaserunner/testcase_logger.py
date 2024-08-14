@@ -3,6 +3,7 @@ import hashlib
 import json
 from collections import defaultdict
 from typing import Any
+import datetime
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -108,7 +109,7 @@ class RunnerLogManager:
         
         metadata = {
             "library_name": RunnerMetadata.LIB_NAME,
-            "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
+            "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }
         self.json_file = {

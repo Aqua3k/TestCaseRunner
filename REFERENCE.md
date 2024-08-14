@@ -17,12 +17,10 @@ def run(
         handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str,
         repeat_count: int = 1,
-        measure_time: bool = True,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
-        log_folder_name: str | None = None,
         _debug: bool = False,
         ) -> None:
 ```
@@ -40,9 +38,6 @@ def run(
 引数`repeat_count`にはそれぞれのテストケースを何回実行するかを指定します。  
 オプション引数で、デフォルト値は1です。  
 使用するアルゴリズムでランダム値を使うなどが理由で結果が一意に定まらない場合に、複数回実行してパフォーマンスを測りたいときに使用することを想定しています。  
-
-引数`measure_time`にTrueが指定された場合、個別テストケースに対するhandler関数の実行時間を測定し、結果ファイルに載せるかどうかを指定します。    
-オプション引数で、デフォルト値はTrueです。  
 
 引数`copy_target_files`はファイルパスのリストです。  
 オプション引数で、デフォルト値は[]です。  
@@ -66,10 +61,6 @@ def run(
 `stderr_file_output`は標準出力の内容をファイルとして保存するかどうかを指定します。  
 オプション引数で、デフォルト値はTrueです。  
 この引数がTrueの場合、[TestCaseResult](#testcaseresult)クラスのメンバ`stderr`をファイルに保存します。  
-
-引数`log_folder_name`にはログファイルのフォルダ名を指定します。  
-オプション引数で、デフォルト値はNoneです。  
-この引数の値がNoneの場合、フォルダの名前は現在時刻がYYYYMMDDHHMMSSの形式になります。  
 
 ## Classes
 

@@ -1,6 +1,5 @@
 import glob
 import os
-from typing import Optional
 import shutil
 from pathlib import Path
 import datetime
@@ -14,26 +13,23 @@ from .logger import RunnerLogger
 class RunnerSettings:
     input_file_path: str
     repeat_count: int
-    measure_time: bool
     copy_target_files: list[str]
     parallel_processing_method: str
     stdout_file_output: bool
     stderr_file_output: bool
-    log_name: Optional[str]
     debug: bool
     
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.logger = RunnerLogger("RunnerSettings")
         self.init_parameters()
         self.init_folders()
 
     def get_log_file_path(self) -> str:
-        if self.log_name is None:
-            self.log_name = str(self.datetime.strftime('%Y%m%d%H%M%S'))
-        name = os.path.join(self.log_dir_path, self.log_name)
+        log_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
+        name = os.path.join(self.log_dir_path, log_name)
         i = 1
         while os.path.exists(name):
-            name = os.path.join(self.log_dir_path, f"{self.log_name}-{i}")
+            name = os.path.join(self.log_dir_path, f"{log_name}-{i}")
             i += 1
         return name
 
@@ -79,8 +75,7 @@ class RunnerSettings:
 
     def init_parameters(self) -> None:
         self.log_dir_path = "log"
-        self.datetime = datetime.datetime.now()
-        self.log_folder_name: str = self.get_log_file_path()
+        self.log_folder_name = self.get_log_file_path()
         self.stdout_log_path = os.path.join(self.log_folder_name, "stdout")
         self.stderr_log_path = os.path.join(self.log_folder_name, "stderr")
         self.input_file_copy_path = os.path.join(self.log_folder_name, "in")
