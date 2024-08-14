@@ -8,7 +8,7 @@ from tqdm import tqdm
 from .runner_defines import TestCase, TestCaseResult
 from .logger import RunnerLogger
 
-class TestcaseExecutor(ABC):
+class TestcaseExecutor(ABC): # pragma: no cover
     logger = RunnerLogger("TestcaseExecutor")
     NOT_START = 0
     STARTED = 1
