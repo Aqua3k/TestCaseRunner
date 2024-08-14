@@ -24,7 +24,7 @@ class Column:
     title: str
     type: HtmlColumnType
 
-class HtmlBuilder(ABC):
+class HtmlBuilder(ABC): # pragma: no cover
     @abstractmethod
     def set_title(self, title: str) -> None:
         pass
