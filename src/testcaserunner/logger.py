@@ -1,7 +1,6 @@
 import logging
 
-class RunnerLogger:
-    # pragma: no cover
+class RunnerLogger: # pragma: no cover
     def __init__(self, name: str) -> None:
         self.name = name
         self.logger = logging.getLogger(name)
