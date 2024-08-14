@@ -78,16 +78,9 @@ def test_no_error_no_warning_case3(caplog, setup_normally):
         run(testcase_handler=no_error_program, input_file_path="in", stderr_file_output=False)
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case4(caplog, setup_normally):
-    # 2回同じフォルダに対して走らせることで、カバレッジを埋める
-    with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", log_folder_name="test")
-        run(testcase_handler=no_error_program, input_file_path="in", log_folder_name="test")
-    assert len(caplog.records) == 0
-
 def test_no_error_no_warning_case5(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", measure_time=False)
+        run(testcase_handler=no_error_program, input_file_path="in")
     assert len(caplog.records) == 0
 
 def test_no_error_no_warning_case6(caplog, setup_normally):

@@ -8,8 +8,6 @@ from tqdm import tqdm
 from .runner_defines import TestCase, TestCaseResult
 from .logger import RunnerLogger
 
-TestcaseHandler = Callable[[TestCase], TestCaseResult]
-
 class TestcaseExecutor(ABC):
     logger = RunnerLogger("TestcaseExecutor")
     NOT_START = 0
@@ -20,7 +18,7 @@ class TestcaseExecutor(ABC):
         pass
 
     @abstractmethod
-    def submit(self, testcase_handler: TestcaseHandler, test_cases: list[TestCase]) -> None:
+    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
         pass
 
     @abstractmethod
@@ -44,7 +42,7 @@ class ProcessTestcaseExecutor(TestcaseExecutor):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: TestcaseHandler, test_cases: list[TestCase]):
+    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]):
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._futures:list[Future] = []
@@ -86,7 +84,7 @@ class ThreadTestcaseExecutor(TestcaseExecutor):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: TestcaseHandler, test_cases: list[TestCase]) -> None:
+    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._futures:list[Future] = []
@@ -128,7 +126,7 @@ class SingleTestcaseExecutor(TestcaseExecutor):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: TestcaseHandler, test_cases: list[TestCase]) -> None:
+    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
         self._handler = testcase_handler

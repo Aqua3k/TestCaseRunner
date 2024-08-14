@@ -8,12 +8,10 @@ from .runner_settings import RunnerSettings
 from .runner_defines import TestCase, TestCaseResult, ResultStatus
 from .logger import RunnerLogger
 
-TestcaseHandler = Callable[[TestCase], TestCaseResult]
-
 class TestCaseRunner:
     logger = RunnerLogger("TestCaseRunner")
     def __init__(self,
-                 testcase_handler: TestcaseHandler,
+                 testcase_handler: Callable[[TestCase], TestCaseResult],
                  setting: RunnerSettings,
                  ) -> None:
         self.settings = setting
@@ -69,8 +67,7 @@ class TestCaseRunner:
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(error_status=ResultStatus.IE, stderr=str(e))
         erapsed_time = time.time() - start_time
-        if self.settings.measure_time:
-            test_result.attribute["time"] = erapsed_time
+        test_result.attribute["time"] = erapsed_time
         if self.settings.stdout_file_output:
             with open(testcase.stdout_file_path, mode='w') as f:
                 f.write(test_result.stdout)
@@ -83,39 +80,33 @@ from .html_builder import make_html  # 循環import対策
 from .testcase_logger import make_log
 
 def run(
-        testcase_handler: TestcaseHandler,
+        testcase_handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str,
         repeat_count: int = 1,
-        measure_time: bool = True,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
         stdout_file_output: bool = True,
         stderr_file_output: bool = True,
-        log_folder_name: Optional[str] = None,
         _debug: bool = False,
         ) -> None:
     """ランナーを実行する
 
     Args:
-        testcase_handler (TestcaseHandler): 並列実行する関数
+        testcase_handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
         input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
         repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
-        measure_time (bool, optional): 処理時間を計測して記録するかどうか. Defaults to True.
         copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
         stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
         stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
-        log_folder_name (Optional[str], optional): ログフォルダの名前(Noneだと現在時刻'YYYYMMDDHHMMSS'形式になる). Defaults to None.
     """
     setting = RunnerSettings(
         input_file_path,
         repeat_count,
-        measure_time,
         copy_target_files,
         parallel_processing_method,
         stdout_file_output,
         stderr_file_output,
-        log_folder_name,
         _debug,
     )
     runner = TestCaseRunner(testcase_handler, setting)
