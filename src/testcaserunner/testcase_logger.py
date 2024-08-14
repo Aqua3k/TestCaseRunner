@@ -11,7 +11,6 @@ import pandas as pd
 
 from .runner_defines import RunnerMetadata, TestCase, TestCaseResult
 from .logger import RunnerLogger
-from .runner_settings import RunnerSettings
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
@@ -48,11 +47,14 @@ class RunnerLogManager:
     stderr_hash_col = "stderr_hash"
 
     logger = RunnerLogger("RunnerLogManager")
-    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
-        self.settings = settings
-        if settings.debug:
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> None:
+        self.log_folder_name = log_folder_name
+        if debug:
             self.logger.enable_debug_mode()
         self.results = results
+
+    def make_folder(self, path: str) -> None:
+        os.makedirs(path, exist_ok=True)
     
     @logger.function_tracer
     def make_log(self) -> None:
@@ -67,14 +69,16 @@ class RunnerLogManager:
     def make_figure(self) -> None:
         # ヒストグラムを描画
         self.runner_log.df.hist()
-        plt.savefig(os.path.join(self.settings.fig_dir_path, 'histgram.png'))
+        fig_dir_path = os.path.join(self.log_folder_name, "fig")
+        self.make_folder(fig_dir_path)
+        plt.savefig(os.path.join(fig_dir_path, 'histgram.png'))
         plt.close()
 
         # 相関係数のヒートマップ
         corr = self.runner_log.df.corr(numeric_only=True)
         heatmap = sns.heatmap(corr, annot=True)
         heatmap.set_title('Correlation Coefficient Heatmap')
-        plt.savefig(os.path.join(self.settings.fig_dir_path, 'heatmap.png'))
+        plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
 
     @logger.function_tracer
     def make_json_file(self) -> None:
@@ -96,9 +100,9 @@ class RunnerLogManager:
             contents[self.input_hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{self.get_file_hash(testcase.input_file_path)}")
             contents[self.stdout_hash_col].append(f"{self.get_file_hash(testcase.stdout_file_path)}")
             contents[self.stderr_hash_col].append(f"{self.get_file_hash(testcase.stderr_file_path)}")
-            contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
-            contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
-            contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
+            contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.log_folder_name))
+            contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.log_folder_name))
+            contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.log_folder_name))
             contents[self.status_col].append(result.error_status)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
@@ -116,8 +120,8 @@ class RunnerLogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.settings.log_folder_name)[1])
-        json_file_path = os.path.join(self.settings.log_folder_name, "result.json")
+        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.log_folder_name)[1])
+        json_file_path = os.path.join(self.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
     
@@ -136,7 +140,7 @@ class RunnerLogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-def make_log(result: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> RunnerLog:
-    log_manager = RunnerLogManager(result, settings)
+def make_log(result: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> RunnerLog:
+    log_manager = RunnerLogManager(result, log_folder_name, debug)
     log_manager.make_log()
     return log_manager.get_log()
