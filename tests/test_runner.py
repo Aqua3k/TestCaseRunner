@@ -78,47 +78,53 @@ def test_no_error_no_warning_case3(caplog, setup_normally):
         run(testcase_handler=no_error_program, input_file_path="in", stderr_file_output=False)
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case5(caplog, setup_normally):
+def test_no_error_no_warning_case4(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case6(caplog, setup_normally):
+def test_no_error_no_warning_case5(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="process")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case7(caplog, setup_normally):
+def test_no_error_no_warning_case6(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="PROCESS")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case8(caplog, setup_normally):
+def test_no_error_no_warning_case7(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="thread")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case9(caplog, setup_normally):
+def test_no_error_no_warning_case8(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="THREAD")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case10(caplog, setup_normally):
+def test_no_error_no_warning_case9(caplog, setup_normally):
     run(testcase_handler=error_program, input_file_path="in")
 
-def test_no_error_no_warning_case11(caplog, setup_normally):
+def test_no_error_no_warning_case10(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="single")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case12(caplog, setup_normally):
+def test_no_error_no_warning_case11(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="SINGLE")
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case13(caplog, setup_normally):
+def test_no_error_no_warning_case12(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program_attribute, input_file_path="in")
+    assert len(caplog.records) == 0
+
+def test_no_error_no_warning_case13(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
+        run(testcase_handler=no_error_program, input_file_path="in",\
+             parallel_processing_method="single", repeat_count=2)
     assert len(caplog.records) == 0
 
 # 例外が出る
