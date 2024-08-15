@@ -50,6 +50,9 @@ class HtmlBuilder(ABC): # pragma: no cover
     def add_css_link(self, css_path: str) -> None:
         pass
     @abstractmethod
+    def add_datetime(self) -> None:
+        pass
+    @abstractmethod
     def write(self) -> None:
         pass
 
@@ -79,14 +82,16 @@ class ResultHtmlBuilder(HtmlBuilder):
         template = self.environment.get_template("figure.j2")
         self.contents.append(template.render({"link": os.path.join("fig", figure_path)}))
     
-    @logger.function_tracer
-    def add_summary(self) -> None:
-        template = self.environment.get_template("summary.j2")
+    def add_datetime(self) -> None:
+        template = self.environment.get_template("datetime.j2")
         data = {
             "date" : self.log.metadata["created_date"],
-            "summary": f"<pre>{self.log.df.describe()}</pre>",
         }
         self.contents.append(template.render(data))
+    
+    @logger.function_tracer
+    def add_summary(self) -> None:
+        self.contents.append(f"<pre>{self.log.df.describe()}</pre>")
 
     @logger.function_tracer
     def add_table(self) -> None:
@@ -236,6 +241,7 @@ class Director:
 
     def construct(self):
         self.__builder.set_title("Runner Result")
+        self.__builder.add_datetime()
         self.__builder.add_heading("Summary")
         self.__builder.add_summary()
         self.__builder.add_heading("Figures")
