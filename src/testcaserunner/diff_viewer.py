@@ -278,14 +278,16 @@ class DiffHtmlBuilder(HtmlBuilder):
             pass
         return "Gold"
 
-    @logger.function_tracer
-    def add_other_file_summary(self, index: int) -> None:
-        template = self.environment.get_template("summary.j2")
+    def add_datetime(self) -> None:
+        template = self.environment.get_template("datetime.j2")
         data = {
-            "date" : self.logs[index].metadata["created_date"],
-            "summary": f"<pre>{self.logs[index].df.describe()}</pre>",
+            "date" : datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
         }
         self.contents.append(template.render(data))
+
+    @logger.function_tracer
+    def add_other_file_summary(self, index: int) -> None:
+        self.contents.append(f"<pre>{self.logs[index].df.describe()}</pre>")
 
     @logger.function_tracer
     def add_link(self, index: int) -> None:
@@ -302,6 +304,7 @@ class DiffDirector:
 
     def construct(self):
         self.__builder.set_title("Compare Result")
+        self.__builder.add_datetime()
         self.__builder.add_heading("Summary 1")
         self.__builder.add_link(0)
         self.__builder.add_other_file_summary(0)
