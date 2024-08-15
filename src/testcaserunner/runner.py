@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from .runner_defines import TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException, InvalidPathException
 from .logger import RunnerLogger
 from .testccase_executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
+from .html_builder import make_html
+from .testcase_logger import make_log
 
 @dataclass
 class TestCaseRunner:
@@ -135,9 +137,6 @@ class TestCaseRunner:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return test_result
-
-from .html_builder import make_html  # 循環import対策
-from .testcase_logger import make_log
 
 def get_log_file_path() -> str:
     log_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
