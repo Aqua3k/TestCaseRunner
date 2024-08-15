@@ -139,13 +139,8 @@ class TestCaseRunner:
         return test_result
 
 def get_log_file_path() -> str:
-    log_name = str(datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
-    name = os.path.join("log", log_name)
-    i = 1
-    while os.path.exists(name):
-        name = os.path.join("log", f"{log_name}-{i}")
-        i += 1
-    return name
+    log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
+    return os.path.join("log", log_name)
 
 def run(
         testcase_handler: Callable[[TestCase], TestCaseResult],

@@ -4,6 +4,7 @@ import glob
 from typing import Any
 from copy import deepcopy
 from dataclasses import dataclass, field
+import datetime
 
 from jinja2 import Environment, FileSystemLoader
 import pandas as pd
@@ -318,6 +319,7 @@ class DiffDirector:
 class RunnerLogViewer:
     logger = RunnerLogger("RunnerLogViewer")
     def __init__(self, path: str="log", _debug=False) -> None:
+        self.debug = _debug
         if _debug:
             self.logger.enable_debug_mode()
         self.logs: list[RunnerLog] = []
@@ -373,9 +375,15 @@ class RunnerLogViewer:
     def get_logs(self) -> list[RunnerLog]:
         return self.logs
 
+    def get_log_file_path(self) -> str:
+        log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_COMPARE"
+        path = os.path.join("log", log_name)
+        os.makedirs(path, exist_ok=True)
+        return path
+
     @logger.function_tracer
     def compare(self, log1: RunnerLog, log2: RunnerLog) -> None:
-        # 不要な列を削除する
-        builder = DiffHtmlBuilder("result.html", [log1, log2], False)
+        folder = self.get_log_file_path()
+        builder = DiffHtmlBuilder(os.path.join(folder, "result.html"), [log1, log2], self.debug)
         director = DiffDirector(builder)
         director.construct()
