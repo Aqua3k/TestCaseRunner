@@ -82,6 +82,14 @@ class RunnerLogManager:
 
     @logger.function_tracer
     def make_json_file(self) -> None:
+        counter: dict[str, int] = defaultdict(int)
+        def add_hash_info(hash: str, suffix: str) -> str:
+            subhash = f"{hash}.{suffix}"
+            index = counter[subhash]
+            counter[subhash] += 1
+            hash = f"{subhash}.{index}"
+            return hash
+
         testcases: list[TestCase] = []
         results: list[TestCaseResult] = []
         for t, r in self.results:
@@ -97,9 +105,9 @@ class RunnerLogManager:
         contents: defaultdict[str, list[Any]] = defaultdict(list)
         for testcase, result in zip(testcases, results):
             contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
-            contents[self.input_hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{self.get_file_hash(testcase.input_file_path)}")
-            contents[self.stdout_hash_col].append(f"{self.get_file_hash(testcase.stdout_file_path)}")
-            contents[self.stderr_hash_col].append(f"{self.get_file_hash(testcase.stderr_file_path)}")
+            contents[self.input_hash_col].append(add_hash_info(self.get_file_hash(testcase.input_file_path), "in"))
+            contents[self.stdout_hash_col].append(add_hash_info(self.get_file_hash(testcase.stdout_file_path), "stdout"))
+            contents[self.stderr_hash_col].append(add_hash_info(self.get_file_hash(testcase.stderr_file_path), "stderr"))
             contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.log_folder_name))
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.log_folder_name))
