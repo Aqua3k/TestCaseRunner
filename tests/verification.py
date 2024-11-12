@@ -27,7 +27,9 @@ def run_program(testcase: TestCase):
     cmd = f"python main.py < {testcase.input_file_path}"
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     err_stat = ResultStatus.AC
-    n,m = map(int, next(testcase.read_testcase_lines()).split())
+    with open(testcase.input_file_path, mode="r") as file:
+        line = file.readline().strip()
+    n,m = map(int, line.split())
     score = n+m
     if proc.returncode != 0:
         print(proc.stdout)

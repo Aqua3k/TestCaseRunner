@@ -14,7 +14,7 @@ import testcaserunner
 
 ```python
 def run(
-        handler: Callable[[TestCase], TestCaseResult],
+        testcase_handler: Callable[[TestCase], TestCaseResult],
         input_file_path: str,
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
@@ -25,14 +25,14 @@ def run(
         ) -> None:
 ```
 
-**普通に使う分には第一引数`handler`と第二引数`input_file_path`を設定するだけで十分です  
+**普通に使う分には第一引数`testcase_handler`と第二引数`input_file_path`を設定するだけで十分です  
 詳細な設定を知りたい方のみ、第三引数以降のオプション引数の説明を参照してください**  
 
-引数`handler`には並列実行させたい関数を渡します。  
-`handler`は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスを戻り値に持つ関数です。  
+引数`testcase_handler`には並列実行させたい関数を渡します。  
+`testcase_handler`は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスを戻り値に持つ関数です。  
 
 引数`input_file_path`にはテストケースファイルがあるディレクトリへのパスを渡します。  
-`input_file_path`で渡されたディレクトリパス直下のすべてのファイルに対して`handler`を実行します。  
+`input_file_path`で渡されたディレクトリパス直下のすべてのファイルに対して`testcase_handler`を実行します。  
 現時点では、フォルダ内を再帰的に走査するオプションやファイルの拡張子を限定するオプションはありません。  
 
 引数`repeat_count`にはそれぞれのテストケースを何回実行するかを指定します。  
@@ -81,6 +81,7 @@ class ResultStatus(IntEnum):
     RE = auto()             # 実行時エラー
     TLE = auto()            # 実行時間制限超過
     IE = auto()             # 内部エラー
+    CAN = auto()            # キャンセルされた
 ```
 
 ### TestCaseResult  
@@ -113,12 +114,12 @@ class TestCaseResult:
 ### TestCase
 
 個別のテストケースの入出力ファイルを管理するクラスです。  
-[run](#run)関数で渡す関数`handler`の引数で使用します。  
+[run](#run)関数で渡す関数`testcase_handler`の引数で使用します。  
 
 メンバ`testcase_name`は入力されるテストケースファイルのファイル名です。  
 
 メンバ`input_file_path`は入力テストケースファイルへのパスです。  
-[run](#run)関数で渡す関数`handler`では、`input_file_path`の内容に対する処理を書いてください。  
+[run](#run)関数で渡す関数`testcase_handler`では、`input_file_path`の内容に対する処理を書いてください。  
 
 メンバ`stdout_file_path`は標準出力の内容を記録するファイルへのパスです。  
 
@@ -128,8 +129,6 @@ class TestCaseResult:
 各ケースに対して固有の値であることが保証されます。  
 個別のテストケースに対してシード値を固定したい場合に使用することを想定しています。  
 
-メソッド`read_testcase_lines`は1行ずつテストケースの入力ファイルの内容を取得するジェネレータを返す関数です。  
-
 ```python
 @dataclass(frozen=True)
 class TestCase:
@@ -138,13 +137,6 @@ class TestCase:
     stdout_file_path: str
     stderr_file_path: str
     testcase_index: int
-
-    def read_testcase_lines(self):
-        """テストケースファイルの内容を1行ずつ取得するジェネレータ
-
-        Yields:
-            str: ファイルの各行の内容
-        """
 ```
 
 ## Exceptions

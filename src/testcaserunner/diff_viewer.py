@@ -9,7 +9,7 @@ import datetime
 from jinja2 import Environment, FileSystemLoader
 import pandas as pd
 import numpy as np
-from jsonschema import ValidationError
+from jsonschema import ValidationError, validate
 
 from .runner_defines import RunnerMetadata, ResultStatus
 from .logger import RunnerLogger
@@ -336,7 +336,7 @@ class RunnerLogViewer:
             schema_path = os.path.join(os.path.split(__file__)[0], "schemas", "result_schema.json")
             with open(schema_path, 'r') as f:
                 schema: dict = json.load(f)
-            #validate(instance=data, schema=schema)
+            validate(instance=data, schema=schema)
         except ValidationError as e:
             self.logger.info("json schema validation error.")
             return False
