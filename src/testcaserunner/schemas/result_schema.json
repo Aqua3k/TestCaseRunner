@@ -8,70 +8,74 @@
         "testcase": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "string" }
+            "^[0-9]+$": { "type": "string" }
           },
           "additionalProperties": false
         },
         "input_hash": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "string" }
+            "^[0-9]+$": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "stdout_hash": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "stderr_hash": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": { "type": "string" }
           },
           "additionalProperties": false
         },
         "in": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "string" }
+            "^[0-9]+$": { "type": "string" }
           },
           "additionalProperties": false
         },
         "stdout": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "string" }
+            "^[0-9]+$": { "type": "string" }
           },
           "additionalProperties": false
         },
         "stderr": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "string" }
+            "^[0-9]+$": { "type": "string" }
           },
           "additionalProperties": false
         },
         "status": {
           "type": "object",
           "patternProperties": {
-            "^\\d+$": { "type": "integer" }
+            "^[0-9]+$": { "type": "integer" }
           },
           "additionalProperties": false
         }
       },
-      "required": ["testcase", "input_hash", "in", "stdout", "stderr", "status"],
+      "required": ["testcase", "input_hash", "stdout_hash", "stderr_hash", "in", "stdout", "stderr", "status"],
       "additionalProperties": true
     },
     "metadata": {
       "type": "object",
       "properties": {
         "library_name": { "type": "string" },
-        "created_date": { "type": "string" },
-        "testcase_num": { "type": "integer" },
+        "created_date": { "type": "string", "format": "date-time" },
         "attributes": {
-          "type": "object",
-          "properties": {
-            "testcase": { "type": "integer" },
-            "input_hash": { "type": "integer" },
-            "in": { "type": "integer" },
-            "stdout": { "type": "integer" },
-            "stderr": { "type": "integer" },
-            "status": { "type": "integer" }
-          },
-          "required": ["testcase", "input_hash", "in", "stdout", "stderr", "status"],
-          "additionalProperties": true
+          "type": "array",
+          "items": { "type": "string" }
         }
       },
-      "required": ["library_name", "created_date", "testcase_num", "attributes"],
+      "required": ["library_name", "created_date", "attributes"],
       "additionalProperties": false
     }
   },
