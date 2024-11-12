@@ -1,32 +1,22 @@
 import os
 import hashlib
 import json
-from enum import IntEnum, auto
 from collections import defaultdict
 from typing import Any
+import datetime
 
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from jinja2 import Environment, FileSystemLoader
-import numpy as np
 
-from .runner_defines import RunnerSettings, RunnerMetadata
-from .runner import ResultStatus, TestCase, TestCaseResult
-from .runner_logger import RunnerLogger
-
-class HtmlColumnType(IntEnum):
-    """HTMLファイルのcolumnの情報
-    """
-    URL = auto()
-    STATUS = auto()
-    TEXT = auto()
-    METADATA = auto()
+from .runner_defines import RunnerMetadata, TestCase, TestCaseResult
+from .logger import RunnerLogger
 
 class RunnerLog:
-    def __init__(self, contents: dict, metadata: dict) -> None:
+    def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
         self._df = pd.DataFrame(contents)
         self._metadata = metadata
+        self.base_dir = base_dir
     
     @property
     def df(self) -> pd.DataFrame:
@@ -41,6 +31,8 @@ class RunnerLog:
         self._metadata["attributes"].pop(column, None)
     
     def _df_at(self, column: str, row: int) -> Any:
+        if column not in self._df.columns:
+            return None # 列がないならNoneを返す
         return self._df.at[str(row), column]
 
 class RunnerLogManager:
@@ -50,57 +42,54 @@ class RunnerLogManager:
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
-    hash_col = "hash"
+    input_hash_col = "input_hash"
+    stdout_hash_col = "stdout_hash"
+    stderr_hash_col = "stderr_hash"
 
     logger = RunnerLogger("RunnerLogManager")
-    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], settings: RunnerSettings) -> None:
-        self.settings = settings
-        if settings.debug:
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> None:
+        self.log_folder_name = log_folder_name
+        if debug:
             self.logger.enable_debug_mode()
         self.results = results
-        self.attributes: dict[str, HtmlColumnType] = {
-            self.infilename_col: HtmlColumnType.TEXT,
-            self.hash_col: HtmlColumnType.METADATA,
-            self.infile_col: HtmlColumnType.URL,
-            self.stdout_col: HtmlColumnType.URL,
-            self.stderr_col: HtmlColumnType.URL,
-            self.status_col: HtmlColumnType.STATUS,
-        }
+
+    def make_folder(self, path: str) -> None:
+        os.makedirs(path, exist_ok=True)
+    
+    @logger.function_tracer
+    def make_log(self) -> None:
         self.make_json_file()
         self.make_figure()
-        self.base_dir = os.path.split(__file__)[0]
     
     @logger.function_tracer
     def get_log(self) -> RunnerLog:
         return self.runner_log
 
     @logger.function_tracer
-    def make_html(self) -> None:
-        self.html_parser = HtmlParser(self.runner_log, self.settings.log_folder_name, self.settings.debug)
-        self.html_parser.make_html()
-
-    json_file_name = "result.json"
-    @logger.function_tracer
-    def add_attribute(self, key: str, type: HtmlColumnType) -> None:
-        self.attributes[key] = type
-
-    histgram_fig_name = 'histgram.png'
-    heatmap_fig_name = 'heatmap.png'
-    @logger.function_tracer
     def make_figure(self) -> None:
         # ヒストグラムを描画
         self.runner_log.df.hist()
-        plt.savefig(os.path.join(self.settings.fig_dir_path, self.histgram_fig_name))
+        fig_dir_path = os.path.join(self.log_folder_name, "fig")
+        self.make_folder(fig_dir_path)
+        plt.savefig(os.path.join(fig_dir_path, 'histgram.png'))
         plt.close()
 
         # 相関係数のヒートマップ
         corr = self.runner_log.df.corr(numeric_only=True)
         heatmap = sns.heatmap(corr, annot=True)
         heatmap.set_title('Correlation Coefficient Heatmap')
-        plt.savefig(os.path.join(self.settings.fig_dir_path, self.heatmap_fig_name))
+        plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
 
     @logger.function_tracer
     def make_json_file(self) -> None:
+        counter: dict[str, int] = defaultdict(int)
+        def add_hash_info(hash: str, suffix: str) -> str:
+            subhash = f"{hash}.{suffix}"
+            index = counter[subhash]
+            counter[subhash] += 1
+            hash = f"{subhash}.{index}"
+            return hash
+
         testcases: list[TestCase] = []
         results: list[TestCaseResult] = []
         for t, r in self.results:
@@ -113,18 +102,15 @@ class RunnerLogManager:
                 attributes[attribute] = ""
         user_attributes = list(attributes.keys())
 
-        for key in user_attributes:
-            self.add_attribute(key, HtmlColumnType.TEXT)
-
         contents: defaultdict[str, list[Any]] = defaultdict(list)
         for testcase, result in zip(testcases, results):
-            path = testcase.input_file_path
-            hash = self.calculate_file_hash(path)
             contents[self.infilename_col].append(os.path.basename(testcase.input_file_path))
-            contents[self.hash_col].append(f"{os.path.basename(testcase.input_file_path)}.{hash}")
-            contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.settings.log_folder_name))
-            contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.settings.log_folder_name))
-            contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.settings.log_folder_name))
+            contents[self.input_hash_col].append(add_hash_info(self.get_file_hash(testcase.input_file_path), "in"))
+            contents[self.stdout_hash_col].append(add_hash_info(self.get_file_hash(testcase.stdout_file_path), "stdout"))
+            contents[self.stderr_hash_col].append(add_hash_info(self.get_file_hash(testcase.stderr_file_path), "stderr"))
+            contents[self.infile_col].append(os.path.relpath(testcase.input_file_path, self.log_folder_name))
+            contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.log_folder_name))
+            contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.log_folder_name))
             contents[self.status_col].append(result.error_status)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
@@ -135,18 +121,24 @@ class RunnerLogManager:
         
         metadata = {
             "library_name": RunnerMetadata.LIB_NAME,
-            "created_date": self.settings.datetime.strftime("%Y/%m/%d %H:%M"),
-            "testcase_num": len(testcases),
-            "attributes": self.attributes,
+            "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
+            "attributes": user_attributes,
         }
         self.json_file = {
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log: RunnerLog = RunnerLog(contents, metadata)
-        json_file_path = os.path.join(self.settings.log_folder_name, self.json_file_name)
+        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.log_folder_name)[1])
+        json_file_path = os.path.join(self.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
+    
+    @logger.function_tracer
+    def get_file_hash(self, path: str) -> str:
+        if os.path.exists(path):
+            return self.calculate_file_hash(path)
+        else:
+            return "" #ファイルが開けないときは空文字にしておく
 
     @logger.function_tracer
     def calculate_file_hash(self, file_path: str) -> str:
@@ -156,154 +148,7 @@ class RunnerLogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-class HtmlParser:
-    logger = RunnerLogger("HtmlParser")
-    def __init__(self, runner_log: RunnerLog, output_path: str, debug: bool) -> None:
-        if debug:
-            self.logger.enable_debug_mode()
-        self.runner_log = runner_log
-        self.output_path = output_path
-        self.base_dir = os.path.split(__file__)[0]
-        loader = FileSystemLoader(os.path.join(self.base_dir, r"templates"))
-        self.environment = Environment(loader=loader)
-
-    status_texts = {
-        ResultStatus.AC: ("AC", "lime"),
-        ResultStatus.WA: ("WA", "gold"),
-        ResultStatus.RE: ("RE", "gold"),
-        ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.IE: ("IE", "red"),
-    }
-    
-    histgram_fig_name = 'histgram.png'
-    heatmap_fig_name = 'heatmap.png'
-    @logger.function_tracer
-    def make_figure(self) -> str:
-        ret = []
-        template = self.environment.get_template("figure.j2")
-        fig = template.render({"link": os.path.join("fig", self.histgram_fig_name)})
-        ret.append(fig)
-        fig = template.render({"link": os.path.join("fig", self.heatmap_fig_name)})
-        ret.append(fig)
-        return "".join(ret)
-
-    html_file_name = "result.html"
-    @logger.function_tracer
-    def make_html(self) -> None:
-        template = self.environment.get_template("main.j2")
-        data = {
-            "date": self.runner_log.metadata["created_date"],
-            "summary": f"<pre>{self.runner_log.df.describe()}</pre>",
-            "header_script_list": self.make_header_script_list(),
-            "footer_script_list": self.make_footer_script_list(),
-            "figures": self.make_figure(),
-            "css_list": self.make_css_list(),
-            "table": self.make_table(),
-            "table_columns": self.make_table_columns(),
-            }
-        html_file_path = os.path.join(self.output_path, self.html_file_name)
-        with open(html_file_path, mode="w") as f:
-            f.write(template.render(data))
-
-    @logger.function_tracer    
-    def get_url_cell(self, column: str, row: int) -> str:
-        value = self.runner_log._df_at(column, row)
-        template = self.environment.get_template("cell_with_file_link.j2")
-        data = {
-            "link": value,
-            "value": "+",
-            }
-        return template.render(data)
-    
-    @logger.function_tracer
-    def get_status_cell(self, column: str, row: int) -> str:
-        value = self.runner_log._df_at(column, row)
-        text, color = self.status_texts.get(value, ("IE", "red"))
-        template = self.environment.get_template("cell_with_color.j2")
-        data = {
-            "color": color,
-            "value": text,
-            }
-        return template.render(data)
-    
-    @logger.function_tracer
-    def get_text_cell(self, column: str, row: int) -> str:
-        value = self.runner_log._df_at(column, row)
-        if type(value) is np.float64 or type(value) is np.float32:
-            value = round(value, 3)
-        template = self.environment.get_template("cell.j2")
-        data = {
-            "value": value,
-            }
-        return template.render(data)
-
-    @logger.function_tracer
-    def make_table(self) -> list[dict[str, str]]:
-        ret = []
-        for row in range(self.runner_log.metadata["testcase_num"]):
-            rows = {}
-            for column in self.runner_log.df.columns:
-                match self.runner_log.metadata["attributes"][column]:
-                    case HtmlColumnType.URL:
-                        value = self.get_url_cell(column, row)
-                    case HtmlColumnType.STATUS:
-                        value = self.get_status_cell(column, row)
-                    case HtmlColumnType.TEXT:
-                        value = self.get_text_cell(column, row)
-                    case HtmlColumnType.METADATA:
-                        continue
-                    case _:
-                        assert "error: 不明なHtmlColumnTypeがあります。"
-                rows[column] = value
-            ret.append(rows)
-        return ret
-    
-    @logger.function_tracer
-    def load_file(self, file: str) -> str:
-        with open(file, mode="r", encoding="utf-8") as f:
-            text = f.read()
-        return text
-    
-    @logger.function_tracer
-    def make_header_script_list(self) -> list[str]:
-        template = self.environment.get_template("script.j2")
-        file = os.path.join(os.path.split(__file__)[0], "js/Table.js")
-        ret = [
-            template.render({"text": self.load_file(file)}),
-        ]
-        return ret
-
-    @logger.function_tracer
-    def make_footer_script_list(self) -> list[str]:
-        template = self.environment.get_template("script.j2")
-        file = os.path.join(os.path.split(__file__)[0], "js/checkbox.js")
-        ret = [
-            template.render({"text": self.load_file(file)}),
-        ]
-        return ret
-    
-    @logger.function_tracer
-    def make_table_columns(self) -> dict[str, str]:
-        table_columns = dict()
-        for column in self.runner_log.df.columns:
-            match self.runner_log.metadata["attributes"][column]:
-                case HtmlColumnType.URL|HtmlColumnType.STATUS:
-                    table_columns[column] = "normal"
-                case HtmlColumnType.TEXT:
-                    table_columns[column] = "sort"
-                case HtmlColumnType.METADATA:
-                    continue
-                case _:
-                    assert "error: 不明なHtmlColumnTypeがあります。"
-        return table_columns
-
-    @logger.function_tracer
-    def make_css_list(self) -> list[str]:
-        template1 = self.environment.get_template("css_link.j2")
-        template2 = self.environment.get_template("css.j2")
-        file = os.path.join(os.path.split(__file__)[0], "js/SortTable.css")
-        ret = [
-            template2.render({"text": self.load_file(file)}),
-            template1.render({"link": r"https://newcss.net/new.min.css"}),
-        ]
-        return ret
+def make_log(result: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> RunnerLog:
+    log_manager = RunnerLogManager(result, log_folder_name, debug)
+    log_manager.make_log()
+    return log_manager.get_log()

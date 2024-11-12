@@ -4,62 +4,11 @@
     <meta charset="UTF-8">
 </head>
 <body>
-    {% if header_script_list %}
-        {% for script in header_script_list %}
-            {{ script }}
-        {% endfor %}
-    {% endif %}
-
-    {% if css_list %}
-        {% for css in css_list %}
-            {{ css }}
-        {% endfor %}
-    {% endif %}
-
     <header>
-        <h1>Result</h1>
+        <h1>{{title}}</h1>
     </header>
-    
-    <h6>Creation date and time: {{ date }}</h6>
-
-    <h2>Summary</h2>
-
-    {% if summary %}
-        {{ summary }}
-    {% endif %}
-
-    <h2>Figures</h2>
-
-    {{ figures }}
-
-    <h2>Table</h2>
-    <div id="column-controls"></div>
-    <table id="sortTable">
-        <thead>
-            <tr>
-                {% for key, value in table_columns.items() %}
-                    {% if value == 'sort' %}
-                        <th cmanSortBtn>{{ key }}</th>
-                    {% else %}
-                        <th>{{ key }}</th>
-                    {% endif %}
-                {% endfor %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in table %}
-            <tr>
-                {% for value in row.values() %}
-                    {{ value }}
-                {% endfor %}
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% if footer_script_list %}
-        {% for script in footer_script_list %}
-            {{ script }}
-        {% endfor %}
-    {% endif %}
+    {% for section in sections %}
+        {{ section }}
+    {% endfor %}
 </body>
 </html>

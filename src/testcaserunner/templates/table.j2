@@ -1,0 +1,23 @@
+<div id="column-controls"></div>
+<table id="sortTable">
+    <thead>
+        <tr>
+            {% for key, value in table_columns.items() %}
+                {% if value == 'sort' %}
+                    <th cmanSortBtn>{{ key }}</th>
+                {% else %}
+                    <th>{{ key }}</th>
+                {% endif %}
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in table %}
+        <tr>
+            {% for value in row.values() %}
+                {{ value }}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
