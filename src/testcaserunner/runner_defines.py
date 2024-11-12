@@ -49,13 +49,3 @@ class TestCase:
     stdout_file_path: str
     stderr_file_path: str
     testcase_index: int
-
-    def read_testcase_lines(self) -> Iterator[str]:
-        """テストケースファイルの内容を1行ずつ取得するジェネレータ
-
-        Yields:
-            str: ファイルの各行の内容
-        """
-        with open(self.input_file_path, mode="r") as file:
-            for line in file:
-                yield line.strip()

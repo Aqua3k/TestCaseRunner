@@ -128,8 +128,6 @@ class TestCaseResult:
 各ケースに対して固有の値であることが保証されます。  
 個別のテストケースに対してシード値を固定したい場合に使用することを想定しています。  
 
-メソッド`read_testcase_lines`は1行ずつテストケースの入力ファイルの内容を取得するジェネレータを返す関数です。  
-
 ```python
 @dataclass(frozen=True)
 class TestCase:
@@ -138,13 +136,6 @@ class TestCase:
     stdout_file_path: str
     stderr_file_path: str
     testcase_index: int
-
-    def read_testcase_lines(self):
-        """テストケースファイルの内容を1行ずつ取得するジェネレータ
-
-        Yields:
-            str: ファイルの各行の内容
-        """
 ```
 
 ## Exceptions
