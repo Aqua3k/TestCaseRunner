@@ -5,7 +5,7 @@ from enum import IntEnum, auto
 @dataclass(frozen=True)
 class RunnerMetadata:
     LIB_NAME: str = "testcaserunner"
-    LIB_VERSION: str = "0.3.0"
+    LIB_VERSION: str = "1.0.0"
 
 class CustomException(Exception):
     """ライブラリ内で使う例外の基底クラス"""
