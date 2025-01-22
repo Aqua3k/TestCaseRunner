@@ -35,6 +35,12 @@ class _RunnerLog:
         if column not in self._df.columns:
             return None # 列がないならNoneを返す
         return self._df.at[str(row), column]
+    
+    def get_attributes(self):
+        return self.metadata.get("attributes")
+    
+    def get_created_date(self):
+        return self.metadata.get("created_date")
 
 class RunnerLogManager:
     js_file_path = "js"
