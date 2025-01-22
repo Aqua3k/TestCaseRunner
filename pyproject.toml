@@ -21,3 +21,6 @@ where = ["src"]
     "*.css",
     "*.js",
 ]
+
+[project.scripts]
+cui = "testcaserunner.cui:main"
