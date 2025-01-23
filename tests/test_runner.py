@@ -10,7 +10,6 @@ sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,
-    ResultStatus,
     TestCaseResult,
     TestCase,
     InvalidPathException,
@@ -20,7 +19,6 @@ from testcaserunner import (
 def no_error_program(testcase: TestCase):
     cmd = f"python main.py < {testcase.input_file_path}"
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    err_stat = ResultStatus.AC
     with open(testcase.input_file_path, mode="r") as file:
         line = file.readline().strip()
     n,m = map(int, line.split())
@@ -28,13 +26,13 @@ def no_error_program(testcase: TestCase):
     if proc.returncode != 0:
         print(proc.stdout)
         print(proc.stderr)
-        err_stat = ResultStatus.RE
+        return TestCaseResult({}, proc.stdout, proc.stderr, "Error")
     attribute = {
         "score": score,
         "n": n,
         "m": m,
     }
-    return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
+    return TestCaseResult(attribute, proc.stdout, proc.stderr)
 
 def error_program(testcase: TestCase):
     foo = 1/0 # division by zero.
@@ -68,16 +66,6 @@ def test_no_error_no_warning_case0(caplog, setup_normally):
 def test_no_error_no_warning_case1(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in", copy_target_files=["main.py"])
-    assert len(caplog.records) == 0
-
-def test_no_error_no_warning_case2(caplog, setup_normally):
-    with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", stdout_file_output=False)
-    assert len(caplog.records) == 0
-
-def test_no_error_no_warning_case3(caplog, setup_normally):
-    with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", stderr_file_output=False)
     assert len(caplog.records) == 0
 
 def test_no_error_no_warning_case4(caplog, setup_normally):

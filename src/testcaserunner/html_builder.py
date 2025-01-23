@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from .runner import ResultStatus
 from .testcase_logger import RunnerLog
 from .logger import RunnerLogger
 
@@ -153,10 +152,7 @@ class ResultHtmlBuilder(HtmlBuilder):
 
     @logger.function_tracer
     def get_data(self, column: str, row: int) -> Any:
-        # 欠損値の場合は空文字にする
         ret = self.log._df_at(column, row)
-        if ret is None:
-            ret = ""
         return ret
 
     @logger.function_tracer
@@ -205,18 +201,19 @@ class ResultHtmlBuilder(HtmlBuilder):
             }
         return template.render(data)
     
-    status_texts = {
-        ResultStatus.AC: ("AC", "lime"),
-        ResultStatus.WA: ("WA", "gold"),
-        ResultStatus.RE: ("RE", "gold"),
-        ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.IE: ("IE", "red"),
-        ResultStatus.CAN: ("---", "gray"),
-    }
     @logger.function_tracer
     def get_status_cell(self, column: str, row: int) -> str:
-        value = self.get_data(column, row)
-        text, color = self.status_texts.get(value, ("IE", "red"))
+        text = self.get_data(column, row)
+        match text:
+            case None:
+                text = "Success"
+                color = "lime"
+            case "IE":
+                color = "red"
+            case "Canceled":
+                color = "gray"
+            case _:
+                color = "gold"
         template = self.environment.get_template("cell_with_color.j2")
         data = {
             "color": color,

@@ -19,8 +19,6 @@ def run(
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
-        stdout_file_output: bool = True,
-        stderr_file_output: bool = True,
         _debug: bool = False,
         ) -> None:
 ```
@@ -54,61 +52,34 @@ def run(
 | `"thread"`  | [ThreadPoolExecutor](https://docs.python.org/ja/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor)を使ってスレッドを並列化します。<br>I/Oバウンドな処理を行う場合に適しています。<br>詳しくはリンク先のドキュメントを参照してください。 |
 | `"single"`  | 並列化を行いません。 |
 
-`stdout_file_output`は標準出力の内容をファイルとして保存するかどうかを指定します。  
-オプション引数で、デフォルト値はTrueです。  
-この引数がTrueの場合、[TestCaseResult](#testcaseresult)クラスのメンバ`stdout`をファイルに保存します。  
-
-`stderr_file_output`は標準出力の内容をファイルとして保存するかどうかを指定します。  
-オプション引数で、デフォルト値はTrueです。  
-この引数がTrueの場合、[TestCaseResult](#testcaseresult)クラスのメンバ`stderr`をファイルに保存します。  
-
 ## Classes
-
-### ResultStatus  
-
-テストケースの実行結果のステータスを定義するEnum型の定義です。  
-[TestCaseResult](#testcaseresult)クラスのメンバ`error_status`で使用します。  
-
-
-```python
-class ResultStatus(IntEnum):
-    """テストケースを実行した結果のステータス定義
-
-    結果ファイルに載るだけで特別な処理をするわけではない
-    """
-    AC = auto()             # Accepted
-    WA = auto()             # Wrong Answer
-    RE = auto()             # 実行時エラー
-    TLE = auto()            # 実行時間制限超過
-    IE = auto()             # 内部エラー
-    CAN = auto()            # キャンセルされた
-```
 
 ### TestCaseResult  
 
 個別のテストケースの実行結果を管理するクラスです。  
 [run](#run)関数の戻り値として使用します。  
 
-メンバ`error_status`は[ResultStatus](#resultstatus)クラスで、テストケースの実行結果ステータスを記録します。  
-
-メンバ`stdout`には標準出力として記録したい内容を文字列型で指定します。  
-[run](run)関数の`stdout_file_output`で`True`を指定していた場合、`stdout`の内容がファイルに保存され、HTMLファイルからリンクとして参照できます。    
-
-メンバ`stderr`には標準エラー出力として記録したい内容を文字列型で指定します。  
-[run](run)関数の`stderr_file_output`で`True`を指定していた場合、`stderr`の内容がファイルに保存され、HTMLファイルからリンクとして参照できます。  
-
 メンバ`attribute`には結果ファイルにカスタマイズして載せたい情報を辞書型で指定します。  
 詳しくはサンプルコードを参照してください。  
+
+文字列を`stdout`へ指定すると、内容がファイルに出力されHTMLファイルからリンクとして参照できます。    
+`stdout`がデフォルト引数`None`のままの場合、ファイルに何も出力しません。  
+
+文字列を`stderr`へ指定すると、内容がファイルに出力されHTMLファイルからリンクとして参照できます。    
+`stderr`がデフォルト引数`None`のままの場合、ファイルに何も出力しません。  
+
+メンバ`error_status`は[ResultStatus](#resultstatus)クラスで、テストケースの実行結果ステータスを記録します。  
 
 ```python
 @dataclass
 class TestCaseResult:
     """テストケースの結果をまとめて管理するクラス"""
-    error_status: ResultStatus = ResultStatus.AC # 終了のステータス
-    stdout: str = ""                             # 標準出力(なければ空文字でいい)
-    stderr: str = ""                             # 標準エラー出力(なければ空文字でいい)
-    attribute: dicg[str, int | float] \
-        = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
+    attribute: dict[str, int | float] \
+        = field(default_factory=dict)    # 結果ファイルに乗せたい情報の一覧
+    stdout: str|None = None              # 標準出力(なければ空文字でいい)
+    stderr: str|None = None              # 標準エラー出力(なければ空文字でいい)
+    error_status: str|None = None        # エラーステータス
+    error_description: str|None = None   # エラーの詳細説明
 ```
 
 ### TestCase

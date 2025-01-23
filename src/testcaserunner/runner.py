@@ -8,7 +8,7 @@ from pathlib import Path
 import datetime
 from dataclasses import dataclass
 
-from .runner_defines import TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException, InvalidPathException
+from .runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
 from .logger import RunnerLogger
 from .testccase_executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
 from .html_builder import make_html
@@ -22,8 +22,6 @@ class TestCaseRunner:
     repeat_count: int
     copy_target_files: list[str]
     parallel_processing_method: str
-    stdout_file_output: bool
-    stderr_file_output: bool
     debug: bool
     def __post_init__(self) -> None:
         self.logger = RunnerLogger("TestCaseRunner")
@@ -114,7 +112,10 @@ class TestCaseRunner:
         parsed_results: list[TestCaseResult] = []
         for result in results:
             if result is None:
-                result = TestCaseResult(ResultStatus.CAN)
+                result = TestCaseResult(
+                    error_status="Canceled",
+                    error_description="The program was interrupted (via Ctrl+C).",
+                    )
             parsed_results.append(result)
         
         assert len(test_cases) == len(results)
@@ -127,13 +128,17 @@ class TestCaseRunner:
         except Exception as e:
             self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
-            test_result = TestCaseResult(error_status=ResultStatus.IE, stderr=str(e))
+            test_result = TestCaseResult(
+                stderr=str(e),
+                error_status="IE",
+                error_description="This is an internal library error. Please contact the developer.",
+                )
         erapsed_time = time.time() - start_time
         test_result.attribute["time"] = erapsed_time
-        if self.stdout_file_output:
+        if test_result.stdout is not None:
             with open(testcase.stdout_file_path, mode='w') as f:
                 f.write(test_result.stdout)
-        if self.stderr_file_output:
+        if test_result.stderr is not None:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return test_result
@@ -148,8 +153,6 @@ def run(
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
-        stdout_file_output: bool = True,
-        stderr_file_output: bool = True,
         _debug: bool = False,
         ) -> None:
     """ランナーを実行する
@@ -160,8 +163,6 @@ def run(
         repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
         copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
-        stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
-        stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
     """
     log_folder_name = get_log_file_path()
     runner = TestCaseRunner(
@@ -171,8 +172,6 @@ def run(
         repeat_count,
         copy_target_files,
         parallel_processing_method,
-        stdout_file_output,
-        stderr_file_output,
         _debug,
     )
     result = runner.start()
