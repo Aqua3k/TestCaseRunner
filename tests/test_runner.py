@@ -10,7 +10,6 @@ sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,
-    ResultStatus,
     TestCaseResult,
     TestCase,
     InvalidPathException,
@@ -20,7 +19,6 @@ from testcaserunner import (
 def no_error_program(testcase: TestCase):
     cmd = f"python main.py < {testcase.input_file_path}"
     proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    err_stat = ResultStatus.AC
     with open(testcase.input_file_path, mode="r") as file:
         line = file.readline().strip()
     n,m = map(int, line.split())
@@ -28,13 +26,13 @@ def no_error_program(testcase: TestCase):
     if proc.returncode != 0:
         print(proc.stdout)
         print(proc.stderr)
-        err_stat = ResultStatus.RE
+        return TestCaseResult({}, proc.stdout, proc.stderr, "Error")
     attribute = {
         "score": score,
         "n": n,
         "m": m,
     }
-    return TestCaseResult(err_stat, proc.stdout, proc.stderr, attribute)
+    return TestCaseResult(attribute, proc.stdout, proc.stderr)
 
 def error_program(testcase: TestCase):
     foo = 1/0 # division by zero.

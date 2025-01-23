@@ -21,26 +21,15 @@ class NoTestcaseFileException(CustomException):
     def __init__(self, message) -> None:
         super().__init__(message)
 
-class ResultStatus(IntEnum):
-    """テストケースを実行した結果のステータス定義
-
-    結果ファイルに載るだけで特別な処理をするわけではない
-    """
-    AC = auto()             # Accepted
-    WA = auto()             # Wrong Answer
-    RE = auto()             # 実行時エラー
-    TLE = auto()            # 実行時間制限超過
-    IE = auto()             # 内部エラー
-    CAN = auto()            # キャンセルされた
-
 @dataclass
 class TestCaseResult:
     """テストケースの結果をまとめて管理するクラス"""
-    error_status: ResultStatus = ResultStatus.AC # 終了のステータス
-    stdout: str = ""                             # 標準出力(なければ空文字でいい)
-    stderr: str = ""                             # 標準エラー出力(なければ空文字でいい)
     attribute: dict[str, int | float] \
-        = field(default_factory=dict)            # 結果ファイルに乗せたい情報の一覧
+        = field(default_factory=dict)    # 結果ファイルに乗せたい情報の一覧
+    stdout: str|None = None              # 標準出力(なければ空文字でいい)
+    stderr: str|None = None              # 標準エラー出力(なければ空文字でいい)
+    error_status: str|None = None        # エラーステータス
+    error_description: str|None = None   # エラーの詳細説明
 
 @dataclass(frozen=True)
 class TestCase:

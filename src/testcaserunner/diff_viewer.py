@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from jsonschema import ValidationError, validate
 
-from .runner_defines import RunnerMetadata, ResultStatus
+from .runner_defines import RunnerMetadata
 from .logger import RunnerLogger
 from .testcase_logger import RunnerLog, RunnerLogManager
 from .html_builder import HtmlBuilder, Column, HtmlColumnType
@@ -140,17 +140,19 @@ class DiffHtmlBuilder(HtmlBuilder):
             table.append(rows)
         return table
     
-    status_texts = {
-        ResultStatus.AC: ("AC", "lime"),
-        ResultStatus.WA: ("WA", "gold"),
-        ResultStatus.RE: ("RE", "gold"),
-        ResultStatus.TLE: ("TLE", "gold"),
-        ResultStatus.IE: ("IE", "red"),
-    }
     @logger.function_tracer
     def get_status_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
-        value = self.get_data(column.title, row, sub_category_index)
-        text, color = self.status_texts.get(value, ("IE", "red"))
+        text = self.get_data(column.title, row, sub_category_index)
+        match text:
+            case None:
+                text = "Success"
+                color = "lime"
+            case "IE":
+                color = "red"
+            case "Canceled":
+                color = "gray"
+            case _:
+                color = "gold"
         template = self.environment.get_template("cell_with_color.j2")
         data = {
             "color": color,

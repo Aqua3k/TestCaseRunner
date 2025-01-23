@@ -8,7 +8,7 @@ from pathlib import Path
 import datetime
 from dataclasses import dataclass
 
-from .runner_defines import TestCase, TestCaseResult, ResultStatus, NoTestcaseFileException, InvalidPathException
+from .runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
 from .logger import RunnerLogger
 from .testccase_executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
 from .html_builder import make_html
@@ -114,7 +114,10 @@ class TestCaseRunner:
         parsed_results: list[TestCaseResult] = []
         for result in results:
             if result is None:
-                result = TestCaseResult(ResultStatus.CAN)
+                result = TestCaseResult(
+                    error_status="Canceled",
+                    error_description="The program was interrupted (via Ctrl+C).",
+                    )
             parsed_results.append(result)
         
         assert len(test_cases) == len(results)
@@ -127,13 +130,17 @@ class TestCaseRunner:
         except Exception as e:
             self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
-            test_result = TestCaseResult(error_status=ResultStatus.IE, stderr=str(e))
+            test_result = TestCaseResult(
+                stderr=str(e),
+                error_status="IE",
+                error_description="This is an internal library error. Please contact the developer.",
+                )
         erapsed_time = time.time() - start_time
         test_result.attribute["time"] = erapsed_time
-        if self.stdout_file_output:
+        if test_result.stdout is not None:
             with open(testcase.stdout_file_path, mode='w') as f:
                 f.write(test_result.stdout)
-        if self.stderr_file_output:
+        if test_result.stderr is not None:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return test_result
