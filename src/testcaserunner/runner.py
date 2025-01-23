@@ -22,8 +22,6 @@ class TestCaseRunner:
     repeat_count: int
     copy_target_files: list[str]
     parallel_processing_method: str
-    stdout_file_output: bool
-    stderr_file_output: bool
     debug: bool
     def __post_init__(self) -> None:
         self.logger = RunnerLogger("TestCaseRunner")
@@ -155,8 +153,6 @@ def run(
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
-        stdout_file_output: bool = True,
-        stderr_file_output: bool = True,
         _debug: bool = False,
         ) -> None:
     """ランナーを実行する
@@ -167,8 +163,6 @@ def run(
         repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
         copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
-        stdout_file_output (bool, optional): 標準出力をファイルで保存するかどうか. Defaults to True.
-        stderr_file_output (bool, optional): 標準エラー出力をファイルで保存するかどうか. Defaults to True.
     """
     log_folder_name = get_log_file_path()
     runner = TestCaseRunner(
@@ -178,8 +172,6 @@ def run(
         repeat_count,
         copy_target_files,
         parallel_processing_method,
-        stdout_file_output,
-        stderr_file_output,
         _debug,
     )
     result = runner.start()

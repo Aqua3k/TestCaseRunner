@@ -68,16 +68,6 @@ def test_no_error_no_warning_case1(caplog, setup_normally):
         run(testcase_handler=no_error_program, input_file_path="in", copy_target_files=["main.py"])
     assert len(caplog.records) == 0
 
-def test_no_error_no_warning_case2(caplog, setup_normally):
-    with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", stdout_file_output=False)
-    assert len(caplog.records) == 0
-
-def test_no_error_no_warning_case3(caplog, setup_normally):
-    with caplog.at_level(logging.WARNING):
-        run(testcase_handler=no_error_program, input_file_path="in", stderr_file_output=False)
-    assert len(caplog.records) == 0
-
 def test_no_error_no_warning_case4(caplog, setup_normally):
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program, input_file_path="in")
