@@ -152,10 +152,7 @@ class ResultHtmlBuilder(HtmlBuilder):
 
     @logger.function_tracer
     def get_data(self, column: str, row: int) -> Any:
-        # 欠損値の場合は空文字にする
         ret = self.log._df_at(column, row)
-        if ret is None:
-            ret = ""
         return ret
 
     @logger.function_tracer

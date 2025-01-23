@@ -47,8 +47,6 @@ class DiffHtmlBuilder(HtmlBuilder):
         if col not in self.merged_df.columns:
             return "" # 列がないならNoneを返す
         ret = self.merged_df.at[row, col]
-        if ret is None:
-            ret = ""
         if type(ret) is np.float64 or type(ret) is np.float32:
             ret = round(ret, 3)
         return ret

@@ -1,7 +1,5 @@
 import subprocess
-import sys
 import time
-sys.path.append(r"..\src")
 
 from testcaserunner import (
     run,
