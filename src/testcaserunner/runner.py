@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 import datetime
 from dataclasses import dataclass
+import traceback
 
 from .runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
 from .logger import RunnerLogger
@@ -126,10 +127,11 @@ class TestCaseRunner:
         try:
             test_result: TestCaseResult = self.testcase_handler(testcase)
         except Exception as e:
+            error_details = traceback.format_exc()
             self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(
-                stderr=str(e),
+                stderr=error_details,
                 error_status="Callback Error",
                 result_description="An exception occurred in the provided callback function. Please check your callback implementation for errors. For more details, refer to `stderr`.",
                 )
