@@ -19,6 +19,7 @@ def run(
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
+        time_limit: int|float|None = None,
         _debug: bool = False,
         ) -> None:
 ```
@@ -27,7 +28,10 @@ def run(
 詳細な設定を知りたい方のみ、第三引数以降のオプション引数の説明を参照してください**  
 
 引数`testcase_handler`には並列実行させたい関数を渡します。  
-`testcase_handler`は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスを戻り値に持つ関数です。  
+`testcase_handler`へ登録する関数は[TestCase](#testcase)クラスを引数にもち、[TestCaseResult](#testcaseresult)クラスもしくは`None`を戻り値に持つ関数です。  
+[TestCaseResult](#testcaseresult)クラスを戻り値にすると、クラスの情報がHTMLファイルに載ります。   
+`None`型を戻り値にすると、HTMLファイルへ追加の情報は載りません。  
+（追加の情報が載らないだけで、HTMLファイルの作成は行われます）  
 
 引数`input_file_path`にはテストケースファイルがあるディレクトリへのパスを渡します。  
 `input_file_path`で渡されたディレクトリパス直下のすべてのファイルに対して`testcase_handler`を実行します。  
@@ -46,11 +50,22 @@ def run(
 オプション引数で、デフォルト値は`"process"`です。  
 指定可能なオプションは以下の3つです。  
 
+引数`time_limit`は実行制限時間の上限を設定します。  
+オプション引数で、デフォルト値は`None`です。  
+設定値`None`は`float(inf)`と同じふるまいをします。  
+`testcase_handler`を実行したときの実行時間がこの値以上だった場合、実行時間エラー(TLE)が記録されます。  
+**現時点では、実行時間を超過したプログラムの強制終了はしません。**  
+実行時間を超過したプログラムの強制終了機能は今後実装予定です。  
+
 | 引数 | 説明 |
 | --- | --- |
 | `"process"` | [ProcessPoolExecutor](https://docs.python.org/ja/3/library/concurrent.futures.html#concurrent.futures.ProcessPoolExecutor)を使ってプロセスを並列化します。<br>CPUバウンドな処理を行う場合に適しています。<br>詳しくはリンク先のドキュメントを参照してください。 |
 | `"thread"`  | [ThreadPoolExecutor](https://docs.python.org/ja/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor)を使ってスレッドを並列化します。<br>I/Oバウンドな処理を行う場合に適しています。<br>詳しくはリンク先のドキュメントを参照してください。 |
 | `"single"`  | 並列化を行いません。 |
+
+引数`_debug`はデバッグ用の出力の有無を切り替えます。  
+オプション引数で、デフォルト値は`False`です。  
+開発用の使用を想定しており、それ以外でこの引数を`True`に設定するメリットはありません。    
 
 ## Classes
 
