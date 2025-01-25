@@ -23,6 +23,7 @@ class TestCaseRunner:
     repeat_count: int
     copy_target_files: list[str]
     parallel_processing_method: str
+    time_limit_: int|float|None
     debug: bool
     def __post_init__(self) -> None:
         self.logger = RunnerLogger("TestCaseRunner")
@@ -31,6 +32,10 @@ class TestCaseRunner:
         if self.debug:
             self.logger.enable_debug_mode()
         self.input_file_path = self.input_file_copy_path
+        if self.time_limit_ is None:
+            self.time_limit = float("inf")
+        else:
+            self.time_limit = self.time_limit_
 
     def make_folder(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
@@ -126,10 +131,12 @@ class TestCaseRunner:
         def unwrap_result(result: TestCaseResult|None) -> TestCaseResult:
             return result if result is not None else TestCaseResult()
         start_time = time.time()
+        has_error = False
         try:
             test_result: TestCaseResult|None = self.testcase_handler(testcase)
         except Exception as e:
             error_details = traceback.format_exc()
+            has_error = True
             self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(
@@ -139,6 +146,12 @@ class TestCaseRunner:
                 )
         test_result = unwrap_result(test_result)
         erapsed_time = time.time() - start_time
+        if not has_error and test_result.error_status is None:
+            if self.time_limit < erapsed_time:
+                # 時間制限超過はエラーが発生していない時だけ記録する
+                test_result.error_status = "TLE"
+                test_result.result_description = "Your program has exceeded the time limit."
+            
         test_result.attribute["time"] = erapsed_time
         if test_result.stdout is not None:
             with open(testcase.stdout_file_path, mode='w') as f:
@@ -158,6 +171,7 @@ def run(
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
         parallel_processing_method: str = "process",
+        time_limit: int|float|None = None,
         _debug: bool = False,
         ) -> None:
     """ランナーを実行する
@@ -177,6 +191,7 @@ def run(
         repeat_count,
         copy_target_files,
         parallel_processing_method,
+        time_limit,
         _debug,
     )
     result = runner.start()
