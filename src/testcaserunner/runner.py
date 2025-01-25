@@ -17,7 +17,7 @@ from .testcase_logger import make_log
 
 @dataclass
 class TestCaseRunner:
-    testcase_handler: Callable[[TestCase], TestCaseResult]
+    testcase_handler: Callable[[TestCase], TestCaseResult|None]
     input_file_path: str
     log_folder_name: str
     repeat_count: int
@@ -123,9 +123,11 @@ class TestCaseRunner:
         return list(zip(test_cases, parsed_results))
     
     def run_testcase(self, testcase: TestCase) -> TestCaseResult:
+        def unwrap_result(result: TestCaseResult|None) -> TestCaseResult:
+            return result if result is not None else TestCaseResult()
         start_time = time.time()
         try:
-            test_result: TestCaseResult = self.testcase_handler(testcase)
+            test_result: TestCaseResult|None = self.testcase_handler(testcase)
         except Exception as e:
             error_details = traceback.format_exc()
             self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
@@ -135,6 +137,7 @@ class TestCaseRunner:
                 error_status="Callback Error",
                 result_description="An exception occurred in the provided callback function. Please check your callback implementation for errors. For more details, refer to `stderr`.",
                 )
+        test_result = unwrap_result(test_result)
         erapsed_time = time.time() - start_time
         test_result.attribute["time"] = erapsed_time
         if test_result.stdout is not None:
@@ -150,7 +153,7 @@ def get_log_file_path() -> str:
     return os.path.join("log", log_name)
 
 def run(
-        testcase_handler: Callable[[TestCase], TestCaseResult],
+        testcase_handler: Callable[[TestCase], TestCaseResult|None],
         input_file_path: str,
         repeat_count: int = 1,
         copy_target_files: list[str] = [],

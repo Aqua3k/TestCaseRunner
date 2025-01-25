@@ -14,7 +14,7 @@ import testcaserunner
 
 ```python
 def run(
-        testcase_handler: Callable[[TestCase], TestCaseResult],
+        testcase_handler: Callable[[TestCase], TestCaseResult|None],
         input_file_path: str,
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
