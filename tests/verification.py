@@ -27,10 +27,16 @@ def run_program(testcase: TestCase):
         line = file.readline().strip()
     n,m = map(int, line.split())
     score = n+m
-    if proc.returncode != 0:
+    if testcase.testcase_index % 4 == 0:
+        raise(TypeError("エラー"))
+    elif testcase.testcase_index % 4 == 1:
         print(proc.stdout)
         print(proc.stderr)
         return TestCaseResult({}, proc.stdout, proc.stderr, "Error")
+    elif testcase.testcase_index % 4 == 2:
+        print(proc.stdout)
+        print(proc.stderr)
+        return TestCaseResult({}, proc.stdout, proc.stderr, "Error", "this is description.")
     attribute = {
         "score": score,
         "n": n,

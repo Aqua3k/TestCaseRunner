@@ -14,7 +14,7 @@ import testcaserunner
 
 ```python
 def run(
-        testcase_handler: Callable[[TestCase], TestCaseResult],
+        testcase_handler: Callable[[TestCase], TestCaseResult|None],
         input_file_path: str,
         repeat_count: int = 1,
         copy_target_files: list[str] = [],
@@ -79,7 +79,7 @@ class TestCaseResult:
     stdout: str|None = None              # 標準出力(なければ空文字でいい)
     stderr: str|None = None              # 標準エラー出力(なければ空文字でいい)
     error_status: str|None = None        # エラーステータス
-    error_description: str|None = None   # エラーの詳細説明
+    result_description: str|None = None  # 実行結果の詳細な説明(任意)
 ```
 
 ### TestCase

@@ -203,7 +203,7 @@ class ResultHtmlBuilder(HtmlBuilder):
     
     @logger.function_tracer
     def get_status_cell(self, column: str, row: int) -> str:
-        text = self.get_data(column, row)
+        text, description = self.get_data(column, row)
         match text:
             case None:
                 text = "Success"
@@ -214,11 +214,19 @@ class ResultHtmlBuilder(HtmlBuilder):
                 color = "gray"
             case _:
                 color = "gold"
-        template = self.environment.get_template("cell_with_color.j2")
-        data = {
-            "color": color,
-            "value": text,
-            }
+        if description is not None:
+            template = self.environment.get_template("cell_with_color_and_mouseover_message.j2")
+            data = {
+                "color": color,
+                "value": text,
+                "description": description,
+                }
+        else:
+            template = self.environment.get_template("cell_with_color.j2")            
+            data = {
+                "color": color,
+                "value": text,
+                }
         return template.render(data)
     
     @logger.function_tracer
