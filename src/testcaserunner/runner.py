@@ -114,7 +114,7 @@ class TestCaseRunner:
             if result is None:
                 result = TestCaseResult(
                     error_status="Canceled",
-                    error_description="The program was interrupted (via Ctrl+C).",
+                    result_description="The program was interrupted (via Ctrl+C).",
                     )
             parsed_results.append(result)
         
@@ -130,8 +130,8 @@ class TestCaseRunner:
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(
                 stderr=str(e),
-                error_status="IE",
-                error_description="This is an internal library error. Please contact the developer.",
+                error_status="Callback Error",
+                result_description="An exception occurred in the provided callback function. Please check your callback implementation for errors. For more details, refer to `stderr`.",
                 )
         erapsed_time = time.time() - start_time
         test_result.attribute["time"] = erapsed_time
