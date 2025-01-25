@@ -42,6 +42,7 @@ class RunnerLogManager:
     stderr_col = "stderr"
     infilename_col = "testcase"
     status_col = "status"
+    description_col = "error_description"
     input_hash_col = "input_hash"
     stdout_hash_col = "stdout_hash"
     stderr_hash_col = "stderr_hash"
@@ -112,6 +113,7 @@ class RunnerLogManager:
             contents[self.stdout_col].append(os.path.relpath(testcase.stdout_file_path, self.log_folder_name))
             contents[self.stderr_col].append(os.path.relpath(testcase.stderr_file_path, self.log_folder_name))
             contents[self.status_col].append(result.error_status)
+            contents[self.description_col].append(result.error_description)
             for key in user_attributes:
                 value = result.attribute[key] if key in result.attribute else None
                 contents[key].append(value)
