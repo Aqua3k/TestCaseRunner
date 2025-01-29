@@ -5,15 +5,12 @@ import time
 from typing import Optional
 import shutil
 from pathlib import Path
-import datetime
 from dataclasses import dataclass
 import traceback
 
-from .runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
-from .logger import RunnerLogger
-from .testccase_executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
-from .html_builder import make_html
-from .testcase_logger import make_log
+from testcaserunner.tracer.logger import RunnerLogger
+from testcaserunner.defines.runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
+from testcaserunner.tester.executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
 
 @dataclass
 class TestCaseRunner:
@@ -160,46 +157,3 @@ class TestCaseRunner:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return test_result
-
-def get_log_file_path() -> str:
-    log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
-    return os.path.join("log", log_name)
-
-def run(
-        testcase_handler: Callable[[TestCase], TestCaseResult|None],
-        input_file_path: str,
-        repeat_count: int = 1,
-        copy_target_files: list[str] = [],
-        parallel_processing_method: str = "process",
-        time_limit: int|float|None = None,
-        _debug: bool = False,
-        ) -> None:
-    """ランナーを実行する
-
-    Args:
-        testcase_handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
-        input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
-        repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
-        copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
-        parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
-    """
-    log_folder_name = get_log_file_path()
-    runner = TestCaseRunner(
-        testcase_handler,
-        input_file_path,
-        log_folder_name,
-        repeat_count,
-        copy_target_files,
-        parallel_processing_method,
-        time_limit,
-        _debug,
-    )
-    result = runner.start()
-    log = make_log(result, log_folder_name, _debug)
-    file = os.path.join(log_folder_name, "result.html")
-    make_html(file, log, _debug)
-
-# 公開するメンバーを制御する
-__all__ = [
-    "run",
-]

@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from .runner_defines import RunnerMetadata, TestCase, TestCaseResult
-from .logger import RunnerLogger
+from testcaserunner.tracer.logger import RunnerLogger
+from testcaserunner.defines.runner_defines import RunnerMetadata, TestCase, TestCaseResult
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:

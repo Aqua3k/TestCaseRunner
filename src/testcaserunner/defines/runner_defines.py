@@ -1,6 +1,4 @@
-from typing import Iterator
 from dataclasses import dataclass, field
-from enum import IntEnum, auto
 
 @dataclass(frozen=True)
 class RunnerMetadata:
