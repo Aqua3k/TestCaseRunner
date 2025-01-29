@@ -11,9 +11,9 @@ import pandas as pd
 import numpy as np
 from jsonschema import ValidationError, validate
 
-from testcaserunner.tracer.logger import RunnerLogger
-from testcaserunner.defines.runner_defines import RunnerMetadata
-from testcaserunner.result_manager.testcase_logger import RunnerLog, RunnerLogManager
+from testcaserunner.debug.logger import RunnerLogger
+from testcaserunner.defines.metadata import RunnerMetadata
+from testcaserunner.runner_log.result_manager import RunnerLog, RunnerLogManager
 from testcaserunner.renderer.html_builder import HtmlBuilder, Column, HtmlColumnType
 
 @dataclass

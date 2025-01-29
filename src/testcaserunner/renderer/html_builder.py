@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from testcaserunner.tracer.logger import RunnerLogger
-from testcaserunner.result_manager.testcase_logger import RunnerLog
+from testcaserunner.debug.logger import RunnerLogger
+from testcaserunner.runner_log.result_manager import RunnerLog
 
 class HtmlColumnType(Enum):
     """HTMLファイルのcolumnの情報

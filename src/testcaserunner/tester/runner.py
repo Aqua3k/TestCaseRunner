@@ -8,8 +8,9 @@ from pathlib import Path
 from dataclasses import dataclass
 import traceback
 
-from testcaserunner.tracer.logger import RunnerLogger
-from testcaserunner.defines.runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
+from testcaserunner.debug.logger import RunnerLogger
+from testcaserunner.defines.testcase import TestCase, TestCaseResult
+from testcaserunner.defines.exceptions import NoTestcaseFileException, InvalidPathException
 from testcaserunner.tester.executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
 
 @dataclass

@@ -2,10 +2,10 @@ import os
 from typing import Callable
 import datetime
 
-from .defines.runner_defines import TestCase, TestCaseResult
+from .defines.testcase import TestCase, TestCaseResult
 from .tester.runner import TestCaseRunner
 from .renderer.html_builder import make_html
-from .result_manager.testcase_logger import make_log
+from .runner_log.result_manager import make_log
 
 def get_log_file_path() -> str:
     log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
