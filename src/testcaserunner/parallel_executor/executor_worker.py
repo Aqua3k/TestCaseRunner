@@ -1,6 +1,6 @@
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, wait, Executor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
 from typing import Callable
-from typing import Self, Optional
+from typing import Self
 from abc import ABC, abstractmethod
 import signal
 import types
@@ -8,11 +8,11 @@ from typing import Any
 
 from tqdm import tqdm
 
-from .runner_defines import TestCase, TestCaseResult
-from .logger import RunnerLogger
+from ..runner_log import RunnerLogger
+from ..defines import TestCase, TestCaseResult
 
-class TestcaseExecutor(ABC): # pragma: no cover
-    logger = RunnerLogger("TestcaseExecutor")
+class BaseExecutor(ABC): # pragma: no cover
+    logger = RunnerLogger("BaseExecutor")
     NOT_START = 0
     STARTED = 1
     SUBMITTED = 2
@@ -25,7 +25,7 @@ class TestcaseExecutor(ABC): # pragma: no cover
         pass
 
     @abstractmethod
-    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
+    def wait_and_get_results(self) -> list[TestCaseResult|None]:
         pass
 
     @abstractmethod
@@ -33,21 +33,22 @@ class TestcaseExecutor(ABC): # pragma: no cover
         pass
 
     @abstractmethod
-    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
-                 exc_tb: Optional[BaseException]):
+    def __exit__(self, exc_type: type[BaseException]|None, exc_val: BaseException|None,
+                 exc_tb: BaseException|None):
         pass
 
     def notify_catch_keyboard_interrupt(self):
         self.logger.warning("ランナーの実行をキャンセルします。")
 
-class PoolTestcaseExecutor(TestcaseExecutor):
+class BaseParallelExecutor(BaseExecutor):
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
         self._interrupted = False
     
+    @abstractmethod
     def get_executor(self) -> Executor:
-        return Executor()
+        raise NotImplementedError
 
     def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]):
         if self._status != self.STARTED:
@@ -59,8 +60,8 @@ class PoolTestcaseExecutor(TestcaseExecutor):
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
-        results: list[Optional[TestCaseResult]] = []
+    def wait_and_get_results(self) -> list[TestCaseResult|None]:
+        results: list[TestCaseResult|None] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         for future in self._futures:
@@ -81,8 +82,8 @@ class PoolTestcaseExecutor(TestcaseExecutor):
         signal.signal(signal.SIGINT, self.signal_handler)
         return self
 
-    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
-                 exc_tb: Optional[BaseException]) -> None:
+    def __exit__(self, exc_type: type[BaseException]|None, exc_val: BaseException|None,
+                 exc_tb: BaseException|None) -> None:
         self._progress.close()
         self._executor.shutdown()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -91,15 +92,15 @@ class PoolTestcaseExecutor(TestcaseExecutor):
         self._interrupted = True
         self.notify_catch_keyboard_interrupt()
 
-class ProcessTestcaseExecutor(PoolTestcaseExecutor):
+class ProcessParallelExecutor(BaseParallelExecutor):
     def get_executor(self) -> Executor:
         return ProcessPoolExecutor()
 
-class ThreadTestcaseExecutor(PoolTestcaseExecutor):
+class ThreadParallelExecutor(BaseParallelExecutor):
     def get_executor(self) -> Executor:
         return ThreadPoolExecutor()
 
-class SingleTestcaseExecutor(TestcaseExecutor):
+class SerialExecutor(BaseExecutor):
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
@@ -111,8 +112,8 @@ class SingleTestcaseExecutor(TestcaseExecutor):
         self._testcases = test_cases
         self._status = self.SUBMITTED
     
-    def wait_and_get_results(self) -> list[Optional[TestCaseResult]]:
-        results: list[Optional[TestCaseResult]] = []
+    def wait_and_get_results(self) -> list[TestCaseResult|None]:
+        results: list[TestCaseResult|None] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         try:
@@ -130,6 +131,6 @@ class SingleTestcaseExecutor(TestcaseExecutor):
         self._progress = tqdm(total=self._total)
         return self
 
-    def __exit__(self, exc_type: Optional[type[BaseException]], exc_val: Optional[BaseException],
-                 exc_tb: Optional[BaseException]) -> None:
+    def __exit__(self, exc_type: type[BaseException]|None, exc_val: BaseException|None,
+                 exc_tb: BaseException|None) -> None:
         self._progress.close()

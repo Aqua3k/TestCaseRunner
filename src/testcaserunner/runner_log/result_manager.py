@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from .runner_defines import RunnerMetadata, TestCase, TestCaseResult
-from .logger import RunnerLogger
+from ..debug import RunnerLogger
+from ..defines import RunnerMetadata, TestCase, TestCaseResult
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
@@ -121,7 +121,7 @@ class RunnerLogManager:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": RunnerMetadata.LIB_NAME,
+            "library_name": RunnerMetadata.LIBRARY_NAME,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }

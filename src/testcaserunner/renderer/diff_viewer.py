@@ -11,9 +11,9 @@ import pandas as pd
 import numpy as np
 from jsonschema import ValidationError, validate
 
-from .runner_defines import RunnerMetadata
-from .logger import RunnerLogger
-from .testcase_logger import RunnerLog, RunnerLogManager
+from ..debug import RunnerLogger
+from ..defines import RunnerMetadata
+from ..runner_log import RunnerLog, RunnerLogManager
 from .html_builder import HtmlBuilder, Column, HtmlColumnType
 
 @dataclass
@@ -344,7 +344,7 @@ class RunnerLogViewer:
         metadata: dict|None = data.get("metadata")
         assert metadata is not None, "metadataがNoneだよ"
         libname = metadata.get("library_name")
-        if libname != RunnerMetadata.LIB_NAME:
+        if libname != RunnerMetadata.LIBRARY_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True

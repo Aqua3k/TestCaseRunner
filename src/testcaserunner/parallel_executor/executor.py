@@ -2,18 +2,14 @@ import glob
 import os
 from typing import Callable
 import time
-from typing import Optional
 import shutil
 from pathlib import Path
-import datetime
 from dataclasses import dataclass
 import traceback
 
-from .runner_defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
-from .logger import RunnerLogger
-from .testccase_executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
-from .html_builder import make_html
-from .testcase_logger import make_log
+from ..debug import RunnerLogger
+from ..defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
+from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
 
 @dataclass
 class TestCaseRunner:
@@ -64,14 +60,14 @@ class TestCaseRunner:
         self.copy_folder(self.input_file_path, self.input_file_copy_path)
         self.copy_files()
 
-    def get_executor(self) -> type[TestcaseExecutor]:
+    def get_executor(self) -> type[BaseExecutor]:
         match self.parallel_processing_method.lower():
             case "process":
-                return ProcessTestcaseExecutor
+                return ProcessParallelExecutor
             case "thread":
-                return ThreadTestcaseExecutor
+                return ThreadParallelExecutor
             case "single":
-                return SingleTestcaseExecutor
+                return SerialExecutor
             case _:
                 raise ValueError("引数parallel_processing_methodの値が不正です。")
 
@@ -113,7 +109,7 @@ class TestCaseRunner:
         self.logger.debug("start testcase run process.")
         with self.Executor(len(test_cases)) as executor:
             executor.submit(self.run_testcase, test_cases)
-            results: list[Optional[TestCaseResult]] = executor.wait_and_get_results()
+            results: list[TestCaseResult|None] = executor.wait_and_get_results()
         
         parsed_results: list[TestCaseResult] = []
         for result in results:
@@ -160,46 +156,3 @@ class TestCaseRunner:
             with open(testcase.stderr_file_path, mode='w') as f:
                 f.write(test_result.stderr)
         return test_result
-
-def get_log_file_path() -> str:
-    log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
-    return os.path.join("log", log_name)
-
-def run(
-        testcase_handler: Callable[[TestCase], TestCaseResult|None],
-        input_file_path: str,
-        repeat_count: int = 1,
-        copy_target_files: list[str] = [],
-        parallel_processing_method: str = "process",
-        time_limit: int|float|None = None,
-        _debug: bool = False,
-        ) -> None:
-    """ランナーを実行する
-
-    Args:
-        testcase_handler (Callable[[TestCase], TestCaseResult]): 並列実行する関数
-        input_file_path (str): 入力ファイル群が置いてあるディレクトリへのパス
-        repeat_count (int, optional): それぞれのテストケースを何回実行するか. Defaults to 1.
-        copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
-        parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
-    """
-    log_folder_name = get_log_file_path()
-    runner = TestCaseRunner(
-        testcase_handler,
-        input_file_path,
-        log_folder_name,
-        repeat_count,
-        copy_target_files,
-        parallel_processing_method,
-        time_limit,
-        _debug,
-    )
-    result = runner.start()
-    log = make_log(result, log_folder_name, _debug)
-    file = os.path.join(log_folder_name, "result.html")
-    make_html(file, log, _debug)
-
-# 公開するメンバーを制御する
-__all__ = [
-    "run",
-]
