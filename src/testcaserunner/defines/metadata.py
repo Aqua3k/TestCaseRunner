@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class RunnerMetadata:
-    LIB_NAME: str = "testcaserunner"
-    LIB_VERSION: str = "1.0.0"
+    LIBRARY_NAME: str = "testcaserunner"
+    LIBRARY_VERSION: str = "1.0.0"

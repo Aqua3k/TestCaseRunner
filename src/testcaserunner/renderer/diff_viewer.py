@@ -344,7 +344,7 @@ class RunnerLogViewer:
         metadata: dict|None = data.get("metadata")
         assert metadata is not None, "metadataがNoneだよ"
         libname = metadata.get("library_name")
-        if libname != RunnerMetadata.LIB_NAME:
+        if libname != RunnerMetadata.LIBRARY_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True

@@ -122,7 +122,7 @@ class RunnerLogManager:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": RunnerMetadata.LIB_NAME,
+            "library_name": RunnerMetadata.LIBRARY_NAME,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }
