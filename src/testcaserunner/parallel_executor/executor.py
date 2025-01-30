@@ -11,7 +11,7 @@ import traceback
 from testcaserunner.debug.logger import RunnerLogger
 from testcaserunner.defines.testcase import TestCase, TestCaseResult
 from testcaserunner.defines.exceptions import NoTestcaseFileException, InvalidPathException
-from testcaserunner.parallel_executor.executor_worker import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
+from testcaserunner.parallel_executor.executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
 
 @dataclass
 class TestCaseRunner:
@@ -62,14 +62,14 @@ class TestCaseRunner:
         self.copy_folder(self.input_file_path, self.input_file_copy_path)
         self.copy_files()
 
-    def get_executor(self) -> type[TestcaseExecutor]:
+    def get_executor(self) -> type[BaseExecutor]:
         match self.parallel_processing_method.lower():
             case "process":
-                return ProcessTestcaseExecutor
+                return ProcessParallelExecutor
             case "thread":
-                return ThreadTestcaseExecutor
+                return ThreadParallelExecutor
             case "single":
-                return SingleTestcaseExecutor
+                return SerialExecutor
             case _:
                 raise ValueError("引数parallel_processing_methodの値が不正です。")
 

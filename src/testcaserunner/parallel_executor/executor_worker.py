@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, wait, Executor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
 from typing import Callable
 from typing import Self, Optional
 from abc import ABC, abstractmethod
@@ -11,8 +11,8 @@ from tqdm import tqdm
 from testcaserunner.debug.logger import RunnerLogger
 from testcaserunner.defines.testcase import TestCase, TestCaseResult
 
-class TestcaseExecutor(ABC): # pragma: no cover
-    logger = RunnerLogger("TestcaseExecutor")
+class BaseExecutor(ABC): # pragma: no cover
+    logger = RunnerLogger("BaseExecutor")
     NOT_START = 0
     STARTED = 1
     SUBMITTED = 2
@@ -40,12 +40,13 @@ class TestcaseExecutor(ABC): # pragma: no cover
     def notify_catch_keyboard_interrupt(self):
         self.logger.warning("ランナーの実行をキャンセルします。")
 
-class PoolTestcaseExecutor(TestcaseExecutor):
+class BaseParallelExecutor(BaseExecutor):
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
         self._interrupted = False
     
+    @abstractmethod
     def get_executor(self) -> Executor:
         return Executor()
 
@@ -91,15 +92,15 @@ class PoolTestcaseExecutor(TestcaseExecutor):
         self._interrupted = True
         self.notify_catch_keyboard_interrupt()
 
-class ProcessTestcaseExecutor(PoolTestcaseExecutor):
+class ProcessParallelExecutor(BaseParallelExecutor):
     def get_executor(self) -> Executor:
         return ProcessPoolExecutor()
 
-class ThreadTestcaseExecutor(PoolTestcaseExecutor):
+class ThreadParallelExecutor(BaseParallelExecutor):
     def get_executor(self) -> Executor:
         return ThreadPoolExecutor()
 
-class SingleTestcaseExecutor(TestcaseExecutor):
+class SerialExecutor(BaseExecutor):
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
