@@ -2,7 +2,6 @@ import glob
 import os
 from typing import Callable
 import time
-from typing import Optional
 import shutil
 from pathlib import Path
 from dataclasses import dataclass
@@ -111,7 +110,7 @@ class TestCaseRunner:
         self.logger.debug("start testcase run process.")
         with self.Executor(len(test_cases)) as executor:
             executor.submit(self.run_testcase, test_cases)
-            results: list[Optional[TestCaseResult]] = executor.wait_and_get_results()
+            results: list[TestCaseResult|None] = executor.wait_and_get_results()
         
         parsed_results: list[TestCaseResult] = []
         for result in results:
