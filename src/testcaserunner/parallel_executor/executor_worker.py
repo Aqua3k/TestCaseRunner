@@ -8,8 +8,8 @@ from typing import Any
 
 from tqdm import tqdm
 
-from testcaserunner.debug.logger import RunnerLogger
-from testcaserunner.defines.testcase import TestCase, TestCaseResult
+from ..runner_log.result_manager import RunnerLogger
+from ..defines.testcase import TestCase, TestCaseResult
 
 class BaseExecutor(ABC): # pragma: no cover
     logger = RunnerLogger("BaseExecutor")

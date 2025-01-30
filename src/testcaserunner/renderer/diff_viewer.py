@@ -11,10 +11,10 @@ import pandas as pd
 import numpy as np
 from jsonschema import ValidationError, validate
 
-from testcaserunner.debug.logger import RunnerLogger
-from testcaserunner.defines.metadata import RunnerMetadata
-from testcaserunner.runner_log.result_manager import RunnerLog, RunnerLogManager
-from testcaserunner.renderer.html_builder import HtmlBuilder, Column, HtmlColumnType
+from ..debug.logger import RunnerLogger
+from ..defines.metadata import RunnerMetadata
+from ..runner_log.result_manager import RunnerLog, RunnerLogManager
+from ..renderer.html_builder import HtmlBuilder, Column, HtmlColumnType
 
 @dataclass
 class DiffColumn(Column):
