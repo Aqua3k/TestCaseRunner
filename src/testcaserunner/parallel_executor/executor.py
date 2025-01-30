@@ -11,7 +11,7 @@ import traceback
 from testcaserunner.debug.logger import RunnerLogger
 from testcaserunner.defines.testcase import TestCase, TestCaseResult
 from testcaserunner.defines.exceptions import NoTestcaseFileException, InvalidPathException
-from testcaserunner.tester.executor import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
+from testcaserunner.parallel_executor.executor_worker import TestcaseExecutor, ProcessTestcaseExecutor, ThreadTestcaseExecutor, SingleTestcaseExecutor
 
 @dataclass
 class TestCaseRunner:

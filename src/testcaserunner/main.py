@@ -3,7 +3,7 @@ from typing import Callable
 import datetime
 
 from .defines.testcase import TestCase, TestCaseResult
-from .tester.runner import TestCaseRunner
+from .parallel_executor.executor import TestCaseRunner
 from .renderer.html_builder import make_html
 from .runner_log.result_manager import make_log
 
