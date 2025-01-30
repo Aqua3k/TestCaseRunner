@@ -7,10 +7,9 @@ from pathlib import Path
 from dataclasses import dataclass
 import traceback
 
-from testcaserunner.debug.logger import RunnerLogger
-from testcaserunner.defines.testcase import TestCase, TestCaseResult
-from testcaserunner.defines.exceptions import NoTestcaseFileException, InvalidPathException
-from testcaserunner.parallel_executor.executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
+from ..debug import RunnerLogger
+from ..defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
+from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
 
 @dataclass
 class TestCaseRunner:
