@@ -12,7 +12,7 @@ from ..defines import TestCase, TestCaseResult, NoTestcaseFileException, Invalid
 from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
 
 @dataclass
-class TestCaseRunner:
+class ParallelExecutor:
     testcase_handler: Callable[[TestCase], TestCaseResult|None]
     input_file_path: str
     log_folder_name: str
@@ -22,7 +22,7 @@ class TestCaseRunner:
     time_limit_: int|float|None
     debug: bool
     def __post_init__(self) -> None:
-        self.logger = RunnerLogger("TestCaseRunner")
+        self.logger = RunnerLogger("ParallelExecutor")
         self.init_parameters()
         self.init_folders()
         if self.debug:
