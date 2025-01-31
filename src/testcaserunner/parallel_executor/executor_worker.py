@@ -1,17 +1,25 @@
+"""並列処理の実装部分
+
+・それぞれの並列化処理はBaseExecutorを継承して実装する
+・tqdmにより、プログレスバーを表示する
+・signalにより、KeyboardInterrupt(Ctrl + C)をキャッチして処理を中断する
+"""
+
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, Future, Executor
-from typing import Callable
-from typing import Self
+from typing import Callable, Self, TypeVar
 from abc import ABC, abstractmethod
 import signal
 import types
-from typing import Any
 
 from tqdm import tqdm
 
-from ..runner_log import RunnerLogger
-from ..defines import TestCase, TestCaseResult
+from ..debug import RunnerLogger
 
+Argument = TypeVar("Argument")
+Return = TypeVar("Return")
+Handler = Callable[[Argument], Return]
 class BaseExecutor(ABC): # pragma: no cover
+    """Executorの基底クラス"""
     logger = RunnerLogger("BaseExecutor")
     NOT_START = 0
     STARTED = 1
@@ -21,11 +29,11 @@ class BaseExecutor(ABC): # pragma: no cover
         pass
 
     @abstractmethod
-    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
+    def submit(self, handler: Handler, arguments: list[Argument]) -> None:
         pass
 
     @abstractmethod
-    def wait_and_get_results(self) -> list[TestCaseResult|None]:
+    def wait_and_get_results(self) -> list[Return|None]:
         pass
 
     @abstractmethod
@@ -41,6 +49,7 @@ class BaseExecutor(ABC): # pragma: no cover
         self.logger.warning("ランナーの実行をキャンセルします。")
 
 class BaseParallelExecutor(BaseExecutor):
+    """concurrent.futuresを使用する並列化処理の基底クラス"""
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
@@ -50,18 +59,18 @@ class BaseParallelExecutor(BaseExecutor):
     def get_executor(self) -> Executor:
         raise NotImplementedError
 
-    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]):
+    def submit(self, handler: Handler, arguments: list[Argument]):
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
-        self._futures:list[Future] = []
-        for testcase in test_cases:
-            future = self._executor.submit(testcase_handler, testcase)
+        self._futures: list[Future] = []
+        for testcase in arguments:
+            future = self._executor.submit(handler, testcase)
             future.add_done_callback(lambda p: self._progress.update())
             self._futures.append(future)
         self._status = self.SUBMITTED
     
-    def wait_and_get_results(self) -> list[TestCaseResult|None]:
-        results: list[TestCaseResult|None] = []
+    def wait_and_get_results(self) -> list[Return|None]:
+        results: list[Return|None] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         for future in self._futures:
@@ -88,32 +97,35 @@ class BaseParallelExecutor(BaseExecutor):
         self._executor.shutdown()
         signal.signal(signal.SIGINT, signal.SIG_DFL)
     
-    def signal_handler(self, signum: int, frame: None | types.FrameType) -> Any:
+    def signal_handler(self, signum: int, frame: None | types.FrameType) -> None:
         self._interrupted = True
         self.notify_catch_keyboard_interrupt()
 
 class ProcessParallelExecutor(BaseParallelExecutor):
+    """ProcessPoolExecutorを使用した並列化処理"""
     def get_executor(self) -> Executor:
         return ProcessPoolExecutor()
 
 class ThreadParallelExecutor(BaseParallelExecutor):
+    """ThreadParallelExecutorを使用した並列化処理"""
     def get_executor(self) -> Executor:
         return ThreadPoolExecutor()
 
 class SerialExecutor(BaseExecutor):
+    """非並列化の処理"""
     def __init__(self, total: int):
         self._total = total
         self._status = self.NOT_START
 
-    def submit(self, testcase_handler: Callable[[TestCase], TestCaseResult], test_cases: list[TestCase]) -> None:
+    def submit(self, handler: Handler, arguments: list[Argument]) -> None:
         if self._status != self.STARTED:
             raise ValueError("使い方間違ってるよ")
-        self._handler = testcase_handler
-        self._testcases = test_cases
+        self._handler = handler
+        self._testcases = arguments
         self._status = self.SUBMITTED
     
-    def wait_and_get_results(self) -> list[TestCaseResult|None]:
-        results: list[TestCaseResult|None] = []
+    def wait_and_get_results(self) -> list[Return|None]:
+        results: list[Return|None] = []
         if self._status != self.SUBMITTED:
             raise ValueError("使い方間違ってるよ")
         try:

@@ -3,7 +3,7 @@ from typing import Callable
 import datetime
 
 from .defines import TestCase, TestCaseResult
-from .parallel_executor import TestCaseRunner
+from .parallel_executor import ParallelExecutor
 from .renderer import make_html
 from .runner_log import make_log
 
@@ -30,7 +30,7 @@ def run(
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
     """
     log_folder_name = get_log_file_path()
-    runner = TestCaseRunner(
+    runner = ParallelExecutor(
         testcase_handler,
         input_file_path,
         log_folder_name,
