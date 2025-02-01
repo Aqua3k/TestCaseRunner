@@ -15,6 +15,7 @@ from ..debug import RunnerLogger
 from ..defines import RunnerMetadata
 from ..runner_log import RunnerLog, RunnerLogManager
 from .html_builder import HtmlBuilder, Column, HtmlColumnType
+from ..defines import InternalError
 
 @dataclass
 class DiffColumn(Column):
@@ -245,8 +246,10 @@ class DiffHtmlBuilder(HtmlBuilder):
             else:
                 others.append(self.get_data(column.title, row, i))
 
-        assert this is not None
-        assert len(others) == len(self.renamed_logs) - 1
+        if this is None:
+            raise InternalError("変数thisがNoneです。")
+        if len(others) != len(self.renamed_logs) - 1:
+            raise InternalError("データの数が一致しません。")
 
         return this, others
 
@@ -259,8 +262,10 @@ class DiffHtmlBuilder(HtmlBuilder):
             else:
                 others.append(self.get_data(column.hash_column, row, sub_category_index))
 
-        assert this is not None
-        assert len(others) == len(self.renamed_logs) - 1
+        if this is None:
+            raise InternalError("変数thisがNoneです。")
+        if len(others) != len(self.renamed_logs) - 1:
+            raise InternalError("データの数が一致しません。")
 
         return this, others
 
@@ -342,7 +347,8 @@ class RunnerLogViewer:
             return False
 
         metadata: dict|None = data.get("metadata")
-        assert metadata is not None, "metadataがNoneだよ"
+        if metadata is None:
+           raise InternalError("変数metadataがNoneだよ。")
         libname = metadata.get("library_name")
         if libname != RunnerMetadata.LIBRARY_NAME:
             return False # ライブラリ名が入っていなかったらFalse
@@ -365,10 +371,14 @@ class RunnerLogViewer:
         
         contents = loaded_data.get("contents")
         metadata = loaded_data.get("metadata")
-        assert contents is not None, "contentsがNoneだよ"
-        assert type(contents) is dict, "contentsがdict型ではないよ"
-        assert metadata is not None, "metadataがNoneだよ"
-        assert type(metadata) is dict, "metadataがNonedict型ではないよ"
+        if contents is None:
+            raise InternalError("contentsがNoneだよ")
+        if type(contents) is not dict:
+            raise InternalError("contentsがdict型ではないよ")
+        if metadata is None:
+            raise InternalError("metadataがNoneだよ")
+        if type(metadata) is dict:
+            raise InternalError("metadataがNonedict型ではないよ")
 
         folder = os.path.split(file)[0]
         self.logs.append(RunnerLog(contents, metadata, os.path.split(folder)[1]))
