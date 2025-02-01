@@ -1,3 +1,3 @@
 from .main import *
-from .runner_log.result_manager import *
+from .parallel_executor.log_builder import *
 from .defines.exceptions import *

@@ -12,7 +12,7 @@ import pandas as pd
 from ..debug import RunnerLogger
 from ..defines import RunnerMetadata, TestCase, TestCaseResult
 
-class RunnerLog:
+class _RunnerLog:
     def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
         self._df = pd.DataFrame(contents)
         self._metadata = metadata
@@ -63,7 +63,7 @@ class RunnerLogManager:
         self.make_figure()
     
     @logger.function_tracer
-    def get_log(self) -> RunnerLog:
+    def get_log(self) -> _RunnerLog:
         return self.runner_log
 
     @logger.function_tracer
@@ -129,7 +129,7 @@ class RunnerLogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.log_folder_name)[1])
+        self.runner_log: _RunnerLog = _RunnerLog(contents, metadata, os.path.split(self.log_folder_name)[1])
         json_file_path = os.path.join(self.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
@@ -149,7 +149,7 @@ class RunnerLogManager:
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
 
-def make_log(result: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> RunnerLog:
+def make_log(result: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> _RunnerLog:
     log_manager = RunnerLogManager(result, log_folder_name, debug)
     log_manager.make_log()
     return log_manager.get_log()
