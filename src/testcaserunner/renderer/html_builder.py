@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from ..debug import RunnerLogger
 from ..runner_log import RunnerLog
+from ..defines import InternalError
 
 class HtmlColumnType(Enum):
     """HTMLファイルのcolumnの情報
@@ -171,7 +172,7 @@ class ResultHtmlBuilder(HtmlBuilder):
                     case HtmlColumnType.METADATA:
                         continue
                     case _:
-                        assert "error: 不明なHtmlColumnTypeがあります。"
+                        raise InternalError("不明なHtmlColumnTypeがあります。")
                 rows[column.title] = value
             ret.append(rows)
         return ret
@@ -188,7 +189,7 @@ class ResultHtmlBuilder(HtmlBuilder):
                 case HtmlColumnType.METADATA:
                     continue
                 case _:
-                    assert "error: 不明なHtmlColumnTypeがあります。"
+                    raise InternalError("不明なHtmlColumnTypeがあります。")
         return table_columns
 
     @logger.function_tracer

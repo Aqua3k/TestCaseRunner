@@ -125,12 +125,17 @@ class TestCase:
     testcase_index: int
 ```
 
-## Exceptions
+## 例外
+
+### BaseException
+このライブラリ内で使われる例外の基底クラスです。  
+
+### InternalError
+ライブラリ内の実装ミス等が原因でライブラリ内部で整合性が取れなくなったときに使われる例外です。  
+この例外が発生したら開発者にご連絡いただけると助かります。  
 
 ### InvalidPathException  
-
 [run](#run)関数の第二引数のパスが正しくなかったときに使われる例外です。
 
 ### NoTestcaseFileException
-
 [run](#run)関数の第二引数のパスで指定されたディレクトリにファイルが1つも存在しなかったときに使われる例外です。

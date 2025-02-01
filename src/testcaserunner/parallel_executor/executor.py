@@ -10,6 +10,7 @@ import traceback
 from ..debug import RunnerLogger
 from ..defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
 from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
+from ..defines import InternalError
 
 @dataclass
 class ParallelExecutor:
@@ -120,7 +121,8 @@ class ParallelExecutor:
                     )
             parsed_results.append(result)
         
-        assert len(test_cases) == len(results)
+        if  len(test_cases) != len(results):
+            raise InternalError("入力と出力の数が一致しません。")
         return list(zip(test_cases, parsed_results))
     
     def run_testcase(self, testcase: TestCase) -> TestCaseResult:
