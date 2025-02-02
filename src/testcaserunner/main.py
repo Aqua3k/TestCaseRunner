@@ -4,6 +4,7 @@ import datetime
 
 from .parallel_executor import start_executor, TestCase, TestCaseResult
 from .renderer import make_html
+from .debug import RunnerLogger
 
 def get_log_file_path() -> str:
     log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
@@ -27,6 +28,8 @@ def run(
         copy_target_files (list[str], optional): コピーしたいファイルパスのリスト. Defaults to [].
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
     """
+    if _debug:
+        RunnerLogger.enable_debug_mode()
     log_folder_name = get_log_file_path()
     log = start_executor(
         testcase_handler,
@@ -36,10 +39,9 @@ def run(
         copy_target_files,
         parallel_processing_method,
         time_limit,
-        _debug,
     )
     file = os.path.join(log_folder_name, "result.html")
-    make_html(file, log, _debug)
+    make_html(file, log)
 
 # 公開するメンバーを制御する
 __all__ = [

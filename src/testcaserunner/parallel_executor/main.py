@@ -13,7 +13,6 @@ def start_executor(
         copy_target_files: list[str],
         parallel_processing_method: str,
         time_limit: int|float|None,
-        _debug: bool,
         ):
     runner = ParallelExecutor(
         testcase_handler,
@@ -23,9 +22,8 @@ def start_executor(
         copy_target_files,
         parallel_processing_method,
         time_limit,
-        _debug,
     )
     result = runner.start()
-    builder = LogBuilder(result, log_folder_name, _debug)
+    builder = LogBuilder(result, log_folder_name)
     builder.build()
     return builder.get_log()

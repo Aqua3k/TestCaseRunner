@@ -36,26 +36,23 @@ class LogBuilder:
     stdout_hash_col = "stdout_hash"
     stderr_hash_col = "stderr_hash"
 
-    logger = RunnerLogger("LogBuilder")
-    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> None:
+    def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str) -> None:
         self.log_folder_name = log_folder_name
-        if debug:
-            self.logger.enable_debug_mode()
         self.results = results
 
     def make_folder(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
     
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def build(self) -> None:
         self.make_json_file()
         self.make_figure()
     
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def get_log(self) -> RunnerLog:
         return self.runner_log
 
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def make_figure(self) -> None:
         # ヒストグラムを描画
         df = self.runner_log.get_dataframe()
@@ -71,7 +68,7 @@ class LogBuilder:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
 
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def make_json_file(self) -> None:
         counter: dict[str, int] = defaultdict(int)
         def add_hash_info(hash: str, suffix: str) -> str:
@@ -124,14 +121,14 @@ class LogBuilder:
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
     
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def get_file_hash(self, path: str) -> str:
         if os.path.exists(path):
             return self.calculate_file_hash(path)
         else:
             return "" #ファイルが開けないときは空文字にしておく
 
-    @logger.function_tracer
+    @RunnerLogger.function_tracer
     def calculate_file_hash(self, file_path: str) -> str:
         hash_obj = hashlib.new('sha256')
         with open(file_path, 'rb') as file:

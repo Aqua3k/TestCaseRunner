@@ -22,13 +22,9 @@ class ParallelExecutor:
     copy_target_files: list[str]
     parallel_processing_method: str
     time_limit_: int|float|None
-    debug: bool
     def __post_init__(self) -> None:
-        self.logger = RunnerLogger("ParallelExecutor")
         self.init_parameters()
         self.init_folders()
-        if self.debug:
-            self.logger.enable_debug_mode()
         self.input_file_path = self.input_file_copy_path
         if self.time_limit_ is None:
             self.time_limit = float("inf")
@@ -50,9 +46,9 @@ class ParallelExecutor:
             if file_path.is_file():
                 self.copy_file(file, self.log_folder_name)
             elif file_path.is_dir():
-                self.logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+                RunnerLogger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
-                self.logger.warning(f"{file}が見つかりません。コピーは行いません。")
+                RunnerLogger.warning(f"{file}が見つかりません。コピーは行いません。")
 
     def init_folders(self) -> None:
         self.make_folder(self.log_folder_name)
@@ -108,7 +104,7 @@ class ParallelExecutor:
     def start(self) -> list[tuple[TestCase, TestCaseResult]]:
         test_cases: list[TestCase] = self.make_testcases()
 
-        self.logger.debug("start testcase run process.")
+        RunnerLogger.debug("start testcase run process.")
         with self.Executor(len(test_cases)) as executor:
             executor.submit(self.run_testcase, test_cases)
             results: list[TestCaseResult|None] = executor.wait_and_get_results()
@@ -136,7 +132,7 @@ class ParallelExecutor:
         except Exception as e:
             error_details = traceback.format_exc()
             has_error = True
-            self.logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
+            RunnerLogger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(
                 stderr=error_details,
