@@ -1,34 +1,53 @@
 import logging
+import inspect
 
 class RunnerLogger: # pragma: no cover
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.WARNING)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        self.logger.addHandler(handler)
+    __is_debugmode = False
+    __logger = logging.getLogger("TestCaseTunner-Logger")
+    __logger.setLevel(logging.WARNING)
+    __handler = logging.StreamHandler()
+    __handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    __logger.addHandler(__handler)
 
-    def enable_debug_mode(self) -> None:
-        self.logger.setLevel(logging.DEBUG)
+    def __new__(cls, *args, **kwargs):
+        raise TypeError(f"This class cannot be instantiated")
+
+    @classmethod
+    def enable_debug_mode(cls) -> None:
+        cls.__is_debugmode = True
+        cls.__logger.setLevel(logging.DEBUG)
     
-    def disable_debug_mode(self) -> None:
-        self.logger.setLevel(logging.WARNING)
+    @classmethod
+    def disable_debug_mode(cls) -> None:
+        cls.__is_debugmode = False
+        cls.__logger.setLevel(logging.WARNING)
+    
+    @classmethod
+    def is_debug_mode(cls) -> bool:
+        return cls.__is_debugmode
 
-    def function_tracer(self, func):
+    @classmethod
+    def function_tracer(cls, func):
+        frame = inspect.currentframe().f_back  # 呼び出し元のフレームを取得
+        caller_cls = None
+        caller_self = frame.f_locals.get("self")
+        if caller_self:
+            caller_cls = caller_self.__class__.__name__
         def wrapper(*args, **kwargs):
-            self.logger.debug(f"{self.name}: Calling {func.__name__}")
+            cls.__logger.debug(f"{caller_cls}: Calling {func.__name__}")
             result = func(*args, **kwargs)
-            self.logger.debug(f"{self.name}: {func.__name__} returned {result}")
+            cls.__logger.debug(f"{caller_cls}: {func.__name__} returned {result}")
             return result
         return wrapper
 
-    def warning(self, msg: str) -> None:
-        self.logger.warning(msg)
+    @classmethod
+    def warning(cls, msg: str) -> None:
+        cls.__logger.warning(msg)
 
-    def info(self, msg: str) -> None:
-        self.logger.info(msg)
+    @classmethod
+    def info(cls, msg: str) -> None:
+        cls.__logger.info(msg)
 
-    def debug(self, msg: str) -> None:
-        self.logger.debug(msg)
+    @classmethod
+    def debug(cls, msg: str) -> None:
+        cls.__logger.debug(msg)
