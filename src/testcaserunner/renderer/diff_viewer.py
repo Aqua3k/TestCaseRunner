@@ -12,8 +12,8 @@ import numpy as np
 from jsonschema import ValidationError, validate
 
 from ..debug import Logger, call_logger
-from ..defines import RunnerMetadata
-from .html_builder import HtmlBuilder, Column, HtmlColumnType
+from ..defines import Metadata
+from .html_builder import BaseHtmlBuilder, Column, HtmlColumnType
 from ..defines import InternalError
 
 from ._result_manager import _RunnerLog, RunnerLogManager # 暫定の対応 TODO 対応する
@@ -27,7 +27,7 @@ class DiffColumn(Column):
     hash_column: str = ""
     sub_categories: list[str] = field(default_factory=list)
 
-class DiffHtmlBuilder(HtmlBuilder):
+class DiffHtmlBuilder(BaseHtmlBuilder):
     #TODO repeat_countを考慮しないとうまくいかなそう…
     def __init__(self, output_html_path: str, logs: list[_RunnerLog], debug: bool) -> None:
         loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
@@ -345,7 +345,7 @@ class RunnerLogViewer:
         if metadata is None:
            raise InternalError("変数metadataがNoneだよ。")
         libname = metadata.get("library_name")
-        if libname != RunnerMetadata.LIBRARY_NAME:
+        if libname != Metadata.LIBRARY_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True

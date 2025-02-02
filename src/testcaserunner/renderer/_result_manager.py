@@ -10,7 +10,7 @@ import seaborn as sns
 import pandas as pd
 
 from ..debug import call_logger
-from ..defines import RunnerMetadata
+from ..defines import Metadata
 from ..parallel_executor import TestCase, TestCaseResult
 
 class _RunnerLog:
@@ -119,7 +119,7 @@ class RunnerLogManager:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": RunnerMetadata.LIBRARY_NAME,
+            "library_name": Metadata.LIBRARY_NAME,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }
