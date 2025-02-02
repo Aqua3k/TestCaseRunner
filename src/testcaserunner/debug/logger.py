@@ -3,7 +3,7 @@ import inspect
 
 class RunnerLogger: # pragma: no cover
     __is_debugmode = False
-    __logger = logging.getLogger("TestCaseTunner-Logger")
+    __logger = logging.getLogger("TestCaseRunner")
     __logger.setLevel(logging.WARNING)
     __handler = logging.StreamHandler()
     __handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
@@ -28,15 +28,11 @@ class RunnerLogger: # pragma: no cover
 
     @classmethod
     def function_tracer(cls, func):
-        frame = inspect.currentframe().f_back  # 呼び出し元のフレームを取得
-        caller_cls = None
-        caller_self = frame.f_locals.get("self")
-        if caller_self:
-            caller_cls = caller_self.__class__.__name__
+        class_name = inspect.stack()[1].function
         def wrapper(*args, **kwargs):
-            cls.__logger.debug(f"{caller_cls}: Calling {func.__name__}")
+            cls.__logger.debug(f"{class_name}: Calling {func.__name__}")
             result = func(*args, **kwargs)
-            cls.__logger.debug(f"{caller_cls}: {func.__name__} returned {result}")
+            cls.__logger.debug(f"{class_name}: {func.__name__} returned {result}")
             return result
         return wrapper
 
