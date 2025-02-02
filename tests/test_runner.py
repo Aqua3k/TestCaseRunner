@@ -39,6 +39,9 @@ def error_program(testcase: TestCase):
     foo = 1/0 # division by zero.
     return TestCaseResult()
 
+def return_none(testcase: TestCase):
+    return None
+
 def no_error_program_attribute(testcase: TestCase):
     basename = os.path.basename(testcase)
     case = os.path.split(basename)[0]
@@ -74,6 +77,12 @@ def test_arguments_are_valid3(caplog, setup_normally):
     # attributeへ情報を登録することができる
     with caplog.at_level(logging.WARNING):
         run(testcase_handler=no_error_program_attribute, input_file_path="in")
+    assert len(caplog.records) == 0
+
+def test_arguments_are_valid4(caplog, setup_normally):
+    # 戻り値Noneは許される
+    with caplog.at_level(logging.WARNING):
+        run(testcase_handler=return_none, input_file_path="in")
     assert len(caplog.records) == 0
 
 def test_no_error_no_warning_case13(caplog, setup_normally):
@@ -146,6 +155,16 @@ def test_5th_argument_is_valid6(caplog, setup_normally):
 def test_5th_argument_is_invalid(setup_normally):
     with pytest.raises(ValueError):
         run(testcase_handler=no_error_program, input_file_path="in", parallel_processing_method="test")
+
+def test_6th_argument_is_valid1(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
+        run(testcase_handler=no_error_program, input_file_path="in", time_limit=10)
+    assert len(caplog.records) == 0
+
+def test_6th_argument_is_valid2(caplog, setup_normally):
+    with caplog.at_level(logging.WARNING):
+        run(testcase_handler=no_error_program, input_file_path="in", time_limit=3.14)
+    assert len(caplog.records) == 0
 
 def test_debug_message(caplog, setup_normally):
     # デバッグメッセージが出力される
