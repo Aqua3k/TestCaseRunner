@@ -5,6 +5,7 @@ import datetime
 from .parallel_executor import start_executor, TestCase, TestCaseResult
 from .renderer import make_html
 from .debug import Logger
+from .parallel_executor import LogManager, RunnerLog
 
 def get_log_file_path() -> str:
     log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
@@ -42,3 +43,7 @@ def run(
     )
     file = os.path.join(log_folder_name, "result.html")
     make_html(file, log)
+
+def get_log() -> list[RunnerLog]:
+    log_manager = LogManager()
+    return log_manager.get_log()
