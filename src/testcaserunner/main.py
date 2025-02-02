@@ -42,8 +42,3 @@ def run(
     )
     file = os.path.join(log_folder_name, "result.html")
     make_html(file, log)
-
-# 公開するメンバーを制御する
-__all__ = [
-    "run",
-]
