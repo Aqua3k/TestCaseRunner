@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from enum import Enum, auto
 from dataclasses import dataclass
 
-from ..debug import RunnerLogger
+from ..debug import call_logger
 from ..parallel_executor import RunnerLog
 from ..defines import InternalError
 
@@ -69,12 +69,12 @@ class ResultHtmlBuilder(HtmlBuilder):
     def set_title(self, title: str) -> None:
         self.title = title
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_heading(self, text: str) -> None:
         template = self.environment.get_template("heading.j2")
         self.contents.append(template.render({"text": text}))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_figure(self, figure_path: str) -> None:
         template = self.environment.get_template("figure.j2")
         self.contents.append(template.render({"link": os.path.join("fig", figure_path)}))
@@ -87,11 +87,11 @@ class ResultHtmlBuilder(HtmlBuilder):
         }
         self.contents.append(template.render(data))
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_summary(self) -> None:
         self.contents.append(f"<pre>{self.log.get_dataframe().describe()}</pre>")
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_table(self) -> None:
         template = self.environment.get_template("table.j2")
         data = {
@@ -100,24 +100,24 @@ class ResultHtmlBuilder(HtmlBuilder):
         }
         self.contents.append(template.render(data))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_script(self, script_path: str) -> None:
         template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], script_path)
         self.contents.append(template.render({"text": self.load_file(file)}))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_css(self, css_path: str) -> None:
         template = self.environment.get_template("css.j2")
         file = os.path.join(os.path.split(__file__)[0], css_path)
         self.contents.append(template.render({"text": self.load_file(file)}))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_css_link(self, css_path: str) -> None:
         template = self.environment.get_template("css_link.j2")
         self.contents.append(template.render({"link": css_path}))
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def write(self) -> None:
         template = self.environment.get_template("main.j2")
         data = {
@@ -127,7 +127,7 @@ class ResultHtmlBuilder(HtmlBuilder):
         with open(self.output_html_path, mode="w") as f:
             f.write(template.render(data))
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def construct_table_columns(self) -> list[Column]:
         columns = [
             Column("testcase", HtmlColumnType.TEXT),
@@ -144,13 +144,13 @@ class ResultHtmlBuilder(HtmlBuilder):
             columns.append(Column(attribute, HtmlColumnType.TEXT))
         return columns
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def load_file(self, file: str) -> str:
         with open(file, mode="r", encoding="utf-8") as f:
             text = f.read()
         return text
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_data(self, column: str, row: int) -> Any:
         def df_at(column: str, row: int) -> Any:
             dataframe = self.log.get_dataframe()
@@ -160,7 +160,7 @@ class ResultHtmlBuilder(HtmlBuilder):
         ret = df_at(column, row)
         return ret
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def make_table_contents(self) -> list[dict[str, str]]:
         ret = []
         for row in range(len(self.log.get_dataframe())):
@@ -181,7 +181,7 @@ class ResultHtmlBuilder(HtmlBuilder):
             ret.append(rows)
         return ret
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def make_table_columns(self) -> dict[str, str]:
         table_columns = dict()
         for column in self.columns:
@@ -196,7 +196,7 @@ class ResultHtmlBuilder(HtmlBuilder):
                     raise InternalError("不明なHtmlColumnTypeがあります。")
         return table_columns
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_url_cell(self, column: str, row: int) -> str:
         value = self.get_data(column, row)
         template = self.environment.get_template("cell_with_file_link.j2")
@@ -206,7 +206,7 @@ class ResultHtmlBuilder(HtmlBuilder):
             }
         return template.render(data)
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_status_cell(self, column: str, row: int) -> str:
         text, description = self.get_data(column, row)
         match text:
@@ -234,7 +234,7 @@ class ResultHtmlBuilder(HtmlBuilder):
                 }
         return template.render(data)
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_text_cell(self, column: str, row: int) -> str:
         value = self.get_data(column, row)
         if type(value) is np.float64 or type(value) is np.float32:

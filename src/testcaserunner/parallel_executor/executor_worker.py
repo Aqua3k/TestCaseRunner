@@ -13,7 +13,7 @@ import types
 
 from tqdm import tqdm
 
-from ..debug import RunnerLogger
+from ..debug import Logger
 
 Argument = TypeVar("Argument")
 Return = TypeVar("Return")
@@ -45,7 +45,7 @@ class BaseExecutor(ABC): # pragma: no cover
         pass
 
     def notify_catch_keyboard_interrupt(self):
-        RunnerLogger.warning("ランナーの実行をキャンセルします。")
+        Logger.warning("ランナーの実行をキャンセルします。")
 
 class BaseParallelExecutor(BaseExecutor):
     """concurrent.futuresを使用する並列化処理の基底クラス"""

@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass
 import traceback
 
-from ..debug import RunnerLogger
+from ..debug import Logger
 from ..defines import NoTestcaseFileException, InvalidPathException
 from .testcase import TestCase, TestCaseResult
 from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
@@ -46,9 +46,9 @@ class ParallelExecutor:
             if file_path.is_file():
                 self.copy_file(file, self.log_folder_name)
             elif file_path.is_dir():
-                RunnerLogger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
+                Logger.warning(f"{file}はディレクトリパスです。コピーは行いません。")
             else:
-                RunnerLogger.warning(f"{file}が見つかりません。コピーは行いません。")
+                Logger.warning(f"{file}が見つかりません。コピーは行いません。")
 
     def init_folders(self) -> None:
         self.make_folder(self.log_folder_name)
@@ -104,7 +104,7 @@ class ParallelExecutor:
     def start(self) -> list[tuple[TestCase, TestCaseResult]]:
         test_cases: list[TestCase] = self.make_testcases()
 
-        RunnerLogger.debug("start testcase run process.")
+        Logger.debug("start testcase run process.")
         with self.Executor(len(test_cases)) as executor:
             executor.submit(self.run_testcase, test_cases)
             results: list[TestCaseResult|None] = executor.wait_and_get_results()
@@ -132,7 +132,7 @@ class ParallelExecutor:
         except Exception as e:
             error_details = traceback.format_exc()
             has_error = True
-            RunnerLogger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
+            Logger.warning(f"テストケース{os.path.basename(testcase.input_file_path)}において、\
                 引数で渡された関数の中で例外が発生しました。\n{str(e)}")
             test_result = TestCaseResult(
                 stderr=error_details,

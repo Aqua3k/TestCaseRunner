@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from jsonschema import ValidationError, validate
 
-from ..debug import RunnerLogger
+from ..debug import Logger, call_logger
 from ..defines import RunnerMetadata
 from .html_builder import HtmlBuilder, Column, HtmlColumnType
 from ..defines import InternalError
@@ -90,7 +90,7 @@ class DiffHtmlBuilder(HtmlBuilder):
     def set_title(self, title: str) -> None:
         self.title = title
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_heading(self, text: str) -> None:
         template = self.environment.get_template("heading.j2")
         self.contents.append(template.render({"text": text}))
@@ -109,7 +109,7 @@ class DiffHtmlBuilder(HtmlBuilder):
         }
         self.contents.append(template.render(data))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def make_table_contents(self) -> list[list[str]]:
         def make_cell_tata(column: DiffColumn, row: int, sub_category_index: int) -> str:
             match column.type:
@@ -137,7 +137,7 @@ class DiffHtmlBuilder(HtmlBuilder):
             table.append(rows)
         return table
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_status_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
         text = self.get_data(column.title, row, sub_category_index)
         match text:
@@ -157,24 +157,24 @@ class DiffHtmlBuilder(HtmlBuilder):
             }
         return template.render(data)
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_script(self, script_path: str) -> None:
         template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], script_path)
         self.contents.append(template.render({"text": self.load_file(file)}))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_css(self, css_path: str) -> None:
         template = self.environment.get_template("css.j2")
         file = os.path.join(os.path.split(__file__)[0], css_path)
         self.contents.append(template.render({"text": self.load_file(file)}))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_css_link(self, css_path: str) -> None:
         template = self.environment.get_template("css_link.j2")
         self.contents.append(template.render({"link": css_path}))
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def write(self) -> None:
         template = self.environment.get_template("main.j2")
         data = {
@@ -184,7 +184,7 @@ class DiffHtmlBuilder(HtmlBuilder):
         with open(self.output_html_path, mode="w") as f:
             f.write(template.render(data))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def load_file(self, file: str) -> str:
         with open(file, mode="r", encoding="utf-8") as f:
             text = f.read()
@@ -194,7 +194,7 @@ class DiffHtmlBuilder(HtmlBuilder):
         template = self.environment.get_template("cell.j2")
         return template.render({"value": value})
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_text_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
         this, others = self.get_cell_data(column, row, sub_category_index)
         if len( set([this]) | (set(others)) ) == 1:
@@ -215,7 +215,7 @@ class DiffHtmlBuilder(HtmlBuilder):
             }
         return template.render(data)
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_url_cell(self, column: DiffColumn, row: int, sub_category_index: int) -> str:
         if not column.hash_column:
             return self.get_url_cell_normal(self.get_data(column.title, row, sub_category_index))
@@ -267,7 +267,7 @@ class DiffHtmlBuilder(HtmlBuilder):
 
         return this, others
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_color(self, this: Any, others: list[Any]) -> str:
         # NOTE: 暫定で最小値と最大値だけを見る
         try:
@@ -288,11 +288,11 @@ class DiffHtmlBuilder(HtmlBuilder):
         }
         self.contents.append(template.render(data))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_other_file_summary(self, index: int) -> None:
         self.contents.append(f"<pre>{self.logs[index].df.describe()}</pre>")
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def add_link(self, index: int) -> None:
         template = self.environment.get_template("link.j2")
         data = {
@@ -330,7 +330,7 @@ class RunnerLogViewer:
         for file in glob.glob(pattern, recursive=True):
             self.load_log(file)
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def is_valid(self, data: dict) -> bool:
         try:
             schema_path = os.path.join(os.path.split(__file__)[0], "schemas", "result_schema.json")
@@ -338,7 +338,7 @@ class RunnerLogViewer:
                 schema: dict = json.load(f)
             validate(instance=data, schema=schema)
         except ValidationError as e:
-            RunnerLogger.info("json schema validation error.")
+            Logger.info("json schema validation error.")
             return False
 
         metadata: dict|None = data.get("metadata")
@@ -350,18 +350,18 @@ class RunnerLogViewer:
 
         return True
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def load_log(self, file: str) -> None:
         try:
             with open(file, 'r') as f:
                 loaded_data: dict = json.load(f)
         except:
             # ロードできなければ処理しない
-            RunnerLogger.info(f"{file} のロードでエラーが起きました。")
+            Logger.info(f"{file} のロードでエラーが起きました。")
             return
 
         if not self.is_valid(loaded_data):
-            RunnerLogger.info(f"{file} は正しいデータではありませんでした。")
+            Logger.info(f"{file} は正しいデータではありませんでした。")
             return
         
         contents = loaded_data.get("contents")
@@ -377,9 +377,9 @@ class RunnerLogViewer:
 
         folder = os.path.split(file)[0]
         self.logs.append(_RunnerLog(contents, metadata, os.path.split(folder)[1]))
-        RunnerLogger.info(f"{file} を読み込みました。")
+        Logger.info(f"{file} を読み込みました。")
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_logs(self) -> list[_RunnerLog]:
         return self.logs
 
@@ -389,7 +389,7 @@ class RunnerLogViewer:
         os.makedirs(path, exist_ok=True)
         return path
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def compare(self, log1: _RunnerLog, log2: _RunnerLog) -> None:
         folder = self.get_log_file_path()
         builder = DiffHtmlBuilder(os.path.join(folder, "result.html"), [log1, log2], self.debug)

@@ -4,7 +4,7 @@ import datetime
 
 from .parallel_executor import start_executor, TestCase, TestCaseResult
 from .renderer import make_html
-from .debug import RunnerLogger
+from .debug import Logger
 
 def get_log_file_path() -> str:
     log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
@@ -29,7 +29,7 @@ def run(
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
     """
     if _debug:
-        RunnerLogger.enable_debug_mode()
+        Logger.enable_debug_mode()
     log_folder_name = get_log_file_path()
     log = start_executor(
         testcase_handler,

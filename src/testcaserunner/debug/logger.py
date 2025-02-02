@@ -1,8 +1,7 @@
 import logging
 import inspect
 
-class RunnerLogger: # pragma: no cover
-    __is_debugmode = False
+class Logger: # pragma: no cover
     __logger = logging.getLogger("TestCaseRunner")
     __logger.setLevel(logging.WARNING)
     __handler = logging.StreamHandler()
@@ -14,27 +13,11 @@ class RunnerLogger: # pragma: no cover
 
     @classmethod
     def enable_debug_mode(cls) -> None:
-        cls.__is_debugmode = True
         cls.__logger.setLevel(logging.DEBUG)
     
     @classmethod
     def disable_debug_mode(cls) -> None:
-        cls.__is_debugmode = False
         cls.__logger.setLevel(logging.WARNING)
-    
-    @classmethod
-    def is_debug_mode(cls) -> bool:
-        return cls.__is_debugmode
-
-    @classmethod
-    def function_tracer(cls, func):
-        class_name = inspect.stack()[1].function
-        def wrapper(*args, **kwargs):
-            cls.__logger.debug(f"{class_name}: Calling {func.__name__}")
-            result = func(*args, **kwargs)
-            cls.__logger.debug(f"{class_name}: {func.__name__} returned {result}")
-            return result
-        return wrapper
 
     @classmethod
     def warning(cls, msg: str) -> None:
@@ -47,3 +30,12 @@ class RunnerLogger: # pragma: no cover
     @classmethod
     def debug(cls, msg: str) -> None:
         cls.__logger.debug(msg)
+
+def call_logger(func):
+    class_name = inspect.stack()[1].function
+    def wrapper(*args, **kwargs):
+        Logger.debug(f"{class_name}: Calling {func.__name__}")
+        result = func(*args, **kwargs)
+        Logger.debug(f"{class_name}: {func.__name__} returned {result}")
+        return result
+    return wrapper

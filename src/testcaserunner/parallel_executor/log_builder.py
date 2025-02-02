@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from ..debug import RunnerLogger
+from ..debug import call_logger
 from ..defines import RunnerMetadata
 from .testcase import TestCase, TestCaseResult
 
@@ -43,16 +43,16 @@ class LogBuilder:
     def make_folder(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def build(self) -> None:
         self.make_json_file()
         self.make_figure()
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_log(self) -> RunnerLog:
         return self.runner_log
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def make_figure(self) -> None:
         # ヒストグラムを描画
         df = self.runner_log.get_dataframe()
@@ -68,7 +68,7 @@ class LogBuilder:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def make_json_file(self) -> None:
         counter: dict[str, int] = defaultdict(int)
         def add_hash_info(hash: str, suffix: str) -> str:
@@ -121,14 +121,14 @@ class LogBuilder:
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
     
-    @RunnerLogger.function_tracer
+    @call_logger
     def get_file_hash(self, path: str) -> str:
         if os.path.exists(path):
             return self.calculate_file_hash(path)
         else:
             return "" #ファイルが開けないときは空文字にしておく
 
-    @RunnerLogger.function_tracer
+    @call_logger
     def calculate_file_hash(self, file_path: str) -> str:
         hash_obj = hashlib.new('sha256')
         with open(file_path, 'rb') as file:
