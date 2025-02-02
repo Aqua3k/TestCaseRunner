@@ -4,9 +4,10 @@ import inspect
 class Logger: # pragma: no cover
     __logger = logging.getLogger("TestCaseRunner")
     __logger.setLevel(logging.WARNING)
-    __handler = logging.StreamHandler()
-    __handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    __logger.addHandler(__handler)
+    if not __logger.hasHandlers():
+        __handler = logging.StreamHandler()
+        __handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        __logger.addHandler(__handler)
 
     def __new__(cls, *args, **kwargs):
         raise TypeError(f"This class cannot be instantiated")
