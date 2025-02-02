@@ -1,3 +1,3 @@
-from .main import *
-from .parallel_executor.log_builder import *
+from .main import run
+from .parallel_executor import TestCase, TestCaseResult
 from .defines.exceptions import *
