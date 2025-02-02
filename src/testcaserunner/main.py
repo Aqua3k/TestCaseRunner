@@ -2,8 +2,7 @@ import os
 from typing import Callable
 import datetime
 
-from .defines import TestCase, TestCaseResult
-from .parallel_executor import start_executor
+from .parallel_executor import start_executor, TestCase, TestCaseResult
 from .renderer import make_html
 
 def get_log_file_path() -> str:

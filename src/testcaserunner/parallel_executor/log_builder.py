@@ -10,7 +10,8 @@ import seaborn as sns
 import pandas as pd
 
 from ..debug import RunnerLogger
-from ..defines import RunnerMetadata, TestCase, TestCaseResult
+from ..defines import RunnerMetadata
+from .testcase import TestCase, TestCaseResult
 
 class RunnerLog:
     def __init__(self, contents: dict, metadata: dict) -> None:

@@ -3,7 +3,7 @@ from typing import Callable
 
 from .executor import ParallelExecutor
 from .log_builder import LogBuilder
-from ..defines import TestCase, TestCaseResult
+from .testcase import TestCase, TestCaseResult
 
 def start_executor(
         testcase_handler: Callable[[TestCase], TestCaseResult|None],
