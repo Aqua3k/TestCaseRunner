@@ -152,10 +152,12 @@ class ParallelExecutor:
                 test_result.result_description = "Your program has exceeded the time limit."
             
         test_result.attribute["time"] = erapsed_time
+
+        # 標準出力と標準エラー出力を追記モードでファイルに出力
         if test_result.stdout is not None:
-            with open(testcase.stdout_file_path, mode='w') as f:
+            with open(testcase.stdout_file_path, mode='a') as f:
                 f.write(test_result.stdout)
         if test_result.stderr is not None:
-            with open(testcase.stderr_file_path, mode='w') as f:
+            with open(testcase.stderr_file_path, mode='a') as f:
                 f.write(test_result.stderr)
         return test_result
