@@ -24,7 +24,7 @@ class Column:
     title: str
     type: HtmlColumnType
 
-class HtmlBuilder(ABC): # pragma: no cover
+class BaseHtmlBuilder(ABC): # pragma: no cover
     @abstractmethod
     def set_title(self, title: str) -> None:
         pass
@@ -56,7 +56,7 @@ class HtmlBuilder(ABC): # pragma: no cover
     def write(self) -> None:
         pass
 
-class ResultHtmlBuilder(HtmlBuilder):
+class ResultHtmlBuilder(BaseHtmlBuilder):
     def __init__(self, output_html_path: str, log: RunnerLog) -> None:
         loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
         self.environment = Environment(loader=loader)
@@ -246,7 +246,7 @@ class ResultHtmlBuilder(HtmlBuilder):
         return template.render(data)
 
 class Director:
-    def __init__(self, builder: HtmlBuilder) -> None:
+    def __init__(self, builder: BaseHtmlBuilder) -> None:
         self.__builder = builder
 
     def construct(self):

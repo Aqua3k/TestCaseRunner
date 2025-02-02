@@ -10,7 +10,7 @@ import seaborn as sns
 import pandas as pd
 
 from ..debug import call_logger
-from ..defines import RunnerMetadata
+from ..defines import Metadata
 from .testcase import TestCase, TestCaseResult
 
 class RunnerLog:
@@ -44,12 +44,9 @@ class LogBuilder:
         os.makedirs(path, exist_ok=True)
     
     @call_logger
-    def build(self) -> None:
+    def build(self) -> RunnerLog:
         self.make_json_file()
         self.make_figure()
-    
-    @call_logger
-    def get_log(self) -> RunnerLog:
         return self.runner_log
 
     @call_logger
@@ -108,7 +105,7 @@ class LogBuilder:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": RunnerMetadata.LIBRARY_NAME,
+            "library_name": Metadata.LIBRARY_NAME,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }

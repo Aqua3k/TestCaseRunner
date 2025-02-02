@@ -25,5 +25,4 @@ def start_executor(
     )
     result = runner.start()
     builder = LogBuilder(result, log_folder_name)
-    builder.build()
-    return builder.get_log()
+    return builder.build()
