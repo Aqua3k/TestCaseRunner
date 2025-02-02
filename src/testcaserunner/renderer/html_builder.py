@@ -8,7 +8,7 @@ from enum import Enum, auto
 from dataclasses import dataclass
 
 from ..debug import RunnerLogger
-from ..runner_log import RunnerLog
+from ..parallel_executor import RunnerLog
 from ..defines import InternalError
 
 class HtmlColumnType(Enum):
@@ -84,14 +84,15 @@ class ResultHtmlBuilder(HtmlBuilder):
     
     def add_datetime(self) -> None:
         template = self.environment.get_template("datetime.j2")
+        metadata = self.log.get_metadata()
         data = {
-            "date" : self.log.metadata["created_date"],
+            "date" : metadata["created_date"],
         }
         self.contents.append(template.render(data))
     
     @logger.function_tracer
     def add_summary(self) -> None:
-        self.contents.append(f"<pre>{self.log.df.describe()}</pre>")
+        self.contents.append(f"<pre>{self.log.get_dataframe().describe()}</pre>")
 
     @logger.function_tracer
     def add_table(self) -> None:
@@ -141,7 +142,8 @@ class ResultHtmlBuilder(HtmlBuilder):
             Column("stdout_hash", HtmlColumnType.METADATA),
             Column("stderr_hash", HtmlColumnType.METADATA),
         ]
-        for attribute in self.log.metadata["attributes"]:
+        metadata = self.log.get_metadata()
+        for attribute in metadata["attributes"]:
             columns.append(Column(attribute, HtmlColumnType.TEXT))
         return columns
 
@@ -153,13 +155,18 @@ class ResultHtmlBuilder(HtmlBuilder):
 
     @logger.function_tracer
     def get_data(self, column: str, row: int) -> Any:
-        ret = self.log._df_at(column, row)
+        def df_at(column: str, row: int) -> Any:
+            dataframe = self.log.get_dataframe()
+            if column not in dataframe.columns:
+                return None # 列がないならNoneを返す
+            return dataframe.at[str(row), column]
+        ret = df_at(column, row)
         return ret
 
     @logger.function_tracer
     def make_table_contents(self) -> list[dict[str, str]]:
         ret = []
-        for row in range(len(self.log.df)):
+        for row in range(len(self.log.get_dataframe())):
             rows = {}
             for column in self.columns:
                 match column.type:

@@ -8,7 +8,8 @@ from dataclasses import dataclass
 import traceback
 
 from ..debug import RunnerLogger
-from ..defines import TestCase, TestCaseResult, NoTestcaseFileException, InvalidPathException
+from ..defines import NoTestcaseFileException, InvalidPathException
+from .testcase import TestCase, TestCaseResult
 from .executor_worker import BaseExecutor, ProcessParallelExecutor, ThreadParallelExecutor, SerialExecutor
 from ..defines import InternalError
 

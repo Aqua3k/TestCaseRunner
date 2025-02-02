@@ -10,32 +10,21 @@ import seaborn as sns
 import pandas as pd
 
 from ..debug import RunnerLogger
-from ..defines import RunnerMetadata, TestCase, TestCaseResult
+from ..defines import RunnerMetadata
+from .testcase import TestCase, TestCaseResult
 
 class RunnerLog:
-    def __init__(self, contents: dict, metadata: dict, base_dir: str) -> None:
+    def __init__(self, contents: dict, metadata: dict) -> None:
         self._df = pd.DataFrame(contents)
         self._metadata = metadata
-        self.base_dir = base_dir
     
-    @property
-    def df(self) -> pd.DataFrame:
+    def get_dataframe(self) -> pd.DataFrame:
         return self._df
-
-    @property
-    def metadata(self) -> dict:
+    
+    def get_metadata(self) -> dict:
         return self._metadata
-    
-    def drop(self, column: str) -> None:
-        self._df = self._df.drop(columns=[column], errors='ignore')
-        self._metadata["attributes"].pop(column, None)
-    
-    def _df_at(self, column: str, row: int) -> Any:
-        if column not in self._df.columns:
-            return None # 列がないならNoneを返す
-        return self._df.at[str(row), column]
 
-class RunnerLogManager:
+class LogBuilder:
     js_file_path = "js"
     infile_col = "in"
     stdout_col = "stdout"
@@ -47,7 +36,7 @@ class RunnerLogManager:
     stdout_hash_col = "stdout_hash"
     stderr_hash_col = "stderr_hash"
 
-    logger = RunnerLogger("RunnerLogManager")
+    logger = RunnerLogger("LogBuilder")
     def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> None:
         self.log_folder_name = log_folder_name
         if debug:
@@ -58,7 +47,7 @@ class RunnerLogManager:
         os.makedirs(path, exist_ok=True)
     
     @logger.function_tracer
-    def make_log(self) -> None:
+    def build(self) -> None:
         self.make_json_file()
         self.make_figure()
     
@@ -69,14 +58,15 @@ class RunnerLogManager:
     @logger.function_tracer
     def make_figure(self) -> None:
         # ヒストグラムを描画
-        self.runner_log.df.hist()
+        df = self.runner_log.get_dataframe()
+        df.hist()
         fig_dir_path = os.path.join(self.log_folder_name, "fig")
         self.make_folder(fig_dir_path)
         plt.savefig(os.path.join(fig_dir_path, 'histgram.png'))
         plt.close()
 
         # 相関係数のヒートマップ
-        corr = self.runner_log.df.corr(numeric_only=True)
+        corr = df.corr(numeric_only=True)
         heatmap = sns.heatmap(corr, annot=True)
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
@@ -129,7 +119,7 @@ class RunnerLogManager:
             "contents": contents,
             "metadata": metadata,
         }
-        self.runner_log: RunnerLog = RunnerLog(contents, metadata, os.path.split(self.log_folder_name)[1])
+        self.runner_log: RunnerLog = RunnerLog(contents, metadata)
         json_file_path = os.path.join(self.log_folder_name, "result.json")
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
@@ -148,8 +138,3 @@ class RunnerLogManager:
             while chunk := file.read(4096):
                 hash_obj.update(chunk)
         return hash_obj.hexdigest()
-
-def make_log(result: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> RunnerLog:
-    log_manager = RunnerLogManager(result, log_folder_name, debug)
-    log_manager.make_log()
-    return log_manager.get_log()

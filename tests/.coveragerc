@@ -3,4 +3,5 @@ exclude_lines =
     if __name__ == .__main__.:
     pragma: no cover
 omit =
-    ../src/testcaserunner/diff_viewer.py
+    ../src/testcaserunner/renderer/diff_viewer.py
+    ../src/testcaserunner/renderer/_result_manager.py

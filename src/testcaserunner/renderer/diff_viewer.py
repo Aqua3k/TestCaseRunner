@@ -13,9 +13,10 @@ from jsonschema import ValidationError, validate
 
 from ..debug import RunnerLogger
 from ..defines import RunnerMetadata
-from ..runner_log import RunnerLog, RunnerLogManager
 from .html_builder import HtmlBuilder, Column, HtmlColumnType
 from ..defines import InternalError
+
+from ._result_manager import _RunnerLog, RunnerLogManager # 暫定の対応 TODO 対応する
 
 @dataclass
 class DiffColumn(Column):
@@ -29,7 +30,7 @@ class DiffColumn(Column):
 class DiffHtmlBuilder(HtmlBuilder):
     logger = RunnerLogger("DiffHtmlBuilder")
     #TODO repeat_countを考慮しないとうまくいかなそう…
-    def __init__(self, output_html_path: str, logs: list[RunnerLog], debug: bool) -> None:
+    def __init__(self, output_html_path: str, logs: list[_RunnerLog], debug: bool) -> None:
         loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
         self.environment = Environment(loader=loader)
         self.output_html_path = output_html_path
@@ -330,7 +331,7 @@ class RunnerLogViewer:
         self.debug = _debug
         if _debug:
             self.logger.enable_debug_mode()
-        self.logs: list[RunnerLog] = []
+        self.logs: list[_RunnerLog] = []
         pattern = os.path.join(path, "**", "*.json")
         for file in glob.glob(pattern, recursive=True):
             self.load_log(file)
@@ -381,11 +382,11 @@ class RunnerLogViewer:
             raise InternalError("metadataがNonedict型ではないよ")
 
         folder = os.path.split(file)[0]
-        self.logs.append(RunnerLog(contents, metadata, os.path.split(folder)[1]))
+        self.logs.append(_RunnerLog(contents, metadata, os.path.split(folder)[1]))
         self.logger.info(f"{file} を読み込みました。")
     
     @logger.function_tracer
-    def get_logs(self) -> list[RunnerLog]:
+    def get_logs(self) -> list[_RunnerLog]:
         return self.logs
 
     def get_log_file_path(self) -> str:
@@ -395,7 +396,7 @@ class RunnerLogViewer:
         return path
 
     @logger.function_tracer
-    def compare(self, log1: RunnerLog, log2: RunnerLog) -> None:
+    def compare(self, log1: _RunnerLog, log2: _RunnerLog) -> None:
         folder = self.get_log_file_path()
         builder = DiffHtmlBuilder(os.path.join(folder, "result.html"), [log1, log2], self.debug)
         director = DiffDirector(builder)

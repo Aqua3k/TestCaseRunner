@@ -2,10 +2,8 @@ import os
 from typing import Callable
 import datetime
 
-from .defines import TestCase, TestCaseResult
-from .parallel_executor import ParallelExecutor
+from .parallel_executor import start_executor, TestCase, TestCaseResult
 from .renderer import make_html
-from .runner_log import make_log
 
 def get_log_file_path() -> str:
     log_name = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_LOG"
@@ -30,7 +28,7 @@ def run(
         parallel_processing_method (str, optional): 並列化の方法(プロセスかスレッドか). Defaults to 'process'.
     """
     log_folder_name = get_log_file_path()
-    runner = ParallelExecutor(
+    log = start_executor(
         testcase_handler,
         input_file_path,
         log_folder_name,
@@ -40,8 +38,6 @@ def run(
         time_limit,
         _debug,
     )
-    result = runner.start()
-    log = make_log(result, log_folder_name, _debug)
     file = os.path.join(log_folder_name, "result.html")
     make_html(file, log, _debug)
 
