@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-from ..debug import RunnerLogger
+from ..debug import call_logger
 from ..defines import RunnerMetadata
 from ..parallel_executor import TestCase, TestCaseResult
 
@@ -48,26 +48,23 @@ class RunnerLogManager:
     stdout_hash_col = "stdout_hash"
     stderr_hash_col = "stderr_hash"
 
-    logger = RunnerLogger("RunnerLogManager")
     def __init__(self, results: list[tuple[TestCase, TestCaseResult]], log_folder_name: str, debug: bool) -> None:
         self.log_folder_name = log_folder_name
-        if debug:
-            self.logger.enable_debug_mode()
         self.results = results
 
     def make_folder(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
     
-    @logger.function_tracer
+    @call_logger
     def make_log(self) -> None:
         self.make_json_file()
         self.make_figure()
     
-    @logger.function_tracer
+    @call_logger
     def get_log(self) -> _RunnerLog:
         return self.runner_log
 
-    @logger.function_tracer
+    @call_logger
     def make_figure(self) -> None:
         # ヒストグラムを描画
         self.runner_log.df.hist()
@@ -82,7 +79,7 @@ class RunnerLogManager:
         heatmap.set_title('Correlation Coefficient Heatmap')
         plt.savefig(os.path.join(fig_dir_path, 'heatmap.png'))
 
-    @logger.function_tracer
+    @call_logger
     def make_json_file(self) -> None:
         counter: dict[str, int] = defaultdict(int)
         def add_hash_info(hash: str, suffix: str) -> str:
@@ -135,14 +132,14 @@ class RunnerLogManager:
         with open(json_file_path, 'w') as f:
             json.dump(self.json_file, f, indent=2)
     
-    @logger.function_tracer
+    @call_logger
     def get_file_hash(self, path: str) -> str:
         if os.path.exists(path):
             return self.calculate_file_hash(path)
         else:
             return "" #ファイルが開けないときは空文字にしておく
 
-    @logger.function_tracer
+    @call_logger
     def calculate_file_hash(self, file_path: str) -> str:
         hash_obj = hashlib.new('sha256')
         with open(file_path, 'rb') as file:

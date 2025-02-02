@@ -1,5 +1,8 @@
 import subprocess
 import time
+import sys
+import os
+sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,

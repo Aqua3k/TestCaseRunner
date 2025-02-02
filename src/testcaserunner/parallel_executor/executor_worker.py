@@ -13,14 +13,13 @@ import types
 
 from tqdm import tqdm
 
-from ..debug import RunnerLogger
+from ..debug import Logger
 
 Argument = TypeVar("Argument")
 Return = TypeVar("Return")
 Handler = Callable[[Argument], Return]
 class BaseExecutor(ABC): # pragma: no cover
     """Executorの基底クラス"""
-    logger = RunnerLogger("BaseExecutor")
     NOT_START = 0
     STARTED = 1
     SUBMITTED = 2
@@ -46,7 +45,7 @@ class BaseExecutor(ABC): # pragma: no cover
         pass
 
     def notify_catch_keyboard_interrupt(self):
-        self.logger.warning("ランナーの実行をキャンセルします。")
+        Logger.warning("ランナーの実行をキャンセルします。")
 
 class BaseParallelExecutor(BaseExecutor):
     """concurrent.futuresを使用する並列化処理の基底クラス"""
