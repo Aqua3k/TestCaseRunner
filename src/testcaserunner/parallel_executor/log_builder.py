@@ -44,7 +44,7 @@ class LogBuilder:
         os.makedirs(path, exist_ok=True)
     
     @call_logger
-    def build(self) -> None:
+    def build(self) -> RunnerLog:
         self.make_json_file()
         self.make_figure()
         return self.runner_log
