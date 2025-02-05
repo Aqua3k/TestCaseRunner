@@ -63,7 +63,7 @@ class LogManager:
             raise InternalError("metadataがNonedict型ではないよ")
 
         folder = os.path.split(file)[0]
-        self.logs.append(RunnerLog(contents, metadata, os.path.split(folder)[1]))
+        self.logs.append(RunnerLog(contents, metadata))
         Logger.info(f"{file} を読み込みました。")
     
     @call_logger
