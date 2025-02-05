@@ -6,6 +6,7 @@ sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,
+    get_log,
     TestCaseResult,
     TestCase,
     )
@@ -50,3 +51,4 @@ def run_program(testcase: TestCase):
 
 if __name__ == "__main__":
     run(run_program, "in", _debug=True)
+    logs = get_log()
