@@ -21,6 +21,25 @@ class ResultTable:
     def add_result(self, result: Result):
         pass
 
+class Singleton(ABC):
+    _instances = {}
+
+    def __new__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__new__(cls)
+            cls._instances[cls] = instance
+            if hasattr(instance, "first_init"):  # 初回だけ実行
+                instance.first_init()
+        return cls._instances[cls]
+
+    @abstractmethod
+    def first_init(self):
+        pass
+
+class Database(Singleton):
+    def first_init(self):
+        pass
+
 class ScreenStatus(Enum):
     MAIN_SCREEN = auto()
     VIEW_RESULTS = auto()
@@ -125,7 +144,7 @@ class CUI:
             raise InternalError("処理できない画面を開こうとしたよ")
         return screen.handle_input(key)
     
-    def activate(self, default_screen: ScreenStatus) -> None:
+    def main_loop(self, default_screen: ScreenStatus) -> None:
         status: ScreenStatus|None = None
         next_status = default_screen
         screen: BaseScreen|None = None
@@ -140,7 +159,16 @@ class CUI:
                 self.__open_screen(screen)
                 self.__display_screen(screen)
             key = input()
+            if key == "q":
+                break
             next_status = self.__handle_input(screen, key)
+
+    def activate(self, default_screen: ScreenStatus) -> None:
+        try:
+            self.main_loop(default_screen)
+        except KeyboardInterrupt:
+            pass
+        print("bye!")
 
 def construct_screens() -> dict[ScreenStatus, BaseScreen]:
     screen = MainScreen()
