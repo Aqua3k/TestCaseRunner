@@ -10,7 +10,7 @@ import seaborn as sns
 import pandas as pd
 
 from ..debug import call_logger
-from ..defines import Metadata
+from ..defines import LibraryMetadata
 from .testcase import TestCase, TestCaseResult
 from .log import RunnerLog
 
@@ -95,7 +95,8 @@ class LogBuilder:
         contents = json.loads(pd.DataFrame(contents).to_json())
         
         metadata = {
-            "library_name": Metadata.LIBRARY_NAME,
+            "library_name": LibraryMetadata.LIBRARY_NAME,
+            "library_version": LibraryMetadata.LIBRARY_VERSION,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
         }
