@@ -83,7 +83,7 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
         template = self.environment.get_template("datetime.j2")
         metadata = self.log.get_metadata()
         data = {
-            "date" : metadata["created_date"],
+            "date" : metadata.created_date,
         }
         self.contents.append(template.render(data))
     
@@ -140,7 +140,7 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
             Column("stderr_hash", HtmlColumnType.METADATA),
         ]
         metadata = self.log.get_metadata()
-        for attribute in metadata["attributes"]:
+        for attribute in metadata.attributes:
             columns.append(Column(attribute, HtmlColumnType.TEXT))
         return columns
 

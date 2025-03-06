@@ -12,7 +12,7 @@ import numpy as np
 from jsonschema import ValidationError, validate
 
 from ..debug import Logger, call_logger
-from ..defines import Metadata
+from ..defines import LibraryMetadata
 from .html_builder import BaseHtmlBuilder, Column, HtmlColumnType
 from ..defines import InternalError
 
@@ -345,7 +345,7 @@ class RunnerLogViewer:
         if metadata is None:
            raise InternalError("変数metadataがNoneだよ。")
         libname = metadata.get("library_name")
-        if libname != Metadata.LIBRARY_NAME:
+        if libname != LibraryMetadata.LIBRARY_NAME:
             return False # ライブラリ名が入っていなかったらFalse
 
         return True
