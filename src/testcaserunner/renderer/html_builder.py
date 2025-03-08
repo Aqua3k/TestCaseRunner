@@ -68,16 +68,25 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
 
     def set_title(self, title: str) -> None:
         self.title = title
+    
+    def get_title(self) -> str:
+        return self.title
+    
+    def add_contents(self, contents: str) -> None:
+        self.contents.append(contents)
+    
+    def get_contents(self) -> list[str]:
+        return self.contents
 
     @call_logger
     def add_heading(self, text: str) -> None:
         template = self.environment.get_template("heading.j2")
-        self.contents.append(template.render({"text": text}))
+        self.add_contents(template.render({"text": text}))
 
     @call_logger
     def add_figure(self, figure_path: str) -> None:
         template = self.environment.get_template("figure.j2")
-        self.contents.append(template.render({"link": os.path.join("fig", figure_path)}))
+        self.add_contents(template.render({"link": os.path.join("fig", figure_path)}))
     
     def add_datetime(self) -> None:
         template = self.environment.get_template("datetime.j2")
@@ -85,11 +94,11 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
         data = {
             "date" : metadata.created_date,
         }
-        self.contents.append(template.render(data))
+        self.add_contents(template.render(data))
     
     @call_logger
     def add_summary(self) -> None:
-        self.contents.append(f"<pre>{self.log.get_dataframe().describe()}</pre>")
+        self.add_contents(f"<pre>{self.log.get_dataframe().describe()}</pre>")
 
     @call_logger
     def add_table(self) -> None:
@@ -98,31 +107,31 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
             "table": self.make_table_contents(),
             "table_columns": self.make_table_columns(),
         }
-        self.contents.append(template.render(data))
+        self.add_contents(template.render(data))
 
     @call_logger
     def add_script(self, script_path: str) -> None:
         template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], script_path)
-        self.contents.append(template.render({"text": self.load_file(file)}))
+        self.add_contents(template.render({"text": self.load_file(file)}))
 
     @call_logger
     def add_css(self, css_path: str) -> None:
         template = self.environment.get_template("css.j2")
         file = os.path.join(os.path.split(__file__)[0], css_path)
-        self.contents.append(template.render({"text": self.load_file(file)}))
+        self.add_contents(template.render({"text": self.load_file(file)}))
 
     @call_logger
     def add_css_link(self, css_path: str) -> None:
         template = self.environment.get_template("css_link.j2")
-        self.contents.append(template.render({"link": css_path}))
+        self.add_contents(template.render({"link": css_path}))
     
     @call_logger
     def write(self) -> None:
         template = self.environment.get_template("main.j2")
         data = {
-            "title": self.title,
-            "sections": self.contents,
+            "title": self.get_title(),
+            "sections": self.get_contents(),
         }
         with open(self.output_html_path, mode="w") as f:
             f.write(template.render(data))
