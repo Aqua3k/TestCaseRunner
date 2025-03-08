@@ -1,6 +1,6 @@
 import os
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 import numpy as np
 from typing import Any
 from abc import ABC, abstractmethod
@@ -10,6 +10,21 @@ from dataclasses import dataclass
 from ..debug import call_logger
 from ..parallel_executor import RunnerLog
 from ..defines import InternalError
+
+RenderData = dict[str, Any]
+class TemplateEngine:
+    def __init__(self, template_dir: str) -> None:
+        loader = FileSystemLoader(template_dir)
+        self.environment = Environment(loader=loader)
+    
+    def render(self, template_name: str, data: RenderData) -> str:
+        try:
+            template = self.environment.get_template(template_name)
+            return template.render(data)
+        except TemplateNotFound as e:
+            raise InternalError(f"Template not found: {e}")
+        except Exception as e:
+            raise InternalError(f"An error occurred while rendering the template: {e}")
 
 class HtmlColumnType(Enum):
     """HTMLファイルのcolumnの情報
@@ -58,8 +73,7 @@ class BaseHtmlBuilder(ABC): # pragma: no cover
 
 class ResultHtmlBuilder(BaseHtmlBuilder):
     def __init__(self, output_html_path: str, log: RunnerLog) -> None:
-        loader = FileSystemLoader(os.path.join(os.path.split(__file__)[0], r"templates"))
-        self.environment = Environment(loader=loader)
+        self.template_engine = TemplateEngine(os.path.join(os.path.split(__file__)[0], r"templates"))
         self.log = log
         self.output_html_path = output_html_path
         self.contents: list[str] = []
@@ -80,21 +94,24 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
 
     @call_logger
     def add_heading(self, text: str) -> None:
-        template = self.environment.get_template("heading.j2")
-        self.add_contents(template.render({"text": text}))
+        self.add_contents(
+            self.template_engine.render("heading.j2", {"text": text})
+        )
 
     @call_logger
     def add_figure(self, figure_path: str) -> None:
-        template = self.environment.get_template("figure.j2")
-        self.add_contents(template.render({"link": os.path.join("fig", figure_path)}))
+        self.add_contents(
+            self.template_engine.render("figure.j2", {"link": os.path.join("fig", figure_path)})
+        )
     
     def add_datetime(self) -> None:
-        template = self.environment.get_template("datetime.j2")
         metadata = self.log.get_metadata()
         data = {
             "date" : metadata.created_date,
         }
-        self.add_contents(template.render(data))
+        self.add_contents(
+            self.template_engine.render("datetime.j2", data)
+        )
     
     @call_logger
     def add_summary(self) -> None:
@@ -102,39 +119,44 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
 
     @call_logger
     def add_table(self) -> None:
-        template = self.environment.get_template("table.j2")
         data = {
             "table": self.make_table_contents(),
             "table_columns": self.make_table_columns(),
         }
-        self.add_contents(template.render(data))
+        self.add_contents(
+            self.template_engine.render("table.j2", data)
+        )
 
     @call_logger
     def add_script(self, script_path: str) -> None:
-        template = self.environment.get_template("script.j2")
         file = os.path.join(os.path.split(__file__)[0], script_path)
-        self.add_contents(template.render({"text": self.load_file(file)}))
+        self.add_contents(
+            self.template_engine.render("script.j2", {"text": self.load_file(file)})
+        )
 
     @call_logger
     def add_css(self, css_path: str) -> None:
-        template = self.environment.get_template("css.j2")
         file = os.path.join(os.path.split(__file__)[0], css_path)
-        self.add_contents(template.render({"text": self.load_file(file)}))
+        self.add_contents(
+            self.template_engine.render("css.j2", {"text": self.load_file(file)})
+        )
 
     @call_logger
     def add_css_link(self, css_path: str) -> None:
-        template = self.environment.get_template("css_link.j2")
-        self.add_contents(template.render({"link": css_path}))
+        self.add_contents(
+            self.template_engine.render("css_link.j2", {"link": css_path})
+        )
     
     @call_logger
     def write(self) -> None:
-        template = self.environment.get_template("main.j2")
         data = {
             "title": self.get_title(),
             "sections": self.get_contents(),
         }
         with open(self.output_html_path, mode="w") as f:
-            f.write(template.render(data))
+            f.write(
+                self.template_engine.render("main.j2", data)
+            )
     
     @call_logger
     def construct_table_columns(self) -> list[Column]:
@@ -208,12 +230,11 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
     @call_logger
     def get_url_cell(self, column: str, row: int) -> str:
         value = self.get_data(column, row)
-        template = self.environment.get_template("cell_with_file_link.j2")
         data = {
             "link": value,
             "value": "+",
             }
-        return template.render(data)
+        return self.template_engine.render("cell_with_file_link.j2", data)
     
     @call_logger
     def get_status_cell(self, column: str, row: int) -> str:
@@ -229,30 +250,28 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
             case _:
                 color = "gold"
         if description is not None:
-            template = self.environment.get_template("cell_with_color_and_mouseover_message.j2")
             data = {
                 "color": color,
                 "value": text,
                 "description": description,
                 }
+            return self.template_engine.render("cell_with_color_and_mouseover_message.j2", data)
         else:
-            template = self.environment.get_template("cell_with_color.j2")            
             data = {
                 "color": color,
                 "value": text,
                 }
-        return template.render(data)
+            return self.template_engine.render("cell_with_color.j2", data)
     
     @call_logger
     def get_text_cell(self, column: str, row: int) -> str:
         value = self.get_data(column, row)
         if type(value) is np.float64 or type(value) is np.float32:
             value = round(value, 3)
-        template = self.environment.get_template("cell.j2")
         data = {
             "value": value,
             }
-        return template.render(data)
+        return self.template_engine.render("cell.j2", data)
 
 class Director:
     def __init__(self, builder: BaseHtmlBuilder) -> None:
