@@ -11,6 +11,23 @@ from ..parallel_executor import RunnerLog
 from ..defines import InternalError
 from .template_engine import TemplateEngine
 
+class PathConfig:
+    template_path: str = r"templates"
+    figure_paths: list[str] = [
+        "histgram.png",
+        "heatmap.png",
+    ]
+    script_paths: list[str] = [
+        r"js/Table.js",
+        r"js/checkbox.js",
+    ]
+    css_paths: list[str] = [
+        r"js/SortTable.css",
+    ]
+    css_link_paths: list[str] = [
+        r"https://newcss.net/new.min.css"
+    ]
+
 class HtmlColumnType(Enum):
     """HTMLファイルのcolumnの情報
     """
@@ -57,8 +74,10 @@ class BaseHtmlBuilder(ABC): # pragma: no cover
         pass
 
 class ResultHtmlBuilder(BaseHtmlBuilder):
-    def __init__(self, output_html_path: str, log: RunnerLog) -> None:
-        self.template_engine = TemplateEngine(os.path.join(os.path.split(__file__)[0], r"templates"))
+    def __init__(self, output_html_path: str, log: RunnerLog, config: PathConfig) -> None:
+        self.template_engine = TemplateEngine(
+            os.path.join(os.path.split(__file__)[0], config.template_path)
+            )
         self.log = log
         self.output_html_path = output_html_path
         self.contents: list[str] = []
@@ -259,26 +278,30 @@ class ResultHtmlBuilder(BaseHtmlBuilder):
         return self.template_engine.render("cell.j2", data)
 
 class Director:
-    def __init__(self, builder: BaseHtmlBuilder) -> None:
-        self.__builder = builder
+    def __init__(self, builder: BaseHtmlBuilder, config: PathConfig) -> None:
+        self.builder = builder
+        self.config = config
 
     def construct(self):
-        self.__builder.set_title("Runner Result")
-        self.__builder.add_datetime()
-        self.__builder.add_heading("Summary")
-        self.__builder.add_summary()
-        self.__builder.add_heading("Figures")
-        self.__builder.add_figure("histgram.png")
-        self.__builder.add_figure("heatmap.png")
-        self.__builder.add_heading("Table")
-        self.__builder.add_table()
-        self.__builder.add_script("js/Table.js")
-        self.__builder.add_script("js/checkbox.js")
-        self.__builder.add_css("js/SortTable.css")
-        self.__builder.add_css_link(r"https://newcss.net/new.min.css")
-        self.__builder.write()
+        self.builder.set_title("Runner Result")
+        self.builder.add_datetime()
+        self.builder.add_heading("Summary")
+        self.builder.add_summary()
+        self.builder.add_heading("Figures")
+        for figure in self.config.figure_paths:
+            self.builder.add_figure(figure)
+        self.builder.add_heading("Table")
+        self.builder.add_table()
+        for script in self.config.script_paths:
+            self.builder.add_script(script)
+        for css in self.config.css_paths:
+            self.builder.add_css(css)
+        for css_link in self.config.css_link_paths:
+            self.builder.add_css_link(css_link)
+        self.builder.write()
 
 def make_html(path: str, log: RunnerLog) -> None:
-    builder = ResultHtmlBuilder(path, log)
-    director = Director(builder)
+    config = PathConfig()
+    builder = ResultHtmlBuilder(path, log, config)
+    director = Director(builder, config)
     director.construct()
