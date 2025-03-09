@@ -21,20 +21,16 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-
-      - name: Cache dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install tox
+        run: pip install -r requirements.txt
 
       - name: Run Tests
-        run: tox -e integration-coverage
+        run: |
+          cd tests
+          set -o pipefail
+          python -m pytest --junitxml=pytest.xml --cov-report=term-missing --cov=../src | tee pytest-coverage.txt
 
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@v1.1.47
