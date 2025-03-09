@@ -34,7 +34,7 @@ jobs:
         run: pip install tox
 
       - name: Run Tests
-        run: tox -e integration
+        run: tox -e integration-coverage
 
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@v1.1.47

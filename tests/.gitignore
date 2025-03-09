@@ -5,3 +5,4 @@ venv/
 log/
 .coverage
 pytest.xml
+pytest-coverage.txt
