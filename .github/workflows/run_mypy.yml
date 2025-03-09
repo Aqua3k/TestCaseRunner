@@ -21,10 +21,17 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install tox
 
       - name: Run mypy
-        run: mypy src/testcaserunner/
+        run: tox -e mypy
