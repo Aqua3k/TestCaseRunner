@@ -207,7 +207,7 @@ def construct_screens() -> dict[ScreenStatus, BaseScreen]:
         }
     return screens
 
-def main():
+def run_cui():
     screens = construct_screens()
     cui = CUI(screens)
     cui.activate(ScreenStatus.MAIN_SCREEN)

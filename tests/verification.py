@@ -1,14 +1,11 @@
 import subprocess
 import time
-import sys
-import os
-sys.path.append(os.path.join("..", "src"))
 
 from testcaserunner import (
     run,
-    get_log,
     TestCaseResult,
     TestCase,
+    run_cui,
     )
 
 def run_program(testcase: TestCase):
@@ -51,4 +48,4 @@ def run_program(testcase: TestCase):
 
 if __name__ == "__main__":
     run(run_program, "in", _debug=True)
-    logs = get_log()
+    run_cui()
