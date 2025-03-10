@@ -3,11 +3,8 @@ import json
 import glob
 import datetime
 
-from jsonschema import ValidationError, validate
-
 from ..debug import Logger, call_logger
 from ..defines import LibraryMetadata
-from ..defines import InternalError
 from .log import RunnerLog
 
 class LogManager:
@@ -18,51 +15,52 @@ class LogManager:
             self.load_log(file)
     
     @call_logger
-    def is_valid(self, data: dict) -> bool:
-        try:
-            schema_path = os.path.join(os.path.split(__file__)[0], "schemas", "result_schema.json")
-            with open(schema_path, 'r') as f:
-                schema: dict = json.load(f)
-            validate(instance=data, schema=schema)
-        except ValidationError as e:
-            Logger.info("json schema validation error.")
-            return False
-
-        metadata: dict|None = data.get("metadata")
-        if metadata is None:
-           raise InternalError("変数metadataがNoneだよ。")
+    def is_valid(self, contents: dict, metadata: dict) -> bool:
         libname = metadata.get("library_name")
         if libname != LibraryMetadata.LIBRARY_NAME:
+            Logger.info("ライブラリ名が一致しませんでした。")
             return False # ライブラリ名が入っていなかったらFalse
-
         return True
-
-    @call_logger
-    def load_log(self, file: str) -> None:
+    
+    def _load_json(self, file: str) -> tuple[dict, dict]|None:
         try:
             with open(file, 'r') as f:
                 loaded_data: dict = json.load(f)
-        except:
-            # ロードできなければ処理しない
-            Logger.info(f"{file} のロードでエラーが起きました。")
-            return
-
-        if not self.is_valid(loaded_data):
-            Logger.info(f"{file} は正しいデータではありませんでした。")
-            return
+        except FileNotFoundError:
+            Logger.info(f"{file} が見つかりませんでした。")
+            return None
+        except json.JSONDecodeError:
+            Logger.info(f"{file} のJSONデコードに失敗しました。")
+            return None
+        except Exception as e:
+            Logger.info(f"{file} のロードでエラーが起きました: {e}")
+            return None
         
         contents = loaded_data.get("contents")
         metadata = loaded_data.get("metadata")
         if contents is None:
-            raise InternalError("contentsがNoneだよ")
-        if type(contents) is not dict:
-            raise InternalError("contentsがdict型ではないよ")
+            Logger.info(f"contentsがNoneでした。")
+            return None
+        if not isinstance(contents, dict):
+            Logger.info(f"contentsがdict型ではありませんでした。")
+            return None
         if metadata is None:
-            raise InternalError("metadataがNoneだよ")
-        if type(metadata) is dict:
-            raise InternalError("metadataがNonedict型ではないよ")
+            Logger.info(f"metadataがNoneでした。")
+            return None
+        if not isinstance(metadata, dict):
+            Logger.info(f"metadataがdict型ではありませんでした。")
+            return None
+        return contents, metadata
 
-        folder = os.path.split(file)[0]
+    @call_logger
+    def load_log(self, file: str) -> None:
+        result = self._load_json(file)
+        if result is None:
+            return
+        contents, metadata = result
+        if not self.is_valid(contents, metadata):
+            Logger.info(f"{file} は正しいデータではありませんでした。")
+            return
         self.logs.append(RunnerLog(contents, metadata))
         Logger.info(f"{file} を読み込みました。")
     

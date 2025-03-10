@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.console import Console
 
 from .parallel_executor import RunnerLog, LogManager
-from .debug import Logger, call_logger
+from .debug import call_logger
 from .defines import InternalError
 
 class Result:
@@ -130,7 +130,7 @@ class MainScreen(BaseScreen):
 
             columns.append(f"{i+1}")
             metadata = log.get_metadata()
-            columns.append(metadata.get("created_date"))
+            columns.append(metadata.created_date)
 
             for attribute in attributes:
                 columns.append("None")
