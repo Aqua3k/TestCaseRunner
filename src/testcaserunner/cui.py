@@ -112,7 +112,7 @@ class MainScreen(BaseScreen):
 
         attributes = dict()
         for log in logs:
-            atts = log.get_metadata().get("attributes")
+            atts = log.get_metadata().attributes
             for att in atts:
                 attributes[att] = ""
 
