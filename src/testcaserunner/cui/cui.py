@@ -6,9 +6,9 @@ from rich import print
 from rich.table import Table
 from rich.console import Console
 
-from .parallel_executor import RunnerLog, LogManager
-from .debug import call_logger
-from .defines import InternalError
+from ..parallel_executor import RunnerLog, LogManager
+from ..debug import call_logger
+from ..defines import InternalError
 
 class Result:
     def __init__(self):
