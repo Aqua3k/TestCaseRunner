@@ -8,6 +8,7 @@ from rich.console import Console
 
 from ..parallel_executor import LogManager
 from ..debug import call_logger
+from .database import Database
 
 class ScreenStatus(Enum):
     MAIN_SCREEN = auto()
@@ -48,6 +49,7 @@ class MainScreen(BaseScreen):
         print(self.main_menu_string)
         viewer = LogManager()
         logs = viewer.get_log()
+        database = Database()
 
         attributes = dict()
         for log in logs:
