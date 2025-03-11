@@ -6,7 +6,6 @@ from rich import print
 from rich.table import Table
 from rich.console import Console
 
-from ..parallel_executor import LogManager
 from ..debug import call_logger
 from .database import Database
 
@@ -47,15 +46,7 @@ class MainScreen(BaseScreen):
         print(f"current directory: {os.getcwd()}")
 
         print(self.main_menu_string)
-        viewer = LogManager()
-        logs = viewer.get_log()
         database = Database()
-
-        attributes = dict()
-        for log in logs:
-            atts = log.get_metadata().attributes
-            for att in atts:
-                attributes[att] = ""
 
         # テーブル作成
         table = Table(title="Test Results")
@@ -63,19 +54,22 @@ class MainScreen(BaseScreen):
         table.add_column("ID")
         table.add_column("created_data")
 
-        for attribute in attributes.keys():
+        for attribute in database.get_attributes():
             table.add_column(attribute)
 
-        for i, log in enumerate(logs):
+        for i, log in enumerate(database.iterate_logs()):
             columns = []
 
             columns.append(f"{i+1}")
             metadata = log.get_metadata()
             columns.append(metadata.created_date)
 
-            for attribute in attributes:
-                columns.append("None")
-            
+            for attribute in database.get_attributes():
+                data  = log.get(attribute)
+                if isinstance(data, float):
+                    columns.append(f"{data:.2f}")  # 小数点以下2桁にフォーマット
+                else:
+                    columns.append(str(data))
             table.add_row(*columns)
 
         # テーブルを表示

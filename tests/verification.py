@@ -47,5 +47,5 @@ def run_program(testcase: TestCase):
     return TestCaseResult(attribute, proc.stdout, proc.stderr)
 
 if __name__ == "__main__":
-    run(run_program, "in", _debug=True)
-    run_cui()
+    #run(run_program, "in", _debug=True)
+    run_cui(True)

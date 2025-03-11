@@ -1,5 +1,6 @@
 from rich import print
 
+from ..debug import Logger
 from ..defines import InternalError
 from .screen import BaseScreen, ScreenStatus, MainScreen
 
@@ -66,7 +67,9 @@ def construct_screens() -> dict[ScreenStatus, BaseScreen]:
         }
     return screens
 
-def run_cui():
+def run_cui(_debug: bool = False) -> None:
+    if _debug:
+        Logger.enable_debug_mode()
     screens = construct_screens()
     cui = CUI(screens)
     cui.activate(ScreenStatus.MAIN_SCREEN)

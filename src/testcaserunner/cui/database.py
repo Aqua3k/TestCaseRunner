@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Generator
+from enum import Enum, auto
 
-from ..parallel_executor import RunnerLog, LogManager
+import pandas as pd
+
+from ..parallel_executor import RunnerLog, LogManager, Metadata
 from ..debug import Logger
 
 Data = int|float|str
@@ -21,6 +24,12 @@ class Singleton(ABC):
     def first_init(self):
         pass
 
+class EvaluationMethod(Enum):
+    MEAN = auto()
+    MEDIAN = auto()
+    MIN = auto()
+    MAX = auto()
+
 class LogStats:
     """RunnerLogをラップしたクラス
     ログの統計情報を提供する
@@ -29,16 +38,45 @@ class LogStats:
         self.df = log.get_dataframe()
         self.metadata = log.get_metadata()
     
-    def get(self, attribute: str) -> Data|None:
+    def __evaluate(self, series: pd.Series, method: EvaluationMethod) -> Data|None:
+        """指定した評価方法でデータを評価する"""
+        match method:
+            case EvaluationMethod.MEAN:
+                result = series.mean()
+            case EvaluationMethod.MEDIAN:
+                result = series.median()
+            case EvaluationMethod.MIN:
+                result = series.min()
+            case EvaluationMethod.MAX:
+                result = series.max()
+            case _:
+                Logger.info(f"評価方法が不正です: {method}")
+                return None
+
+        if isinstance(result, float):
+            if result.is_integer():
+                return int(result)
+            else:
+                return float(result)
+        if isinstance(result, int):
+            return int(result)
+        Logger.info(f"結果の型が不正です: {type(result)}")
+        return None
+    
+    def get(self, attribute: str, method: EvaluationMethod=EvaluationMethod.MEAN) -> Data|None:
         """指定した属性の値を取得する"""
         if attribute in self.df.columns:
-            data = self.df[attribute]
-            if isinstance(data, (int, float, str)):
-                return data
+            series = self.df[attribute]
+            if isinstance(series, pd.Series):
+                return self.__evaluate(series, method)
             else:
-                Logger.info(f"データ型が不正です: {type(data)}")
+                Logger.info(f"データ型が不正です: {type(series)}")
                 return None
+        Logger.info(f"属性が存在しません: {attribute}")
         return None
+    
+    def get_metadata(self) -> Metadata:
+        return self.metadata
     
     def analyze(self):
         """ログを解析する"""
@@ -61,22 +99,30 @@ class Database(Singleton):
         log_manager = LogManager()
         runner_logs = log_manager.get_log()
         self.attributes: list[str] = []
-        atts: set[str] = set()
+        atts: dict[str, None] = {}
         for log in runner_logs:
             for att in log.get_metadata().attributes:
-                atts.add(att)
-        self.attributes = list(atts)
+                atts[att] = None
+        self.attributes = list(atts.keys())
         self.logs = [LogStats(log) for log in runner_logs]
-        print(self.attributes)
     
-    def sort(self, key):
+    def sort(self, key: str):
         """データをソートする"""
         pass
 
-    def delete(self, index):
+    def delete(self, index: int):
         """データを削除する"""
         pass
 
-    def compare(self, index1, index2):
+    def compare(self, index1: int, index2: int) -> dict[str, Any]:
         """データを比較する"""
         pass
+
+    def get_attributes(self) -> list[str]:
+        """属性を取得する"""
+        return self.attributes
+
+    def iterate_logs(self) -> Generator[LogStats, None, None]:
+        """logsを順番にyieldする"""
+        for log in self.logs:
+            yield log
