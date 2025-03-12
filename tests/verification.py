@@ -1,5 +1,6 @@
 import subprocess
 import time
+import random
 
 from testcaserunner import (
     run,
@@ -27,17 +28,17 @@ def run_program(testcase: TestCase):
     with open(testcase.input_file_path, mode="r") as file:
         line = file.readline().strip()
     n,m = map(int, line.split())
-    score = n+m
-    if testcase.testcase_index % 4 == 0:
-        raise(TypeError("エラー"))
-    elif testcase.testcase_index % 4 == 1:
-        print(proc.stdout)
-        print(proc.stderr)
-        return TestCaseResult({}, proc.stdout, proc.stderr, "Error")
-    elif testcase.testcase_index % 4 == 2:
-        print(proc.stdout)
-        print(proc.stderr)
-        return TestCaseResult({}, proc.stdout, proc.stderr, "Error", "this is description.")
+    score = random.randint(0, 100)
+    # if testcase.testcase_index % 4 == 0:
+    #     raise(TypeError("エラー"))
+    # elif testcase.testcase_index % 4 == 1:
+    #     print(proc.stdout)
+    #     print(proc.stderr)
+    #     return TestCaseResult({}, proc.stdout, proc.stderr, "Error")
+    # elif testcase.testcase_index % 4 == 2:
+    #     print(proc.stdout)
+    #     print(proc.stderr)
+    #     return TestCaseResult({}, proc.stdout, proc.stderr, "Error", "this is description.")
     attribute = {
         "score": score,
         "n": n,
@@ -47,5 +48,6 @@ def run_program(testcase: TestCase):
     return TestCaseResult(attribute, proc.stdout, proc.stderr)
 
 if __name__ == "__main__":
-    #run(run_program, "in", _debug=True)
+    # for i in range(5):
+    #     run(run_program, "in", _debug=True)
     run_cui(True)
