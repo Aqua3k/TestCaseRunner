@@ -40,7 +40,7 @@ class MainScreen(BaseScreen):
         "2. Sort Results\n"
         "3. Delete Result\n"
         "4. Compare Results\n"
-        "5. Exit\n"
+        "5. Exit"
         )
     def display(self) -> None:
         print(f"current directory: {os.getcwd()}")
@@ -52,7 +52,8 @@ class MainScreen(BaseScreen):
         table = Table(title="Test Results")
 
         table.add_column("ID")
-        table.add_column("created_data")
+        table.add_column("Created Date")
+        table.add_column("Link")
 
         for attribute in database.get_attributes():
             table.add_column(attribute)
@@ -63,6 +64,7 @@ class MainScreen(BaseScreen):
             columns.append(f"{i+1}")
             metadata = log.get_metadata()
             columns.append(metadata.created_date)
+            columns.append(f"[link={log.get_html_path()}]+[/link]")
 
             for attribute in database.get_attributes():
                 data  = log.get(attribute)

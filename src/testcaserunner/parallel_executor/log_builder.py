@@ -99,6 +99,7 @@ class LogBuilder:
             "library_version": LibraryMetadata.LIBRARY_VERSION,
             "created_date": datetime.datetime.now().strftime("%Y/%m/%d %H:%M"),
             "attributes": user_attributes,
+            "log_folder_path": self.log_folder_name,
         }
         self.json_file = {
             "contents": contents,

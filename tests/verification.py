@@ -50,4 +50,4 @@ def run_program(testcase: TestCase):
 if __name__ == "__main__":
     # for i in range(5):
     #     run(run_program, "in", _debug=True)
-    run_cui(True)
+    run_cui()

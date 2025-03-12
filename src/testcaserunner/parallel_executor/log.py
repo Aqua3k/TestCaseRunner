@@ -7,6 +7,7 @@ class Metadata:
     library_version: str
     created_date: str
     attributes: list[str]
+    log_folder_path: str
 
     @staticmethod
     def load(metadata: dict) -> 'Metadata':
@@ -15,7 +16,8 @@ class Metadata:
             library_name=metadata["library_name"],
             library_version=metadata["library_version"],
             created_date=metadata["created_date"],
-            attributes=metadata["attributes"]
+            attributes=metadata["attributes"],
+            log_folder_path=metadata["log_folder_path"],
         )
 
 class RunnerLog:

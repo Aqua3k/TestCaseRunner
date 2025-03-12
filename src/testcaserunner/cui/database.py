@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generator
 from enum import Enum, auto
+import os
 
 import pandas as pd
 
@@ -88,6 +89,15 @@ class LogStats:
             "created_date": self.metadata.created_date,
             "attributes": self.metadata.attributes,
         }
+    
+    def get_html_path(self) -> str:
+        """ログファイルまでの絶対パスを取得する
+
+        Returns:
+            str: ログフォルダまでの絶対パス
+        """
+        path = os.path.join(self.metadata.log_folder_path, "result.html")
+        return os.path.abspath(path)
 
 class Database(Singleton):
     def first_init(self):
