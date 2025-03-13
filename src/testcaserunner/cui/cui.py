@@ -21,24 +21,64 @@ class KeyboardInputs(Enum):
     ENTER = auto()
     OTHER = auto()
 
-class Screen:
-    def __init__(self) -> None:
-        self.result_table = Table(title="Test Results")
-        self.menu_table = Table(show_header=True, header_style="bold magenta")
+class ScreenTableBase:
+    def __init__(self, title: str = "") -> None:
+        self.table = Table(title=title)
 
-    def update_result_table(self) -> Table:
+    def clear(self) -> None:
+        self.table.columns.clear()
+        self.table.rows.clear()
+
+    def add_row(self, columns: list[str]) -> None:
+        self.table.add_row(*columns)
+
+    def add_column(self, name: str, **kwargs) -> None:
+        self.table.add_column(name, **kwargs)
+
+    def get_table(self) -> Table:
+        return self.table
+
+class MainMenuTable(ScreenTableBase):
+    def __init__(self) -> None:
+        super().__init__(title="Menu")
+
+    options = [
+        "1. View All Results",
+        "2. Sort Results",
+        "3. Delete Result",
+        "4. Compare Results",
+        "5. Exit",
+    ]
+    def update(self):
+
+        selected = 0 # TODO: 選択された項目を保持する変数を追加する
+
+        # テーブルの列をクリア
+        self.clear()
+
+        self.add_column("Select", justify="center")
+        self.add_column("Menu")
+
+        for i, option in enumerate(self.options):
+            marker = ">" if i == selected else ""
+            self.add_row([marker, option])
+
+class ResultTable(ScreenTableBase):
+    def __init__(self) -> None:
+        super().__init__(title="Results")
+
+    def update(self):
         database = Database()
 
         # テーブルの列をクリア
-        self.result_table.columns.clear()
-        self.result_table.rows.clear()
+        self.clear()
 
-        self.result_table.add_column("ID")
-        self.result_table.add_column("Created Date")
-        self.result_table.add_column("Link")
+        self.add_column("ID")
+        self.add_column("Created Date")
+        self.add_column("Link")
 
         for attribute in database.get_attributes():
-            self.result_table.add_column(attribute)
+            self.add_column(attribute)
 
         for i, log in enumerate(database.iterate_logs()):
             columns = []
@@ -54,46 +94,37 @@ class Screen:
                     columns.append(f"{data:.2f}")  # 小数点以下2桁にフォーマット
                 else:
                     columns.append(str(data))
-            self.result_table.add_row(*columns)
-        return self.result_table
+            self.add_row(columns)
 
-    def update_main_menu(self) -> Table:
-        options = [
-            "1. View All Results",
-            "2. Sort Results",
-            "3. Delete Result",
-            "4. Compare Results",
-            "5. Exit",
-        ]
-        selected = 0
+class Screen:
+    def __init__(self) -> None:
+        self.result_table = ResultTable()
+        self.menu_table = MainMenuTable()
+        self.console = Console()
+        self.live = None
 
-        # テーブルの列をクリア
-        self.menu_table.columns.clear()
-        self.menu_table.rows.clear()
+    def __enter__(self):
+        self.live = Live(console=self.console, refresh_per_second=10, screen=True)
+        self.live.__enter__()
+        return self
 
-        self.menu_table.add_column("Select", justify="center")
-        self.menu_table.add_column("Menu")
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.live.__exit__(exc_type, exc_value, traceback)
 
-        for i, option in enumerate(options):
-            marker = ">" if i == selected else ""
-            self.menu_table.add_row(marker, option)
-
-        return self.menu_table
-
-    def display(self, live: Live) -> None:
+    def display(self) -> None:
         # テーブルを更新
-        result_table = self.update_result_table()
-        main_menu_table = self.update_main_menu()
+        self.result_table.update()
+        self.menu_table.update()
 
         # パネルにテーブルを追加
-        result_panel = Panel(result_table, title="Results")
-        menu_panel = Panel(main_menu_table, title="Menu")
+        result_panel = Panel(self.result_table.get_table(), title="Results")
+        menu_panel = Panel(self.menu_table.get_table(), title="Menu")
 
         # カラムにパネルを追加
         columns = Columns([result_panel, menu_panel])
 
         # Liveを更新
-        live.update(columns)
+        self.live.update(columns)
 
 class CUI:
     def __init__(self):
@@ -119,11 +150,9 @@ class CUI:
         return KeyboardInputs.OTHER
     
     def main_loop(self) -> None:
-        screen = Screen()
-        console = Console()
-        with Live(console=console, refresh_per_second=10, screen=True) as live:
+        with Screen() as screen:
             while True:
-                screen.display(live)
+                screen.display()
                 key = self.handle_keybord_input()
                 if key == KeyboardInputs.QUIT or key == KeyboardInputs.OTHER:
                     break
