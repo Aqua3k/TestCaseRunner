@@ -21,10 +21,10 @@ class CUI:
                     return KeyboardInputs.LEFT
                 case b'M':  # 右キー
                     return KeyboardInputs.RIGHT
-                case b'q':  # 'q' キー
-                    return KeyboardInputs.QUIT
-                case b'\r':  # Enterキー
-                    return KeyboardInputs.ENTER
+        elif key == b'q':  # 'q' キー
+            return KeyboardInputs.QUIT
+        elif key == b'\r':  # Enterキー
+            return KeyboardInputs.ENTER
         return KeyboardInputs.OTHER
     
     def main_loop(self) -> None:
@@ -32,7 +32,8 @@ class CUI:
             while True:
                 screen.update()
                 key = self.handle_keybord_input()
-                if screen.notify_keyboard_input(key):
+                is_quit = screen.notify_keyboard_input(key)
+                if is_quit:
                     break
 
     def activate(self) -> None:
